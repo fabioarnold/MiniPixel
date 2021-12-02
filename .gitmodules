@@ -1,0 +1,3 @@
+[submodule "deps/nfd-zig"]
+	path = deps/nfd-zig
+	url = https://github.com/fabioarnold/nfd-zig
