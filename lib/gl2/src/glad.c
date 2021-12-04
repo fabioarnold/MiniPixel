@@ -432,6 +432,7 @@ PFNGLGETSHADERINFOLOGPROC glad_glGetShaderInfoLog = NULL;
 PFNGLGETSHADERSOURCEPROC glad_glGetShaderSource = NULL;
 PFNGLGETSHADERIVPROC glad_glGetShaderiv = NULL;
 PFNGLGETSTRINGPROC glad_glGetString = NULL;
+PFNGLGETSTRINGIPROC glad_glGetStringi = NULL;
 PFNGLGETTEXENVFVPROC glad_glGetTexEnvfv = NULL;
 PFNGLGETTEXENVIVPROC glad_glGetTexEnviv = NULL;
 PFNGLGETTEXGENDVPROC glad_glGetTexGendv = NULL;
@@ -852,6 +853,7 @@ static void load_GL_VERSION_1_0(GLADloadproc load) {
 	glad_glGetFloatv = (PFNGLGETFLOATVPROC)load("glGetFloatv");
 	glad_glGetIntegerv = (PFNGLGETINTEGERVPROC)load("glGetIntegerv");
 	glad_glGetString = (PFNGLGETSTRINGPROC)load("glGetString");
+	glad_glGetStringi = (PFNGLGETSTRINGIPROC)load("glGetStringi");
 	glad_glGetTexImage = (PFNGLGETTEXIMAGEPROC)load("glGetTexImage");
 	glad_glGetTexParameterfv = (PFNGLGETTEXPARAMETERFVPROC)load("glGetTexParameterfv");
 	glad_glGetTexParameteriv = (PFNGLGETTEXPARAMETERIVPROC)load("glGetTexParameteriv");

@@ -1179,6 +1179,12 @@ GLAPI PFNGLGETINTEGERVPROC glad_glGetIntegerv;
 typedef const GLubyte * (APIENTRYP PFNGLGETSTRINGPROC)(GLenum name);
 GLAPI PFNGLGETSTRINGPROC glad_glGetString;
 #define glGetString glad_glGetString
+
+typedef const GLubyte * (APIENTRYP PFNGLGETSTRINGIPROC)(GLenum name, GLuint index);
+GLAPI PFNGLGETSTRINGIPROC glad_glGetStringi;
+#define glGetString glad_glGetStringi
+
+
 typedef void (APIENTRYP PFNGLGETTEXIMAGEPROC)(GLenum target, GLint level, GLenum format, GLenum type, void *pixels);
 GLAPI PFNGLGETTEXIMAGEPROC glad_glGetTexImage;
 #define glGetTexImage glad_glGetTexImage
