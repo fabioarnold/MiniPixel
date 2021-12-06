@@ -843,8 +843,6 @@ pub fn main() !void {
     }
     std.process.argsFree(allocator, args);
 
-    // editor_widget.loadDocument("minitetris.png");
-
     mainloop: while (true) {
         var sdl_event: c.SDL_Event = undefined;
         switch (mainloop_type) {

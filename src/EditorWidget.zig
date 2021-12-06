@@ -14,6 +14,7 @@ const Clipboard = @import("Clipboard.zig");
 const Document = @import("Document.zig");
 
 const NewDocumentWidget = @import("NewDocumentWidget.zig");
+const ErrorMessageWidget = @import("ErrorMessageWidget.zig");
 const CanvasWidget = @import("CanvasWidget.zig");
 const ColorPaletteWidget = @import("ColorPaletteWidget.zig");
 const ColorPickerWidget = @import("ColorPickerWidget.zig");
@@ -59,6 +60,7 @@ tool_text: [100]u8 = .{0} ** 100,
 image_text: [20]u8 = .{0} ** 20,
 memory_text: [100]u8 = .{0} ** 100,
 
+error_message_widget: *ErrorMessageWidget,
 new_document_widget: *NewDocumentWidget,
 canvas: *CanvasWidget,
 color_palette: *ColorPaletteWidget,
@@ -104,6 +106,7 @@ pub fn init(allocator: *Allocator, rect: Rect(f32)) !*Self {
         .image_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 80, 20), ""),
         .memory_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 80, 20), ""),
 
+        .error_message_widget = try ErrorMessageWidget.init(allocator, ""),
         .new_document_widget = try NewDocumentWidget.init(allocator, self),
         .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
@@ -520,6 +523,7 @@ pub fn deinit(self: *Self) void {
     self.image_status_label.deinit();
     self.memory_status_label.deinit();
 
+    self.error_message_widget.deinit();
     self.new_document_widget.deinit();
     self.canvas.deinit();
     self.color_palette.deinit();
@@ -613,6 +617,22 @@ fn updateLayout(self: *Self) void {
     self.status_bar.widget.setSize(rect.w, menu_bar_h);
 }
 
+pub fn showErrorMessageBox(self: *Self, title: [:0]const u8, message: []const u8) void {
+    if (self.widget.getWindow()) |parent_window| {
+        var window_or_error = parent_window.createChildWindow(
+            title,
+            self.error_message_widget.widget.relative_rect.w,
+            self.error_message_widget.widget.relative_rect.h,
+            gui.Window.CreateOptions{ .resizable = false },
+        );
+        if (window_or_error) |window| {
+            window.is_modal = true;
+            window.setMainWidget(&self.error_message_widget.widget);
+            self.error_message_widget.message_label.text = message;
+        } else |_| {}
+    }
+}
+
 fn newDocument(self: *Self) void {
     if (self.widget.getWindow()) |parent_window| {
         var window_or_error = parent_window.createChildWindow(
@@ -663,7 +683,8 @@ fn saveDocument(self: *Self) void {
             if (png_file_path_or_error) |png_file_path| {
                 defer self.allocator.free(png_file_path);
                 self.document.save(png_file_path) catch {
-                    // TODO: show error message
+                    self.showErrorMessageBox("Save document", "Could not save document.");
+                    return;
                 };
                 self.updateWindowTitle(png_file_path);
             } else |_| {
@@ -752,7 +773,8 @@ fn toggleGrid(self: *Self) void {
 
 pub fn loadDocument(self: *Self, file_path: []const u8) void {
     self.document.load(file_path) catch {
-        // TODO: show error message
+        self.showErrorMessageBox("Load document", "Could not open document.");
+        return;
     };
     self.canvas.centerDocument();
     self.updateImageStatus();
