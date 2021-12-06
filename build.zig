@@ -10,6 +10,16 @@ const nfd = Pkg{ .name = "nfd", .path = FileSource.relative("deps/nfd-zig/src/li
 const nanovg = Pkg{ .name = "nanovg", .path = FileSource.relative("deps/nanovg/src/nanovg.zig") };
 const gui = Pkg{ .name = "gui", .path = FileSource.relative("src/gui/gui.zig"), .dependencies = &.{nanovg} };
 
+fn printError(str: []const u8) void {
+    var stderr = std.io.getStdErr();
+    var stderr_writer = stderr.writer();
+    var tty_config = std.debug.detectTTYConfig();
+    tty_config.setColor(stderr_writer, .Red);
+    _ = stderr_writer.write("ERROR: ") catch {};
+    tty_config.setColor(stderr_writer, .Reset);
+    _ = stderr_writer.write(str) catch {};
+}
+
 pub fn build(b: *Builder) !void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
@@ -29,6 +39,11 @@ pub fn build(b: *Builder) !void {
         }
         exe.subsystem = .Windows;
         exe.linkSystemLibrary("shell32");
+        std.fs.cwd().access("minipixel.o", .{}) catch {
+            printError("minipixel.o not found. Please use VS Developer Prompt and run\n\n" ++
+                "\trc /fo minipixel.o minipixel.rc\n\nbefore continuing\n");
+            return error.FileNotFound;
+        };
         exe.addObjectFile("minipixel.o"); // add icon
         exe.want_lto = false; // workaround for https://github.com/ziglang/zig/issues/8531
     } else if (exe.target.isDarwin()) {
