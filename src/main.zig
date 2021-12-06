@@ -138,6 +138,7 @@ const SdlWindow = struct {
     fn setSize(self: *SdlWindow, width: i32, height: i32) void {
         self.video_width = @intToFloat(f32, width);
         self.video_height = @intToFloat(f32, height);
+        self.window.setSize(self.video_width, self.video_height);
         switch (builtin.os.tag) {
             .windows, .linux => {
                 self.updateVideoScale();
@@ -832,6 +833,7 @@ pub fn main() !void {
     }.closeRequest;
     if (window_config_file_path) |file_path| {
         loadAndApplyWindowConfig(allocator, main_window, file_path) catch {}; // don't care
+        editor_widget.canvas.centerDocument(); // Window size might have changed recenter document
     }
 
     // parse command line arguments
