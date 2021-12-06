@@ -1,3 +1,6 @@
+const ORG_NAME = "FabioWare";
+const APP_NAME = "Mini Pixel";
+
 const std = @import("std");
 const builtin = @import("builtin");
 const win32 = @import("win32");
@@ -751,9 +754,9 @@ pub fn main() !void {
         enableAppleMomentumScroll();
     }
 
-    if (c.SDL_GetPrefPath("FabioWare", "MiniPixel")) |path| {
-        defer c.SDL_free(path);
-        const user_pref_path = std.mem.sliceTo(path, 0);
+    if (c.SDL_GetPrefPath(ORG_NAME, APP_NAME)) |sdl_pref_path| {
+        defer c.SDL_free(sdl_pref_path);
+        const user_pref_path = std.mem.sliceTo(sdl_pref_path, 0);
         window_config_file_path = try std.fs.path.join(allocator, &.{ user_pref_path, "window.json" });
     }
     defer {
@@ -821,11 +824,15 @@ pub fn main() !void {
     main_window.setMainWidget(&editor_widget.widget);
     main_window.onCloseRequestFn = struct {
         fn closeRequest(window: *gui.Window) bool {
-            writeWindowConfig(window) catch {}; // don't care
+            if (window_config_file_path) |file_path| {
+                writeWindowConfig(window, file_path) catch {}; // don't care
+            }
             return true;
         }
     }.closeRequest;
-    loadAndApplyWindowConfig(allocator, main_window) catch {}; // don't care
+    if (window_config_file_path) |file_path| {
+        loadAndApplyWindowConfig(allocator, main_window, file_path) catch {}; // don't care
+    }
 
     // parse command line arguments
     const args = try std.process.argsAlloc(allocator);
@@ -863,9 +870,8 @@ const WindowConfig = struct {
     is_maximized: bool,
 };
 
-fn writeWindowConfig(window: *gui.Window) !void {
+fn writeWindowConfig(window: *gui.Window, file_path: []const u8) !void {
     const sdl_window = findSdlWindow(window.id) orelse return;
-    const file_path = window_config_file_path orelse return;
 
     const config = WindowConfig{
         .display_index = sdl_window.getDisplayIndex(),
@@ -874,15 +880,13 @@ fn writeWindowConfig(window: *gui.Window) !void {
         .is_maximized = sdl_window.isMaximized(),
     };
 
-    // TODO: use user dir
     var file = try std.fs.cwd().createFile(file_path, .{});
     defer file.close();
     try std.json.stringify(config, .{}, file.writer());
 }
 
-fn loadAndApplyWindowConfig(allocator: *std.mem.Allocator, window: *gui.Window) !void {
+fn loadAndApplyWindowConfig(allocator: *std.mem.Allocator, window: *gui.Window, file_path: []const u8) !void {
     const sdl_window = findSdlWindow(window.id) orelse return;
-    const file_path = window_config_file_path orelse return;
 
     var file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
