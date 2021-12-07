@@ -64,7 +64,7 @@ const SdlWindow = struct {
             }
         }
 
-        var window_flags: c_uint = c.SDL_WINDOW_OPENGL | c.SDL_WINDOW_ALLOW_HIGHDPI;
+        var window_flags: c_uint = c.SDL_WINDOW_OPENGL | c.SDL_WINDOW_ALLOW_HIGHDPI | c.SDL_WINDOW_HIDDEN;
         if (options.resizable) window_flags |= c.SDL_WINDOW_RESIZABLE;
         var window_width: c_int = undefined;
         var window_height: c_int = undefined;
@@ -248,6 +248,9 @@ const SdlWindow = struct {
         nvg.endFrame();
 
         c.glFlush();
+        if (c.SDL_GetWindowFlags(self.handle) & c.SDL_WINDOW_HIDDEN != 0) {
+            c.SDL_ShowWindow(self.handle);
+        }
         c.SDL_GL_SwapWindow(self.handle);
         self.dirty = false;
     }
