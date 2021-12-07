@@ -66,9 +66,13 @@ pub fn Spinner(comptime T: type) type {
                             }) |value| {
                                 const old_value = spinner.value;
                                 const in_range = value >= spinner.min_value and value <= spinner.max_value;
-                                spinner.value = std.math.clamp(value, spinner.min_value, spinner.max_value);
-                                if (spinner.value != old_value) spinner.notifyChanged();
-                                text_box.background_color = if (in_range) gui.theme_colors.light else error_color;
+                                if (in_range) {
+                                    spinner.value = std.math.clamp(value, spinner.min_value, spinner.max_value);
+                                    if (spinner.value != old_value) spinner.notifyChanged();
+                                    text_box.background_color = gui.theme_colors.light;
+                                } else {
+                                    text_box.background_color = error_color;
+                                }
                             } else |_| { // error
                                 text_box.background_color = error_color;
                             }
@@ -199,6 +203,7 @@ pub fn Spinner(comptime T: type) type {
             self.value = std.math.clamp(value, self.min_value, self.max_value);
             if (self.value != old_value) {
                 self.updateTextBox();
+                self.text_box.background_color = gui.theme_colors.light;
                 self.notifyChanged();
             }
         }
