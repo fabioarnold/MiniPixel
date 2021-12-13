@@ -159,6 +159,25 @@ const UndoSystem = struct {
     }
 };
 
+const PrimitiveTag = enum {
+    brush,
+    line,
+    none,
+};
+const PrimitivePreview = union(PrimitiveTag) {
+    brush: struct {
+        x: u32,
+        y: u32,
+    },
+    line: struct {
+        x0: i32,
+        y0: i32,
+        x1: i32,
+        y1: i32,
+    },
+    none: void,
+};
+
 allocator: *Allocator,
 
 width: u32 = 32,
@@ -167,6 +186,7 @@ height: u32 = 32,
 texture: nvg.Image, // image for display using nvg
 bitmap: []u8,
 preview_bitmap: []u8, // preview brush and lines
+last_preview: PrimitivePreview = .none,
 colormap: ?[]u8 = null, // if this is set bitmap is an indexmap into this colormap
 dirty: bool = false, // bitmap needs to be uploaded to gpu on next draw call
 
@@ -241,7 +261,7 @@ pub fn load(self: *Self, file_path: []const u8) !void {
     self.allocator.free(self.preview_bitmap);
     self.preview_bitmap = try self.allocator.dupe(u8, self.bitmap);
 
-    // resolution might have change so recreate image
+    // resolution might have changed so recreate image
     nvg.deleteImage(self.texture);
     self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
 
@@ -510,14 +530,16 @@ pub fn setBackgroundColorRgba(self: *Self, color: [4]u8) void {
     self.background_color = color;
 }
 
-fn setPixel(bitmap: []u8, w: u32, h: u32, x: i32, y: i32, color: [4]u8) void {
+fn setPixel(bitmap: []u8, w: u32, h: u32, x: i32, y: i32, color: [4]u8) bool {
     if (x >= 0 and y >= 0) {
         const ux = @intCast(u32, x);
         const uy = @intCast(u32, y);
         if (ux < w and uy < h) {
             setPixelUnchecked(bitmap, w, ux, uy, color);
+            return true;
         }
     }
+    return false;
 }
 
 fn setPixelUnchecked(bitmap: []u8, w: u32, x: u32, y: u32, color: [4]u8) void {
@@ -551,6 +573,11 @@ fn getPixelUnchecked(bitmap: []u8, w: u32, x: u32, y: u32) [4]u8 {
     };
 }
 
+fn copyPixelUnchecked(dst_bitmap: []u8, src_bitmap: []u8, w: u32, x: u32, y: u32) void {
+    const src_color = getPixelUnchecked(src_bitmap, w, x, y);
+    setPixelUnchecked(dst_bitmap, w, x, y, src_color);
+}
+
 fn drawLine(bitmap: []u8, w: u32, h: u32, x0: i32, y0: i32, x1: i32, y1: i32, color: [4]u8) void {
     const dx = std.math.absInt(x1 - x0) catch unreachable;
     const sx: i32 = if (x0 < x1) 1 else -1;
@@ -561,7 +588,7 @@ fn drawLine(bitmap: []u8, w: u32, h: u32, x0: i32, y0: i32, x1: i32, y1: i32, co
     var x = x0;
     var y = y0;
     while (true) {
-        setPixel(bitmap, w, h, x, y, color);
+        if (!setPixel(bitmap, w, h, x, y, color)) break;
         if (x == x1 and y == y1) break;
         const e2 = 2 * err;
         if (e2 >= dy) {
@@ -577,16 +604,28 @@ fn drawLine(bitmap: []u8, w: u32, h: u32, x0: i32, y0: i32, x1: i32, y1: i32, co
 
 pub fn previewBrush(self: *Self, x: i32, y: i32) void {
     self.clearPreview();
-    setPixel(self.preview_bitmap, self.width, self.height, x, y, self.foreground_color);
+    if (setPixel(self.preview_bitmap, self.width, self.height, x, y, self.foreground_color)) {
+        self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
+    }
 }
 
 pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
     self.clearPreview();
     drawLine(self.preview_bitmap, self.width, self.height, x0, y0, x1, y1, self.foreground_color);
+    self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
 }
 
 pub fn clearPreview(self: *Self) void {
-    std.mem.copy(u8, self.preview_bitmap, self.bitmap);
+    switch (self.last_preview) {
+        .brush => |brush| {
+            copyPixelUnchecked(self.preview_bitmap, self.bitmap, self.width, brush.x, brush.y);
+        },
+        .line => {
+            std.mem.copy(u8, self.preview_bitmap, self.bitmap);
+        },
+        else => {},
+    }
+    self.last_preview = .none;
     self.dirty = true;
 }
 
@@ -798,12 +837,15 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
 }
 
 pub fn beginStroke(self: *Self, x: i32, y: i32) void {
-    setPixel(self.bitmap, self.width, self.height, x, y, self.foreground_color);
-    self.clearPreview();
+    if (setPixel(self.bitmap, self.width, self.height, x, y, self.foreground_color)) {
+        self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
+        self.clearPreview();
+    }
 }
 
 pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
     drawLine(self.bitmap, self.width, self.height, x0, y0, x1, y1, self.foreground_color);
+    self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
     self.clearPreview();
 }
 
