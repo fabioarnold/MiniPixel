@@ -1,5 +1,5 @@
 # ✏️ Mini Pixel
-![Banner](art/minipixel-banner.png?raw=true "Banner")
+![Banner](art/minipixel.png?raw=true "Banner")
 
 A tiny pixel art editor.
 
