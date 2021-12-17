@@ -551,12 +551,12 @@ fn setPixelUnchecked(bitmap: []u8, w: u32, x: u32, y: u32, color: [4]u8) void {
     bitmap[i + 3] = color[3];
 }
 
-fn getPixel(self: Self, x: i32, y: i32) ?[4]u8 {
+fn getPixel(bitmap: []u8, w: u32, h: u32, x: i32, y: i32) ?[4]u8 {
     if (x >= 0 and y >= 0) {
         const ux = @intCast(u32, x);
         const uy = @intCast(u32, y);
-        if (ux < self.width and uy < self.height) {
-            return getPixelUnchecked(self.bitmap, self.width, ux, uy);
+        if (ux < w and uy < h) {
+            return getPixelUnchecked(bitmap, w, ux, uy);
         }
     }
     return null;
@@ -602,6 +602,32 @@ fn drawLine(bitmap: []u8, w: u32, h: u32, x0: i32, y0: i32, x1: i32, y1: i32, co
     }
 }
 
+fn copyLine(dst_bitmap: []u8, src_bitmap: []u8, w: u32, h: u32, x0: i32, y0: i32, x1: i32, y1: i32) void {
+    const dx = std.math.absInt(x1 - x0) catch unreachable;
+    const sx: i32 = if (x0 < x1) 1 else -1;
+    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
+    const sy: i32 = if (y0 < y1) 1 else -1;
+    var err = dx + dy;
+
+    var x = x0;
+    var y = y0;
+    while (true) {
+        if (getPixel(src_bitmap, w, h, x, y)) |src_color| {
+            setPixelUnchecked(dst_bitmap, w, @intCast(u32, x), @intCast(u32, y), src_color);
+        } else break;
+        if (x == x1 and y == y1) break;
+        const e2 = 2 * err;
+        if (e2 >= dy) {
+            err += dy;
+            x += sx;
+        }
+        if (e2 <= dx) {
+            err += dx;
+            y += sy;
+        }
+    }
+}
+
 pub fn previewBrush(self: *Self, x: i32, y: i32) void {
     self.clearPreview();
     if (setPixel(self.preview_bitmap, self.width, self.height, x, y, self.foreground_color)) {
@@ -620,8 +646,8 @@ pub fn clearPreview(self: *Self) void {
         .brush => |brush| {
             copyPixelUnchecked(self.preview_bitmap, self.bitmap, self.width, brush.x, brush.y);
         },
-        .line => {
-            std.mem.copy(u8, self.preview_bitmap, self.bitmap);
+        .line => |line| {
+            copyLine(self.preview_bitmap, self.bitmap, self.width, self.height, line.x0, line.y0, line.x1, line.y1);
         },
         else => {},
     }
@@ -816,7 +842,7 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
     try stack.append(.{ .x = x, .y = y });
     while (stack.items.len > 0) {
         const coords = stack.pop();
-        if (self.getPixel(coords.x, coords.y)) |color| {
+        if (getPixel(self.bitmap, self.width, self.height, coords.x, coords.y)) |color| {
             if (std.mem.eql(u8, color[0..], old_color[0..])) {
                 setPixelUnchecked(
                     bitmap,
@@ -854,7 +880,7 @@ pub fn endStroke(self: *Self) !void {
 }
 
 pub fn pickColor(self: *Self, x: i32, y: i32) ?[4]u8 {
-    return self.getPixel(x, y);
+    return getPixel(self.bitmap, self.width, self.height, x, y);
 }
 
 pub fn draw(self: *Self) void {
