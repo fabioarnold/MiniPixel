@@ -75,7 +75,7 @@ pub const WINML_TENSOR_BINDING_DESC = extern struct {
     NumDimensions: u32,
     pShape: ?*i64,
     DataSize: u32,
-    pData: ?*c_void,
+    pData: ?*anyopaque,
 };
 
 pub const WINML_SEQUENCE_BINDING_DESC = extern struct {
@@ -110,7 +110,7 @@ pub const WINML_IMAGE_BINDING_DESC = extern struct {
     NumDimensions: u32,
     pShape: ?*i64,
     DataSize: u32,
-    pData: ?*c_void,
+    pData: ?*anyopaque,
 };
 
 pub const WINML_RESOURCE_BINDING_DESC = extern struct {
@@ -392,7 +392,7 @@ pub const IMLOperatorAttributes = extern struct {
             type: MLOperatorAttributeType,
             elementCount: u32,
             elementByteSize: usize,
-            value: ?*c_void,
+            value: ?*anyopaque,
         ) callconv(@import("std").os.windows.WINAPI) HRESULT,
         GetStringAttributeElementLength: fn(
             self: *const IMLOperatorAttributes,
@@ -416,7 +416,7 @@ pub const IMLOperatorAttributes = extern struct {
             return @ptrCast(*const IMLOperatorAttributes.VTable, self.vtable).GetAttributeElementCount(@ptrCast(*const IMLOperatorAttributes, self), name, type_, elementCount);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
-        pub fn IMLOperatorAttributes_GetAttribute(self: *const T, name: ?[*:0]const u8, type_: MLOperatorAttributeType, elementCount: u32, elementByteSize: usize, value: ?*c_void) callconv(.Inline) HRESULT {
+        pub fn IMLOperatorAttributes_GetAttribute(self: *const T, name: ?[*:0]const u8, type_: MLOperatorAttributeType, elementCount: u32, elementByteSize: usize, value: ?*anyopaque) callconv(.Inline) HRESULT {
             return @ptrCast(*const IMLOperatorAttributes.VTable, self.vtable).GetAttribute(@ptrCast(*const IMLOperatorAttributes, self), name, type_, elementCount, elementByteSize, value);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
@@ -597,7 +597,7 @@ pub const IMLOperatorTensor = extern struct {
         ) callconv(@import("std").os.windows.WINAPI) bool,
         GetData: fn(
             self: *const IMLOperatorTensor,
-        ) callconv(@import("std").os.windows.WINAPI) ?*c_void,
+        ) callconv(@import("std").os.windows.WINAPI) ?*anyopaque,
         GetDataInterface: fn(
             self: *const IMLOperatorTensor,
             dataInterface: ?*?*IUnknown,
@@ -627,7 +627,7 @@ pub const IMLOperatorTensor = extern struct {
             return @ptrCast(*const IMLOperatorTensor.VTable, self.vtable).IsDataInterface(@ptrCast(*const IMLOperatorTensor, self));
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
-        pub fn IMLOperatorTensor_GetData(self: *const T) callconv(.Inline) ?*c_void {
+        pub fn IMLOperatorTensor_GetData(self: *const T) callconv(.Inline) ?*anyopaque {
             return @ptrCast(*const IMLOperatorTensor.VTable, self.vtable).GetData(@ptrCast(*const IMLOperatorTensor, self));
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
@@ -651,13 +651,13 @@ pub const IMLOperatorKernelContext = extern struct {
         GetOutputTensor: fn(
             self: *const IMLOperatorKernelContext,
             outputIndex: u32,
+            dimensionCount: u32,
+            dimensionSizes: [*]const u32,
             tensor: ?*?*IMLOperatorTensor,
         ) callconv(@import("std").os.windows.WINAPI) HRESULT,
         GetOutputTensor1: fn(
             self: *const IMLOperatorKernelContext,
             outputIndex: u32,
-            dimensionCount: u32,
-            dimensionSizes: [*]const u32,
             tensor: ?*?*IMLOperatorTensor,
         ) callconv(@import("std").os.windows.WINAPI) HRESULT,
         AllocateTemporaryData: fn(
@@ -678,12 +678,12 @@ pub const IMLOperatorKernelContext = extern struct {
             return @ptrCast(*const IMLOperatorKernelContext.VTable, self.vtable).GetInputTensor(@ptrCast(*const IMLOperatorKernelContext, self), inputIndex, tensor);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
-        pub fn IMLOperatorKernelContext_GetOutputTensor(self: *const T, outputIndex: u32, tensor: ?*?*IMLOperatorTensor) callconv(.Inline) HRESULT {
-            return @ptrCast(*const IMLOperatorKernelContext.VTable, self.vtable).GetOutputTensor(@ptrCast(*const IMLOperatorKernelContext, self), outputIndex, tensor);
+        pub fn IMLOperatorKernelContext_GetOutputTensor(self: *const T, outputIndex: u32, dimensionCount: u32, dimensionSizes: [*]const u32, tensor: ?*?*IMLOperatorTensor) callconv(.Inline) HRESULT {
+            return @ptrCast(*const IMLOperatorKernelContext.VTable, self.vtable).GetOutputTensor(@ptrCast(*const IMLOperatorKernelContext, self), outputIndex, dimensionCount, dimensionSizes, tensor);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
-        pub fn IMLOperatorKernelContext_GetOutputTensor1(self: *const T, outputIndex: u32, dimensionCount: u32, dimensionSizes: [*]const u32, tensor: ?*?*IMLOperatorTensor) callconv(.Inline) HRESULT {
-            return @ptrCast(*const IMLOperatorKernelContext.VTable, self.vtable).GetOutputTensor(@ptrCast(*const IMLOperatorKernelContext, self), outputIndex, dimensionCount, dimensionSizes, tensor);
+        pub fn IMLOperatorKernelContext_GetOutputTensor1(self: *const T, outputIndex: u32, tensor: ?*?*IMLOperatorTensor) callconv(.Inline) HRESULT {
+            return @ptrCast(*const IMLOperatorKernelContext.VTable, self.vtable).GetOutputTensor(@ptrCast(*const IMLOperatorKernelContext, self), outputIndex, tensor);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
         pub fn IMLOperatorKernelContext_AllocateTemporaryData(self: *const T, size: usize, data: ?*?*IUnknown) callconv(.Inline) HRESULT {
@@ -747,7 +747,7 @@ pub const MLOperatorSchemaEdgeDescription = extern struct {
     options: MLOperatorParameterOptions,
     typeFormat: MLOperatorSchemaEdgeTypeFormat,
     Anonymous: extern union {
-        reserved: ?*const c_void,
+        reserved: ?*const anyopaque,
         typeLabel: ?[*:0]const u8,
         edgeDescription: MLOperatorEdgeDescription,
     },
@@ -954,7 +954,7 @@ pub const MLOperatorAttributeNameValue = extern struct {
     type: MLOperatorAttributeType,
     valueCount: u32,
     Anonymous: extern union {
-        reserved: ?*const c_void,
+        reserved: ?*const anyopaque,
         ints: ?*const i64,
         strings: ?*const ?*i8,
         floats: ?*const f32,

@@ -173,8 +173,8 @@ pub extern "KERNEL32" fn Heap32Next(
 // TODO: this type is limited to platform 'windows5.1.2600'
 pub extern "KERNEL32" fn Toolhelp32ReadProcessMemory(
     th32ProcessID: u32,
-    lpBaseAddress: ?*const c_void,
-    lpBuffer: ?*c_void,
+    lpBaseAddress: ?*const anyopaque,
+    lpBuffer: ?*anyopaque,
     cbRead: usize,
     lpNumberOfBytesRead: ?*usize,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
@@ -257,7 +257,7 @@ pub usingnamespace switch (@import("../../zig.zig").unicode_mode) {
 // Section: Imports (4)
 //--------------------------------------------------------------------------------
 const BOOL = @import("../../foundation.zig").BOOL;
-const CHAR = @import("../../system/system_services.zig").CHAR;
+const CHAR = @import("../../foundation.zig").CHAR;
 const HANDLE = @import("../../foundation.zig").HANDLE;
 const HINSTANCE = @import("../../foundation.zig").HINSTANCE;
 

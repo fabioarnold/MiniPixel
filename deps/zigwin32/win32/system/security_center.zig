@@ -317,10 +317,10 @@ pub const WSC_SECURITY_PROVIDER_HEALTH_SNOOZE = WSC_SECURITY_PROVIDER_HEALTH.SNO
 //--------------------------------------------------------------------------------
 // TODO: this type is limited to platform 'windows6.0.6000'
 pub extern "WSCAPI" fn WscRegisterForChanges(
-    Reserved: ?*c_void,
+    Reserved: ?*anyopaque,
     phCallbackRegistration: ?*?HANDLE,
     lpCallbackAddress: ?LPTHREAD_START_ROUTINE,
-    pContext: ?*c_void,
+    pContext: ?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) HRESULT;
 
 // TODO: this type is limited to platform 'windows6.0.6000'
@@ -365,8 +365,8 @@ const BOOL = @import("../foundation.zig").BOOL;
 const BSTR = @import("../foundation.zig").BSTR;
 const HANDLE = @import("../foundation.zig").HANDLE;
 const HRESULT = @import("../foundation.zig").HRESULT;
-const IDispatch = @import("../system/ole_automation.zig").IDispatch;
-const LPTHREAD_START_ROUTINE = @import("../system/system_services.zig").LPTHREAD_START_ROUTINE;
+const IDispatch = @import("../system/com.zig").IDispatch;
+const LPTHREAD_START_ROUTINE = @import("../system/threading.zig").LPTHREAD_START_ROUTINE;
 const PWSTR = @import("../foundation.zig").PWSTR;
 
 test {

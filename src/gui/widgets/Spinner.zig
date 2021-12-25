@@ -14,7 +14,7 @@ pub fn Spinner(comptime T: type) type {
 
     return struct {
         widget: gui.Widget,
-        allocator: *std.mem.Allocator,
+        allocator: std.mem.Allocator,
         text_box: *gui.TextBox,
         up_button: *gui.Button,
         down_button: *gui.Button,
@@ -31,7 +31,7 @@ pub fn Spinner(comptime T: type) type {
 
         const Self = @This();
 
-        pub fn init(allocator: *std.mem.Allocator, rect: Rect(f32)) !*Self {
+        pub fn init(allocator: std.mem.Allocator, rect: Rect(f32)) !*Self {
             var self = try allocator.create(Self);
             self.* = Self{
                 .widget = gui.Widget.init(allocator, rect),

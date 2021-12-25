@@ -29,7 +29,7 @@ const UndoStep = union(enum) {
         bitmap: []u8,
     },
 
-    fn make(allocator: *Allocator, document: *Document) !UndoStep {
+    fn make(allocator: Allocator, document: *Document) !UndoStep {
         return UndoStep{ .document = .{
             .width = document.width,
             .height = document.height,
@@ -37,7 +37,7 @@ const UndoStep = union(enum) {
         } };
     }
 
-    fn deinit(self: UndoStep, allocator: *Allocator) void {
+    fn deinit(self: UndoStep, allocator: Allocator) void {
         switch (self) {
             .document => |d| allocator.free(d.bitmap),
         }
@@ -51,7 +51,7 @@ const UndoStep = union(enum) {
         };
     }
 
-    fn undo(self: UndoStep, allocator: *Allocator, document: *Document) !void {
+    fn undo(self: UndoStep, allocator: Allocator, document: *Document) !void {
         switch (self) {
             .document => |d| {
                 if (document.width != d.width or document.height != d.height) {
@@ -69,20 +69,20 @@ const UndoStep = union(enum) {
         }
     }
 
-    fn redo(self: UndoStep, allocator: *Allocator, document: *Document) !void {
+    fn redo(self: UndoStep, allocator: Allocator, document: *Document) !void {
         try self.undo(allocator, document);
     }
 };
 
 const UndoSystem = struct {
-    allocator: *Allocator,
+    allocator: Allocator,
     stack: ArrayList(UndoStep),
     index: usize = 0,
 
     undo_listener_address: usize = 0, // TODO: this is pretty hacky
     onUndoChangedFn: ?fn (*Document) void = null,
 
-    fn init(allocator: *Allocator) !*UndoSystem {
+    fn init(allocator: Allocator) !*UndoSystem {
         var self = try allocator.create(UndoSystem);
         self.* = UndoSystem{
             .allocator = allocator,
@@ -121,7 +121,7 @@ const UndoSystem = struct {
         return self.index > 0;
     }
 
-    fn undo(self: *UndoSystem, allocator: *Allocator, document: *Document) !void {
+    fn undo(self: *UndoSystem, allocator: Allocator, document: *Document) !void {
         if (!self.canUndo()) return;
         self.index -= 1;
         const step = self.stack.items[self.index];
@@ -134,7 +134,7 @@ const UndoSystem = struct {
         return self.index + 1 < self.stack.items.len;
     }
 
-    fn redo(self: *UndoSystem, allocator: *Allocator, document: *Document) !void {
+    fn redo(self: *UndoSystem, allocator: Allocator, document: *Document) !void {
         if (!self.canRedo()) return;
         self.index += 1;
         const step = self.stack.items[self.index];
@@ -178,7 +178,7 @@ const PrimitivePreview = union(PrimitiveTag) {
     none: void,
 };
 
-allocator: *Allocator,
+allocator: Allocator,
 
 width: u32 = 32,
 height: u32 = 32,
@@ -199,7 +199,7 @@ background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator) !*Self {
+pub fn init(allocator: Allocator) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .allocator = allocator,

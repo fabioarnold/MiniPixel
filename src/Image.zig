@@ -8,9 +8,9 @@ width: u32,
 height: u32,
 pixels: []u8,
 colormap: ?[]u8 = null,
-allocator: *std.mem.Allocator,
+allocator: std.mem.Allocator,
 
-pub fn initFromFile(allocator: *std.mem.Allocator, file_path: []const u8) !Image {
+pub fn initFromFile(allocator: std.mem.Allocator, file_path: []const u8) !Image {
     var image_width: u32 = undefined;
     var image_height: u32 = undefined;
     var colormap_entries: u32 = undefined;
@@ -37,7 +37,7 @@ pub fn initFromFile(allocator: *std.mem.Allocator, file_path: []const u8) !Image
     return self;
 }
 
-pub fn initFromMemory(allocator: *std.mem.Allocator, memory: []const u8) !Image {
+pub fn initFromMemory(allocator: std.mem.Allocator, memory: []const u8) !Image {
     var image_width: u32 = undefined;
     var image_height: u32 = undefined;
     var colormap_entries: u32 = undefined;
@@ -75,7 +75,7 @@ pub fn writeToFile(self:Image, file_path: []const u8) !void {
     if (err != 0) return error.WritePngFail;
 }
 
-pub fn writeToMemory(self: Image, allocator: *std.mem.Allocator) ![]const u8 {
+pub fn writeToMemory(self: Image, allocator: std.mem.Allocator) ![]const u8 {
     const colormap: [*c]const u8 = if (self.colormap) |colormap| colormap.ptr else null;
     var mem_len: usize = undefined;
     var err = writePngMemory(null, &mem_len, self.width, self.height, self.pixels.ptr, colormap, colormap_len);

@@ -742,7 +742,7 @@ const FillTool = struct {
 const CanvasWidget = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 
 baseOnKeyDownFn: fn (*gui.Widget, *gui.KeyEvent) void,
 
@@ -772,7 +772,7 @@ onScaleChangedFn: ?fn (*Self, f32) void = null,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32), document: *Document) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

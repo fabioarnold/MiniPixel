@@ -10,7 +10,7 @@ pub fn Slider(comptime T: type) type {
 
     return struct {
         widget: gui.Widget,
-        allocator: *Allocator,
+        allocator: Allocator,
 
         value: T = 0,
         min_value: T = 0,
@@ -21,7 +21,7 @@ pub fn Slider(comptime T: type) type {
 
         const Self = @This();
 
-        pub fn init(allocator: *Allocator, rect: Rect(f32)) !*Self {
+        pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
             var self = try allocator.create(Self);
             self.* = Self{
                 .widget = gui.Widget.init(allocator, rect),

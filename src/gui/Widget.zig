@@ -38,7 +38,7 @@ onClipboardUpdateFn: fn (*Widget) void = onClipboardUpdate,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32)) Self {
+pub fn init(allocator: Allocator, rect: Rect(f32)) Self {
     return Self{ .children = ArrayList(*Self).init(allocator), .relative_rect = rect };
 }
 

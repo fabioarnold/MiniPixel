@@ -7,7 +7,7 @@ const Rect = @import("../geometry.zig").Rect;
 const Label = @This();
 
 widget: gui.Widget,
-allocator: *std.mem.Allocator,
+allocator: std.mem.Allocator,
 text: []const u8,
 text_alignment: gui.TextAlignment = .left,
 padding: f32 = 0,
@@ -15,7 +15,7 @@ draw_border: bool = false,
 
 const Self = @This();
 
-pub fn init(allocator: *std.mem.Allocator, rect: Rect(f32), text: []const u8) !*Self {
+pub fn init(allocator: std.mem.Allocator, rect: Rect(f32), text: []const u8) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

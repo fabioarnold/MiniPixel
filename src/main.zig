@@ -519,7 +519,7 @@ var first_surrogate_half: ?u16 = null;
 fn sdlProcessTextInput(text_event: c.SDL_TextInputEvent) void {
     if (findSdlWindow(text_event.windowID)) |sdl_window| {
         sdl_window.dirty = true;
-        const text = mem.spanZ(std.meta.assumeSentinel(&text_event.text, 0));
+        const text = mem.sliceTo(std.meta.assumeSentinel(&text_event.text, 0), 0);
 
         if (std.unicode.utf8ValidateSlice(text)) {
             var te = gui.TextInputEvent{
@@ -556,7 +556,7 @@ fn sdlProcessTextInput(text_event: c.SDL_TextInputEvent) void {
     }
 }
 
-fn sdlEventWatch(userdata: ?*c_void, sdl_event_ptr: [*c]c.SDL_Event) callconv(.C) c_int {
+fn sdlEventWatch(userdata: ?*anyopaque, sdl_event_ptr: [*c]c.SDL_Event) callconv(.C) c_int {
     _ = userdata; // unused
     const sdl_event = sdl_event_ptr[0];
     if (sdl_event.type == c.SDL_WINDOWEVENT) {
@@ -582,19 +582,19 @@ fn sdlEventWatch(userdata: ?*c_void, sdl_event_ptr: [*c]c.SDL_Event) callconv(.C
 fn sdlAddTimer(timer: *gui.Timer, interval: u32) u32 {
     const res = c.SDL_AddTimer(interval, sdlTimerCallback, timer);
     if (res == 0) {
-        std.debug.warn("SDL_AddTimer failed: {s}", .{c.SDL_GetError()});
+        std.debug.print("SDL_AddTimer failed: {s}", .{c.SDL_GetError()});
     }
     return @intCast(u32, res);
 }
 
 fn sdlCancelTimer(timer_id: u32) void {
     _ = c.SDL_RemoveTimer(@intCast(c_int, timer_id));
-    //if (!res) std.debug.warn("SDL_RemoveTimer failed: {}", .{c.SDL_GetError()});
+    //if (!res) std.debug.print("SDL_RemoveTimer failed: {}", .{c.SDL_GetError()});
 }
 
 const SDL_USEREVENT_TIMER = 1;
 
-fn sdlTimerCallback(interval: u32, param: ?*c_void) callconv(.C) u32 {
+fn sdlTimerCallback(interval: u32, param: ?*anyopaque) callconv(.C) u32 {
     var userevent: c.SDL_UserEvent = undefined;
     userevent.type = c.SDL_USEREVENT;
     userevent.code = SDL_USEREVENT_TIMER;
@@ -622,7 +622,7 @@ fn sdlProcessUserEvent(user_event: c.SDL_UserEvent) void {
 
 fn sdlProcessDropFile(drop_event: c.SDL_DropEvent) void {
     markAllWindowsAsDirty();
-    const file_path = std.mem.spanZ(drop_event.file);
+    const file_path = std.mem.sliceTo(drop_event.file, 0);
     editor_widget.loadDocument(file_path);
     c.SDL_free(drop_event.file);
 }
@@ -691,7 +691,7 @@ fn sdlSetWindowTitle(window_id: u32, title: [:0]const u8) void {
     }
 }
 
-pub fn sdlGetClipboardText(allocator: *std.mem.Allocator) !?[]const u8 {
+pub fn sdlGetClipboardText(allocator: std.mem.Allocator) !?[]const u8 {
     if (c.SDL_HasClipboardText() == c.SDL_FALSE) return null;
     const sdl_text = c.SDL_GetClipboardText();
     if (sdl_text == null) return null;
@@ -700,7 +700,7 @@ pub fn sdlGetClipboardText(allocator: *std.mem.Allocator) !?[]const u8 {
     return text;
 }
 
-pub fn sdlSetClipboardText(allocator: *std.mem.Allocator, text: []const u8) !void {
+pub fn sdlSetClipboardText(allocator: std.mem.Allocator, text: []const u8) !void {
     const sdl_text = try allocator.dupeZ(u8, text);
     defer allocator.free(sdl_text);
     if (c.SDL_SetClipboardText(sdl_text) != 0) {
@@ -743,7 +743,7 @@ pub fn main() !void {
         const leaked = gpa.deinit();
         if (leaked) @panic("Memory leak :(");
     }
-    const allocator = &gpa.allocator;
+    const allocator = gpa.allocator();
 
     if (builtin.os.tag == .windows) {
         _ = SetProcessDPIAware();
@@ -888,7 +888,7 @@ fn writeWindowConfig(window: *gui.Window, file_path: []const u8) !void {
     try std.json.stringify(config, .{}, file.writer());
 }
 
-fn loadAndApplyWindowConfig(allocator: *std.mem.Allocator, window: *gui.Window, file_path: []const u8) !void {
+fn loadAndApplyWindowConfig(allocator: std.mem.Allocator, window: *gui.Window, file_path: []const u8) !void {
     const sdl_window = findSdlWindow(window.id) orelse return;
 
     var file = try std.fs.cwd().openFile(file_path, .{});

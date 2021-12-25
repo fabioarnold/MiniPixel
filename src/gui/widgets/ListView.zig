@@ -8,7 +8,7 @@ const Rect = @import("../geometry.zig").Rect;
 const ListView = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 
 vertical_scrollbar: *gui.Scrollbar,
 horizontal_scrollbar: *gui.Scrollbar,
@@ -29,7 +29,7 @@ pub const Model = struct {
     deleteFn: fn (ctx: usize, i: usize) void,
 };
 
-pub fn init(allocator: *Allocator, rect: Rect(f32), model: Model) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), model: Model) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

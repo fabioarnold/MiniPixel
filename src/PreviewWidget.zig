@@ -10,7 +10,7 @@ const Point = @import("gui/geometry.zig").Point;
 const PreviewWidget = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 
 document: *Document,
 translation: Point(f32) = Point(f32).make(0, 0),
@@ -20,7 +20,7 @@ background_image: nvg.Image,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32), document: *Document) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

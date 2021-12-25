@@ -214,7 +214,7 @@ pub const IReconcilableObject = extern struct {
             rgpmkOtherInput: [*]?*IMoniker,
             plOutIndex: ?*i32,
             pstgNewResidues: ?*IStorage,
-            pvReserved: ?*c_void,
+            pvReserved: ?*anyopaque,
         ) callconv(@import("std").os.windows.WINAPI) HRESULT,
         GetProgressFeedbackMaxEstimate: fn(
             self: *const IReconcilableObject,
@@ -225,7 +225,7 @@ pub const IReconcilableObject = extern struct {
     pub fn MethodMixin(comptime T: type) type { return struct {
         pub usingnamespace IUnknown.MethodMixin(T);
         // NOTE: method is namespaced with interface name to avoid conflicts for now
-        pub fn IReconcilableObject_Reconcile(self: *const T, pInitiator: ?*IReconcileInitiator, dwFlags: u32, hwndOwner: ?HWND, hwndProgressFeedback: ?HWND, ulcInput: u32, rgpmkOtherInput: [*]?*IMoniker, plOutIndex: ?*i32, pstgNewResidues: ?*IStorage, pvReserved: ?*c_void) callconv(.Inline) HRESULT {
+        pub fn IReconcilableObject_Reconcile(self: *const T, pInitiator: ?*IReconcileInitiator, dwFlags: u32, hwndOwner: ?HWND, hwndProgressFeedback: ?HWND, ulcInput: u32, rgpmkOtherInput: [*]?*IMoniker, plOutIndex: ?*i32, pstgNewResidues: ?*IStorage, pvReserved: ?*anyopaque) callconv(.Inline) HRESULT {
             return @ptrCast(*const IReconcilableObject.VTable, self.vtable).Reconcile(@ptrCast(*const IReconcilableObject, self), pInitiator, dwFlags, hwndOwner, hwndProgressFeedback, ulcInput, rgpmkOtherInput, plOutIndex, pstgNewResidues, pvReserved);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
@@ -375,8 +375,8 @@ const HKEY = @import("../system/registry.zig").HKEY;
 const HRESULT = @import("../foundation.zig").HRESULT;
 const HWND = @import("../foundation.zig").HWND;
 const IMoniker = @import("../system/com.zig").IMoniker;
-const IOleObject = @import("../system/com.zig").IOleObject;
-const IStorage = @import("../storage/structured_storage.zig").IStorage;
+const IOleObject = @import("../system/ole.zig").IOleObject;
+const IStorage = @import("../system/com/structured_storage.zig").IStorage;
 const IUnknown = @import("../system/com.zig").IUnknown;
 const PWSTR = @import("../foundation.zig").PWSTR;
 

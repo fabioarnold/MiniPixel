@@ -11,7 +11,7 @@ pub fn hasImage() bool {
     return false;
 }
 
-pub fn getImage(allocator: *std.mem.Allocator) !?Image {
+pub fn getImage(allocator: std.mem.Allocator) !?Image {
     const png_format = c.RegisterClipboardFormatA("PNG");
     if (png_format != 0 and c.IsClipboardFormatAvailable(png_format) != 0) {
         if (c.OpenClipboard(null) == 0) return error.OpenClipboardFailed;
@@ -98,7 +98,7 @@ pub fn getImage(allocator: *std.mem.Allocator) !?Image {
     return null;
 }
 
-pub fn setImage(allocator: *std.mem.Allocator, image: Image) !void {
+pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
     const png_format = c.RegisterClipboardFormatA("PNG");
     if (png_format == 0) return error.FormatPngUnsupported;
 

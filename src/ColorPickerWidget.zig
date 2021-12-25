@@ -8,7 +8,7 @@ const Rect = @import("gui/geometry.zig").Rect;
 const ColorPickerWidget = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 spinners: [4]*gui.Spinner(i32) = undefined,
 sliders: [5]*gui.Slider(f32) = undefined,
 
@@ -18,7 +18,7 @@ onChangedFn: ?fn (*ColorPickerWidget) void = null,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32)) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

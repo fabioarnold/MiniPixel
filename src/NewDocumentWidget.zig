@@ -12,7 +12,7 @@ const EditorWidget = @import("EditorWidget.zig");
 const NewDocumentWidget = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 editor_widget: *EditorWidget,
 width_label: *gui.Label,
 width_spinner: *gui.Spinner(i32),
@@ -25,7 +25,7 @@ onSelectedFn: ?fn (*Self) void = null,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, editor_widget: *EditorWidget) !*Self {
+pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, Rect(f32).make(0, 0, 240, 100)),

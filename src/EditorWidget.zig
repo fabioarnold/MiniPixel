@@ -24,7 +24,7 @@ const PreviewWidget = @import("PreviewWidget.zig");
 pub const EditorWidget = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 
 document: *Document,
 
@@ -71,7 +71,7 @@ panel_right: *gui.Panel,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32)) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

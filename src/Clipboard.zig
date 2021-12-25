@@ -8,12 +8,12 @@ usingnamespace switch (@import("builtin").os.tag) {
             return false;
         }
 
-        pub fn getImage(allocator: *std.mem.Allocator) !?Image {
+        pub fn getImage(allocator: std.mem.Allocator) !?Image {
             _ = allocator;
             return null;
         }
 
-        pub fn setImage(allocator: *std.mem.Allocator, image: Image) !void {
+        pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
             _ = allocator;
             _ = image;
         }

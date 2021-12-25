@@ -8,7 +8,7 @@ const Rect = @import("../geometry.zig").Rect;
 const Scrollbar = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 
 orientation: gui.Orientation,
 mouse_offset: f32 = 0,
@@ -28,7 +28,7 @@ const scroll_speed = 5;
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32), orientation: gui.Orientation) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), orientation: gui.Orientation) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

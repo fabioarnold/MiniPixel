@@ -18,6 +18,7 @@ pub const PROFILE_MEMBUFFER = @as(u32, 2);
 pub const PROFILE_READ = @as(u32, 1);
 pub const PROFILE_READWRITE = @as(u32, 2);
 pub const INDEX_DONT_CARE = @as(u32, 0);
+pub const CMM_FROM_PROFILE = @as(u32, 0);
 pub const ENUM_TYPE_VERSION = @as(u32, 768);
 pub const ET_DEVICENAME = @as(u32, 1);
 pub const ET_MEDIATYPE = @as(u32, 2);
@@ -84,10 +85,9 @@ pub const CMS_TARGETOVERFLOW = @as(i32, 536870912);
 pub const DONT_USE_EMBEDDED_WCS_PROFILES = @as(i32, 1);
 pub const WCS_DEFAULT = @as(i32, 0);
 pub const WCS_ICCONLY = @as(i32, 65536);
-pub const COLORADAPTER_PROFILE_NAME_MAX_LENGTH = @as(u32, 80);
 
 //--------------------------------------------------------------------------------
-// Section: Types (51)
+// Section: Types (49)
 //--------------------------------------------------------------------------------
 pub const ICM_COMMAND = enum(u32) {
     ADDPROFILE = 1,
@@ -117,18 +117,6 @@ pub const CS_DELETE_TRANSFORM = COLOR_MATCH_TO_TARGET_ACTION.DELETE_TRANSFORM;
 
 // TODO: this type has a FreeFunc 'DeleteColorSpace', what can Zig do with this information?
 pub const HCOLORSPACE = *opaque{};
-
-pub const CIEXYZ = extern struct {
-    ciexyzX: i32,
-    ciexyzY: i32,
-    ciexyzZ: i32,
-};
-
-pub const CIEXYZTRIPLE = extern struct {
-    ciexyzRed: CIEXYZ,
-    ciexyzGreen: CIEXYZ,
-    ciexyzBlue: CIEXYZ,
-};
 
 pub const LOGCOLORSPACEA = extern struct {
     lcsSignature: u32,
@@ -165,6 +153,21 @@ pub const ICMENUMPROCW = fn(
     param0: ?PWSTR,
     param1: LPARAM,
 ) callconv(@import("std").os.windows.WINAPI) i32;
+
+pub const EMRCREATECOLORSPACE = extern struct {
+    emr: EMR,
+    ihCS: u32,
+    lcs: LOGCOLORSPACEA,
+};
+
+pub const EMRCREATECOLORSPACEW = extern struct {
+    emr: EMR,
+    ihCS: u32,
+    lcs: LOGCOLORSPACEW,
+    dwFlags: u32,
+    cbData: u32,
+    Data: [1]u8,
+};
 
 pub const XYZColorF = extern struct {
     X: f32,
@@ -457,7 +460,7 @@ pub const COLOR = extern union {
     hifi: HiFiCOLOR,
     Anonymous: extern struct {
         reserved1: u32,
-        reserved2: ?*c_void,
+        reserved2: ?*anyopaque,
     },
 };
 
@@ -650,7 +653,7 @@ pub const PROFILEHEADER = extern struct {
 
 pub const PROFILE = extern struct {
     dwType: u32,
-    pProfileData: ?*c_void,
+    pProfileData: ?*anyopaque,
     cbDataSize: u32,
 };
 
@@ -761,40 +764,29 @@ pub const COLORMATCHSETUPA = extern struct {
     lParamApplyCallback: LPARAM,
 };
 
-pub const XYYPoint = extern struct {
-    x: f32,
-    y: f32,
-    Y: f32,
+pub const WCS_DEVICE_VCGT_CAPABILITIES = extern struct {
+    Size: u32,
+    SupportsVcgt: BOOL,
 };
 
-pub const WhitePoint = extern struct {
-    type: i32,
-    Anonymous: extern union {
-        xyY: XYYPoint,
-        CCT: f32,
-    },
+pub const WCS_DEVICE_MHC2_CAPABILITIES = extern struct {
+    Size: u32,
+    SupportsMhc2: BOOL,
+    RegammaLutEntryCount: u32,
+    CscXyzMatrixRows: u32,
+    CscXyzMatrixColumns: u32,
 };
 
-pub const DisplayID = extern struct {
-    targetAdapterID: LUID,
-    sourceInfoID: u32,
+pub const WCS_DEVICE_CAPABILITIES_TYPE = enum(i32) {
+    VideoCardGammaTable = 1,
+    MicrosoftHardwareColorV2 = 2,
 };
-
-pub const DisplayStateID = extern struct {
-    profileID: u32,
-    transformID: u32,
-    whitepointID: u32,
-};
-
-pub const DisplayTransformLut = extern struct {
-    red: [256]u16,
-    green: [256]u16,
-    blue: [256]u16,
-};
+pub const VideoCardGammaTable = WCS_DEVICE_CAPABILITIES_TYPE.VideoCardGammaTable;
+pub const MicrosoftHardwareColorV2 = WCS_DEVICE_CAPABILITIES_TYPE.MicrosoftHardwareColorV2;
 
 
 //--------------------------------------------------------------------------------
-// Section: Functions (131)
+// Section: Functions (121)
 //--------------------------------------------------------------------------------
 // TODO: this type is limited to platform 'windows5.0'
 pub extern "GDI32" fn SetICMMode(
@@ -807,7 +799,7 @@ pub extern "GDI32" fn CheckColorsInGamut(
     hdc: ?HDC,
     lpRGBTriple: [*]RGBTRIPLE,
     // TODO: what to do with BytesParamIndex 3?
-    dlpBuffer: ?*c_void,
+    dlpBuffer: ?*anyopaque,
     nCount: u32,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
@@ -882,13 +874,13 @@ pub extern "GDI32" fn SetICMProfileW(
 // TODO: this type is limited to platform 'windows5.0'
 pub extern "GDI32" fn GetDeviceGammaRamp(
     hdc: ?HDC,
-    lpRamp: ?*c_void,
+    lpRamp: ?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
 // TODO: this type is limited to platform 'windows5.0'
 pub extern "GDI32" fn SetDeviceGammaRamp(
     hdc: ?HDC,
-    lpRamp: ?*c_void,
+    lpRamp: ?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
 // TODO: this type is limited to platform 'windows5.0'
@@ -1004,7 +996,7 @@ pub extern "mscms" fn GetColorProfileElement(
     dwOffset: u32,
     pcbElement: ?*u32,
     // TODO: what to do with BytesParamIndex 3?
-    pElement: ?*c_void,
+    pElement: ?*anyopaque,
     pbReference: ?*BOOL,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
@@ -1118,12 +1110,12 @@ pub extern "mscms" fn DeleteColorTransform(
 
 pub extern "mscms" fn TranslateBitmapBits(
     hColorTransform: isize,
-    pSrcBits: ?*c_void,
+    pSrcBits: ?*anyopaque,
     bmInput: BMFORMAT,
     dwWidth: u32,
     dwHeight: u32,
     dwInputStride: u32,
-    pDestBits: ?*c_void,
+    pDestBits: ?*anyopaque,
     bmOutput: BMFORMAT,
     dwOutputStride: u32,
     pfnCallBack: ?LPBMCALLBACKFN,
@@ -1132,7 +1124,7 @@ pub extern "mscms" fn TranslateBitmapBits(
 
 pub extern "mscms" fn CheckBitmapBits(
     hColorTransform: isize,
-    pSrcBits: ?*c_void,
+    pSrcBits: ?*anyopaque,
     bmInput: BMFORMAT,
     dwWidth: u32,
     dwHeight: u32,
@@ -1389,12 +1381,12 @@ pub extern "mscms" fn WcsTranslateColors(
     cdtInput: COLORDATATYPE,
     cbInput: u32,
     // TODO: what to do with BytesParamIndex 4?
-    pInputData: ?*c_void,
+    pInputData: ?*anyopaque,
     nOutputChannels: u32,
     cdtOutput: COLORDATATYPE,
     cbOutput: u32,
     // TODO: what to do with BytesParamIndex 8?
-    pOutputData: ?*c_void,
+    pOutputData: ?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
 pub extern "mscms" fn WcsCheckColors(
@@ -1404,7 +1396,7 @@ pub extern "mscms" fn WcsCheckColors(
     cdtInput: COLORDATATYPE,
     cbInput: u32,
     // TODO: what to do with BytesParamIndex 4?
-    pInputData: ?*c_void,
+    pInputData: ?*anyopaque,
     paResult: [*:0]u8,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
@@ -1418,7 +1410,7 @@ pub extern "ICM32" fn CMCheckColors(
 
 pub extern "ICM32" fn CMCheckRGBs(
     hcmTransform: isize,
-    lpSrcBits: ?*c_void,
+    lpSrcBits: ?*anyopaque,
     bmInput: BMFORMAT,
     dwWidth: u32,
     dwHeight: u32,
@@ -1461,25 +1453,25 @@ pub extern "ICM32" fn CMCreateMultiProfileTransform(
 
 pub extern "ICM32" fn CMCreateProfileW(
     lpColorSpace: ?*LOGCOLORSPACEW,
-    lpProfileData: ?*?*c_void,
+    lpProfileData: ?*?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
 pub extern "ICM32" fn CMCreateTransform(
     lpColorSpace: ?*LOGCOLORSPACEA,
-    lpDevCharacter: ?*c_void,
-    lpTargetDevCharacter: ?*c_void,
+    lpDevCharacter: ?*anyopaque,
+    lpTargetDevCharacter: ?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) isize;
 
 pub extern "ICM32" fn CMCreateTransformW(
     lpColorSpace: ?*LOGCOLORSPACEW,
-    lpDevCharacter: ?*c_void,
-    lpTargetDevCharacter: ?*c_void,
+    lpDevCharacter: ?*anyopaque,
+    lpTargetDevCharacter: ?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) isize;
 
 pub extern "ICM32" fn CMCreateTransformExt(
     lpColorSpace: ?*LOGCOLORSPACEA,
-    lpDevCharacter: ?*c_void,
-    lpTargetDevCharacter: ?*c_void,
+    lpDevCharacter: ?*anyopaque,
+    lpTargetDevCharacter: ?*anyopaque,
     dwFlags: u32,
 ) callconv(@import("std").os.windows.WINAPI) isize;
 
@@ -1493,7 +1485,7 @@ pub extern "ICM32" fn CMCheckColorsInGamut(
 
 pub extern "ICM32" fn CMCreateProfile(
     lpColorSpace: ?*LOGCOLORSPACEA,
-    lpProfileData: ?*?*c_void,
+    lpProfileData: ?*?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
 pub extern "ICM32" fn CMTranslateRGB(
@@ -1505,20 +1497,20 @@ pub extern "ICM32" fn CMTranslateRGB(
 
 pub extern "ICM32" fn CMTranslateRGBs(
     hcmTransform: isize,
-    lpSrcBits: ?*c_void,
+    lpSrcBits: ?*anyopaque,
     bmInput: BMFORMAT,
     dwWidth: u32,
     dwHeight: u32,
     dwStride: u32,
-    lpDestBits: ?*c_void,
+    lpDestBits: ?*anyopaque,
     bmOutput: BMFORMAT,
     dwTranslateDirection: u32,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
 
 pub extern "ICM32" fn CMCreateTransformExtW(
     lpColorSpace: ?*LOGCOLORSPACEW,
-    lpDevCharacter: ?*c_void,
-    lpTargetDevCharacter: ?*c_void,
+    lpDevCharacter: ?*anyopaque,
+    lpTargetDevCharacter: ?*anyopaque,
     dwFlags: u32,
 ) callconv(@import("std").os.windows.WINAPI) isize;
 
@@ -1551,12 +1543,12 @@ pub extern "ICM32" fn CMTranslateColors(
 
 pub extern "ICM32" fn CMTranslateRGBsExt(
     hcmTransform: isize,
-    lpSrcBits: ?*c_void,
+    lpSrcBits: ?*anyopaque,
     bmInput: BMFORMAT,
     dwWidth: u32,
     dwHeight: u32,
     dwInputStride: u32,
-    lpDestBits: ?*c_void,
+    lpDestBits: ?*anyopaque,
     bmOutput: BMFORMAT,
     dwOutputStride: u32,
     lpfnCallback: ?LPBMCALLBACKFN,
@@ -1595,63 +1587,6 @@ pub extern "mscms" fn WcsGetCalibrationManagementState(
 pub extern "mscms" fn WcsSetCalibrationManagementState(
     bIsEnabled: BOOL,
 ) callconv(@import("std").os.windows.WINAPI) BOOL;
-
-pub extern "mscms" fn ColorAdapterGetSystemModifyWhitePointCaps(
-    whitePointAdjCapable: ?*BOOL,
-    isColorOverrideActive: ?*BOOL,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterUpdateDisplayGamma(
-    displayID: DisplayID,
-    displayTransform: ?*DisplayTransformLut,
-    internal: BOOL,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterUpdateDeviceProfile(
-    displayID: DisplayID,
-    profName: ?PWSTR,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterGetDisplayCurrentStateID(
-    displayID: DisplayID,
-    displayStateID: ?*DisplayStateID,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterGetDisplayTransformData(
-    displayID: DisplayID,
-    displayTransformLut: ?*DisplayTransformLut,
-    transformID: ?*u32,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterGetDisplayTargetWhitePoint(
-    displayID: DisplayID,
-    wtpt: ?*WhitePoint,
-    transitionTime: ?*u32,
-    whitepointID: ?*u32,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterGetDisplayProfile(
-    displayID: DisplayID,
-    displayProfile: *[80]u16,
-    profileID: ?*u32,
-    bUseAccurate: ?*BOOL,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterGetCurrentProfileCalibration(
-    displayID: DisplayID,
-    maxCalibrationBlobSize: u32,
-    blobSize: ?*u32,
-    // TODO: what to do with BytesParamIndex 2?
-    calibrationBlob: ?*u8,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterRegisterOEMColorService(
-    registration: ?*?HANDLE,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
-
-pub extern "mscms" fn ColorAdapterUnregisterOEMColorService(
-    registration: ?HANDLE,
-) callconv(@import("std").os.windows.WINAPI) HRESULT;
 
 pub extern "mscms" fn ColorProfileAddDisplayAssociation(
     scope: WCS_PROFILE_MANAGEMENT_SCOPE,
@@ -1821,21 +1756,23 @@ pub usingnamespace switch (@import("../zig.zig").unicode_mode) {
     },
 };
 //--------------------------------------------------------------------------------
-// Section: Imports (16)
+// Section: Imports (18)
 //--------------------------------------------------------------------------------
 const Guid = @import("../zig.zig").Guid;
 const BOOL = @import("../foundation.zig").BOOL;
 const BSTR = @import("../foundation.zig").BSTR;
-const CHAR = @import("../system/system_services.zig").CHAR;
+const CHAR = @import("../foundation.zig").CHAR;
+const CIEXYZ = @import("../graphics/gdi.zig").CIEXYZ;
+const CIEXYZTRIPLE = @import("../graphics/gdi.zig").CIEXYZTRIPLE;
 const DLGPROC = @import("../ui/windows_and_messaging.zig").DLGPROC;
-const HANDLE = @import("../foundation.zig").HANDLE;
+const EMR = @import("../graphics/gdi.zig").EMR;
 const HDC = @import("../graphics/gdi.zig").HDC;
 const HPALETTE = @import("../graphics/gdi.zig").HPALETTE;
 const HRESULT = @import("../foundation.zig").HRESULT;
 const HWND = @import("../foundation.zig").HWND;
 const IUnknown = @import("../system/com.zig").IUnknown;
 const LPARAM = @import("../foundation.zig").LPARAM;
-const LUID = @import("../system/system_services.zig").LUID;
+const LUID = @import("../foundation.zig").LUID;
 const PSTR = @import("../foundation.zig").PSTR;
 const PWSTR = @import("../foundation.zig").PWSTR;
 const RGBTRIPLE = @import("../graphics/gdi.zig").RGBTRIPLE;

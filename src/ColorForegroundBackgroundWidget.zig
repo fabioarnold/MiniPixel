@@ -14,7 +14,7 @@ pub const ColorType = enum {
 };
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 
 active: ColorType = .foreground,
 colors: [2][4]u8 = [_][4]u8{
@@ -31,7 +31,7 @@ const pad = 5;
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32)) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     const rect_size = 32;
     const rect_offset = 14;
 

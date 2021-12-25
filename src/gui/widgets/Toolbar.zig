@@ -9,13 +9,13 @@ const Rect = @import("../geometry.zig").Rect;
 const Self = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 
 has_grip: bool = false,
 
 separators: ArrayList(*gui.Widget),
 
-pub fn init(allocator: *Allocator, rect: Rect(f32)) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

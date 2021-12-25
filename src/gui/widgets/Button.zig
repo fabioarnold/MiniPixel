@@ -15,7 +15,7 @@ pub const ButtonStyle = enum(u8) {
 };
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 text: [:0]const u8,
 font_size: f32 = 9,
 iconFn: ?fn () void = null,
@@ -37,7 +37,7 @@ onLeaveFn: ?fn (*Self) void = null,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32), text: [:0]const u8) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),

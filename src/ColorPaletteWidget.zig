@@ -8,7 +8,7 @@ const Rect = @import("gui/geometry.zig").Rect;
 const ColorPaletteWidget = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 colors: [256][3]u8 = [_][3]u8{[_]u8{ 0, 0, 0 }} ** 256,
 selected: ?u8 = null,
 
@@ -16,7 +16,7 @@ onSelectionChangedFn: ?fn (*Self) void = null,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, rect: Rect(f32)) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),
@@ -52,7 +52,7 @@ pub fn clearSelection(self: *Self) void {
     self.setSelection(null);
 }
 
-pub fn loadPal(self: *Self, allocator: *Allocator, filename: []const u8) !void {
+pub fn loadPal(self: *Self, allocator: Allocator, filename: []const u8) !void {
     var file = try std.fs.cwd().openFile(filename, .{});
     defer file.close();
 

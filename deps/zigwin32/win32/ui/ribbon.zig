@@ -208,7 +208,7 @@ pub const IUIFramework = extern struct {
             self: *const IUIFramework,
             viewId: u32,
             riid: ?*const Guid,
-            ppv: ?*?*c_void,
+            ppv: ?*?*anyopaque,
         ) callconv(@import("std").os.windows.WINAPI) HRESULT,
         GetUICommandProperty: fn(
             self: *const IUIFramework,
@@ -252,7 +252,7 @@ pub const IUIFramework = extern struct {
             return @ptrCast(*const IUIFramework.VTable, self.vtable).LoadUI(@ptrCast(*const IUIFramework, self), instance, resourceName);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
-        pub fn IUIFramework_GetView(self: *const T, viewId: u32, riid: ?*const Guid, ppv: ?*?*c_void) callconv(.Inline) HRESULT {
+        pub fn IUIFramework_GetView(self: *const T, viewId: u32, riid: ?*const Guid, ppv: ?*?*anyopaque) callconv(.Inline) HRESULT {
             return @ptrCast(*const IUIFramework.VTable, self.vtable).GetView(@ptrCast(*const IUIFramework, self), viewId, riid, ppv);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
@@ -688,10 +688,10 @@ const HBITMAP = @import("../graphics/gdi.zig").HBITMAP;
 const HINSTANCE = @import("../foundation.zig").HINSTANCE;
 const HRESULT = @import("../foundation.zig").HRESULT;
 const HWND = @import("../foundation.zig").HWND;
-const IStream = @import("../storage/structured_storage.zig").IStream;
+const IStream = @import("../system/com.zig").IStream;
 const IUnknown = @import("../system/com.zig").IUnknown;
-const PROPERTYKEY = @import("../system/properties_system.zig").PROPERTYKEY;
-const PROPVARIANT = @import("../storage/structured_storage.zig").PROPVARIANT;
+const PROPERTYKEY = @import("../ui/shell/properties_system.zig").PROPERTYKEY;
+const PROPVARIANT = @import("../system/com/structured_storage.zig").PROPVARIANT;
 const PWSTR = @import("../foundation.zig").PWSTR;
 
 test {

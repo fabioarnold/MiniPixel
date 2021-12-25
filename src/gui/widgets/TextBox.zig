@@ -8,7 +8,7 @@ const Point = @import("../geometry.zig").Point;
 const TextBox = @This();
 
 widget: gui.Widget,
-allocator: *std.mem.Allocator,
+allocator: std.mem.Allocator,
 text: std.ArrayList(u8),
 text_alignment: gui.TextAlignment = .left,
 background_color: nvg.Color,
@@ -33,7 +33,7 @@ blink_timer: gui.Timer,
 
 const Self = @This();
 
-pub fn init(allocator: *std.mem.Allocator, rect: Rect(f32)) !*Self {
+pub fn init(allocator: std.mem.Allocator, rect: Rect(f32)) !*Self {
     var self = try allocator.create(Self);
     const widget = gui.Widget.init(allocator, rect);
     self.* = Self{

@@ -9,13 +9,13 @@ const Rect = geometry.Rect;
 const ErrorMessageWidget = @This();
 
 widget: gui.Widget,
-allocator: *Allocator,
+allocator: Allocator,
 message_label: *gui.Label,
 ok_button: *gui.Button,
 
 const Self = @This();
 
-pub fn init(allocator: *Allocator, message: []const u8) !*Self {
+pub fn init(allocator: Allocator, message: []const u8) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, Rect(f32).make(0, 0, 240, 100)),

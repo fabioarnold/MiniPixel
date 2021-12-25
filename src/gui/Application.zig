@@ -16,22 +16,22 @@ pub const SystemCallbacks = struct {
     startTimer: ?fn (*gui.Timer, u32) u32 = null,
     cancelTimer: ?fn (u32) void = null,
     showCursor: ?fn (bool) void = null,
-    getClipboardText: ?fn (*std.mem.Allocator) anyerror!?[]const u8 = null,
-    setClipboardText: ?fn (*std.mem.Allocator, []const u8) anyerror!void = null,
+    getClipboardText: ?fn (std.mem.Allocator) anyerror!?[]const u8 = null,
+    setClipboardText: ?fn (std.mem.Allocator, []const u8) anyerror!void = null,
 };
 
 // TODO: get rid of globals (Timer might need a reference to Application)
 var startTimerFn: ?fn (*gui.Timer, u32) u32 = null;
 var cancelTimerFn : ?fn (u32) void = null;
 
-allocator: *std.mem.Allocator,
+allocator: std.mem.Allocator,
 system_callbacks: SystemCallbacks,
 windows: std.ArrayList(*gui.Window),
 //main_window: ?*gui.Window = null,
 
 const Self = @This();
 
-pub fn init(allocator: *std.mem.Allocator, system_callbacks: SystemCallbacks) !*Self {
+pub fn init(allocator: std.mem.Allocator, system_callbacks: SystemCallbacks) !*Self {
     var self = try allocator.create(Application);
     self.* = Self{
         .allocator = allocator,
@@ -98,13 +98,13 @@ pub fn showCursor(self: Self, show: bool) void {
     }
 }
 
-pub fn setClipboardText(self: Self, allocator: *std.mem.Allocator, text: []const u8) !void {
+pub fn setClipboardText(self: Self, allocator: std.mem.Allocator, text: []const u8) !void {
     if (self.system_callbacks.setClipboardText) |setClipboardTextFn| {
         try setClipboardTextFn(allocator, text);
     }
 }
 
-pub fn getClipboardText(self: Self, allocator: *std.mem.Allocator) !?[]const u8 {
+pub fn getClipboardText(self: Self, allocator: std.mem.Allocator) !?[]const u8 {
     if (self.system_callbacks.getClipboardText) |getClipboardTextFn| {
         return try getClipboardTextFn(allocator);
     }

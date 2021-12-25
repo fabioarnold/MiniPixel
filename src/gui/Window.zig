@@ -7,7 +7,7 @@ const Point = @import("geometry.zig").Point;
 
 const Window = @This();
 
-allocator: *std.mem.Allocator,
+allocator: std.mem.Allocator,
 application: *gui.Application,
 
 id: u32,
@@ -32,7 +32,7 @@ onCloseRequestFn: ?fn (*gui.Window) bool = null, // true: yes, close window. fal
 
 const Self = @This();
 
-pub fn init(allocator: *std.mem.Allocator, application: *gui.Application) !*Self {
+pub fn init(allocator: std.mem.Allocator, application: *gui.Application) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .allocator = allocator,

@@ -90,7 +90,7 @@ pub const SWDeviceLifetimeMax = SW_DEVICE_LIFETIME.Max;
 pub const SW_DEVICE_CREATE_CALLBACK = fn(
     hSwDevice: ?HSWDEVICE,
     CreateResult: HRESULT,
-    pContext: ?*c_void,
+    pContext: ?*anyopaque,
     pszDeviceInstanceId: ?[*:0]const u16,
 ) callconv(@import("std").os.windows.WINAPI) void;
 
@@ -1302,7 +1302,7 @@ pub extern "CFGMGR32" fn SwDeviceCreate(
     cPropertyCount: u32,
     pProperties: ?[*]const DEVPROPERTY,
     pCallback: ?SW_DEVICE_CREATE_CALLBACK,
-    pContext: ?*c_void,
+    pContext: ?*anyopaque,
     phSwDevice: ?*isize,
 ) callconv(@import("std").os.windows.WINAPI) HRESULT;
 
@@ -1343,7 +1343,7 @@ pub extern "CFGMGR32" fn SwDeviceInterfaceRegister(
 
 // TODO: this type is limited to platform 'windows8.0'
 pub extern "CFGMGR32" fn SwMemFree(
-    pMem: ?*c_void,
+    pMem: ?*anyopaque,
 ) callconv(@import("std").os.windows.WINAPI) void;
 
 // TODO: this type is limited to platform 'windows8.0'
@@ -1381,13 +1381,13 @@ pub usingnamespace switch (@import("../../zig.zig").unicode_mode) {
 const Guid = @import("../../zig.zig").Guid;
 const BOOL = @import("../../foundation.zig").BOOL;
 const BSTR = @import("../../foundation.zig").BSTR;
-const DEVPROPERTY = @import("../../system/system_services.zig").DEVPROPERTY;
+const DEVPROPERTY = @import("../../devices/properties.zig").DEVPROPERTY;
 const HRESULT = @import("../../foundation.zig").HRESULT;
-const IDispatch = @import("../../system/ole_automation.zig").IDispatch;
+const IDispatch = @import("../../system/com.zig").IDispatch;
 const IUnknown = @import("../../system/com.zig").IUnknown;
 const PWSTR = @import("../../foundation.zig").PWSTR;
 const SECURITY_DESCRIPTOR = @import("../../security.zig").SECURITY_DESCRIPTOR;
-const VARIANT = @import("../../system/ole_automation.zig").VARIANT;
+const VARIANT = @import("../../system/com.zig").VARIANT;
 
 test {
     // The following '_ = <FuncPtrType>' lines are a workaround for https://github.com/ziglang/zig/issues/4476

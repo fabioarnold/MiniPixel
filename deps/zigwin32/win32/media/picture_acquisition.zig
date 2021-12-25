@@ -694,7 +694,7 @@ pub const IPhotoAcquireSource = extern struct {
         BindToObject: fn(
             self: *const IPhotoAcquireSource,
             riid: ?*const Guid,
-            ppv: ?*?*c_void,
+            ppv: ?*?*anyopaque,
         ) callconv(@import("std").os.windows.WINAPI) HRESULT,
     };
     vtable: *const VTable,
@@ -729,7 +729,7 @@ pub const IPhotoAcquireSource = extern struct {
             return @ptrCast(*const IPhotoAcquireSource.VTable, self.vtable).GetDeviceId(@ptrCast(*const IPhotoAcquireSource, self), pbstrDeviceId);
         }
         // NOTE: method is namespaced with interface name to avoid conflicts for now
-        pub fn IPhotoAcquireSource_BindToObject(self: *const T, riid: ?*const Guid, ppv: ?*?*c_void) callconv(.Inline) HRESULT {
+        pub fn IPhotoAcquireSource_BindToObject(self: *const T, riid: ?*const Guid, ppv: ?*?*anyopaque) callconv(.Inline) HRESULT {
             return @ptrCast(*const IPhotoAcquireSource.VTable, self.vtable).BindToObject(@ptrCast(*const IPhotoAcquireSource, self), riid, ppv);
         }
     };}
@@ -1085,11 +1085,11 @@ const HICON = @import("../ui/windows_and_messaging.zig").HICON;
 const HRESULT = @import("../foundation.zig").HRESULT;
 const HWND = @import("../foundation.zig").HWND;
 const IEnumString = @import("../system/com.zig").IEnumString;
-const IPropertyStore = @import("../system/properties_system.zig").IPropertyStore;
-const IStream = @import("../storage/structured_storage.zig").IStream;
+const IPropertyStore = @import("../ui/shell/properties_system.zig").IPropertyStore;
+const IStream = @import("../system/com.zig").IStream;
 const IUnknown = @import("../system/com.zig").IUnknown;
-const PROPERTYKEY = @import("../system/properties_system.zig").PROPERTYKEY;
-const PROPVARIANT = @import("../storage/structured_storage.zig").PROPVARIANT;
+const PROPERTYKEY = @import("../ui/shell/properties_system.zig").PROPERTYKEY;
+const PROPVARIANT = @import("../system/com/structured_storage.zig").PROPVARIANT;
 const PWSTR = @import("../foundation.zig").PWSTR;
 const SIZE = @import("../foundation.zig").SIZE;
 
