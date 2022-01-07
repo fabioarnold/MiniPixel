@@ -1,0 +1,15 @@
+{
+    "name": "minipixel",
+    "version-string": "0.1.0",
+    "maintainers": [
+        "Fabio Arnold <fabio@fabioarnold.de>"
+    ],
+    "description": "A tiny pixel art editor",
+    "homepage": "https://fabioarnold.itch.io/mini-pixel",
+    "license": "MIT",
+    "supports": "windows",
+    "dependencies": [
+        "libpng",
+        "sdl2"
+    ]
+}

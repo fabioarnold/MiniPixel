@@ -61,7 +61,7 @@ pub fn build(b: *Builder) !void {
     const nfd_lib = try @import("deps/nfd-zig/build.zig").makeLib(b, mode, target, "deps/nfd-zig/");
     exe.linkLibrary(nfd_lib);
     exe.linkSystemLibrary("SDL2");
-    exe.linkSystemLibrary("libpng16");
+    exe.linkSystemLibraryName("libpng16"); // Workaround for CI: Zig detects pkg-config and resolves -lpng16 which doesn't exist
     if (exe.target.isDarwin()) {
         exe.linkFramework("OpenGL");
     } else if (exe.target.isWindows()) {
@@ -77,19 +77,6 @@ pub fn build(b: *Builder) !void {
     const run_cmd = exe.run();
     run_cmd.step.dependOn(b.getInstallStep());
 
-    const run_step = b.step("run", "Run VectorZig");
+    const run_step = b.step("run", "Run MiniPixel");
     run_step.dependOn(&run_cmd.step);
-
-    // if (exe.target.isWindows()) {
-    //     const sdk_bin_dir = "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.18362.0\\x64\\";
-    //     const mt_exe = sdk_bin_dir ++ "mt.exe";
-    //     //const rc_exe = sdk_bin_dir ++ "rc.exe";
-    //     //b.addSystemCommand(&[_][]const u8{ rc_exe, "/fo", "vector_ico.o", "vector.rc" });
-    //     const outputresource = try std.mem.join(b.allocator, "", &.{ "-outputresource:", "zig-cache\\bin\\", exe.out_filename, ";1" });
-    //     const manifest_cmd = b.addSystemCommand(&.{ mt_exe, "-manifest", "app.manifest", outputresource });
-    //     manifest_cmd.step.dependOn(b.getInstallStep());
-    //     const manifest_step = b.step("manifest", "Embed manifest");
-    //     manifest_step.dependOn(&manifest_cmd.step);
-    //     run_cmd.step.dependOn(&manifest_cmd.step);
-    // }
 }
