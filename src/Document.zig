@@ -649,7 +649,7 @@ pub fn clearPreview(self: *Self) void {
         .line => |line| {
             copyLine(self.preview_bitmap, self.bitmap, self.width, self.height, line.x0, line.y0, line.x1, line.y1);
         },
-        else => {},
+        else => std.mem.copy(u8, self.preview_bitmap, self.bitmap),
     }
     self.last_preview = .none;
     self.dirty = true;
