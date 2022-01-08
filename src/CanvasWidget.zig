@@ -877,10 +877,11 @@ fn updateScrollbars(self: *Self) void {
     const client_rect = self.getClientRect();
     const document_w = self.scale * @intToFloat(f32, self.document.width);
     const document_h = self.scale * @intToFloat(f32, self.document.height);
+    const translation = self.translation;
     self.horizontal_scrollbar.setMaxValue(document_w);
-    self.horizontal_scrollbar.setValue(0.5 * client_rect.w - self.translation.x);
+    self.horizontal_scrollbar.setValue(0.5 * client_rect.w - translation.x);
     self.vertical_scrollbar.setMaxValue(document_h);
-    self.vertical_scrollbar.setValue(0.5 * client_rect.h - self.translation.y);
+    self.vertical_scrollbar.setValue(0.5 * client_rect.h - translation.y);
 }
 
 pub fn centerDocument(self: *Self) void {
