@@ -1,3 +1,6 @@
 [submodule "deps/nfd-zig"]
 	path = deps/nfd-zig
 	url = https://github.com/fabioarnold/nfd-zig
+[submodule "deps/zigwin32"]
+	path = deps/zigwin32
+	url = https://github.com/marlersoft/zigwin32
