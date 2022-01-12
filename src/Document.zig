@@ -13,6 +13,8 @@ const Recti = Rect(i32);
 
 const Image = @import("Image.zig");
 const Clipboard = @import("Clipboard.zig");
+const HistoryBuffer = @import("history.zig").Buffer;
+const HistorySnapshot = @import("history.zig").Snapshot;
 
 const Document = @This();
 
@@ -20,143 +22,6 @@ pub const Selection = struct {
     rect: Recti,
     bitmap: []u8,
     texture: nvg.Image,
-};
-
-const UndoStep = union(enum) {
-    document: struct {
-        width: u32,
-        height: u32,
-        bitmap: []u8,
-    },
-
-    fn make(allocator: Allocator, document: *Document) !UndoStep {
-        return UndoStep{ .document = .{
-            .width = document.width,
-            .height = document.height,
-            .bitmap = try allocator.dupe(u8, document.bitmap),
-        } };
-    }
-
-    fn deinit(self: UndoStep, allocator: Allocator) void {
-        switch (self) {
-            .document => |d| allocator.free(d.bitmap),
-        }
-    }
-
-    fn hasChanges(self: UndoStep, document: *Document) bool {
-        return switch (self) {
-            .document => |d| d.width != document.width or
-                d.width != document.width or
-                !std.mem.eql(u8, d.bitmap, document.bitmap),
-        };
-    }
-
-    fn undo(self: UndoStep, allocator: Allocator, document: *Document) !void {
-        switch (self) {
-            .document => |d| {
-                if (document.width != d.width or document.height != d.height) {
-                    document.bitmap = try allocator.realloc(document.bitmap, d.bitmap.len);
-                    document.preview_bitmap = try allocator.realloc(document.preview_bitmap, d.bitmap.len);
-
-                    // recreate texture
-                    nvg.deleteImage(document.texture);
-                    document.texture = nvg.createImageRgba(d.width, d.height, .{ .nearest = true }, d.bitmap);
-                }
-                std.mem.copy(u8, document.bitmap, d.bitmap);
-                document.width = d.width;
-                document.height = d.height;
-            },
-        }
-    }
-
-    fn redo(self: UndoStep, allocator: Allocator, document: *Document) !void {
-        try self.undo(allocator, document);
-    }
-};
-
-const UndoSystem = struct {
-    allocator: Allocator,
-    stack: ArrayList(UndoStep),
-    index: usize = 0,
-
-    undo_listener_address: usize = 0, // TODO: this is pretty hacky
-    onUndoChangedFn: ?fn (*Document) void = null,
-
-    fn init(allocator: Allocator) !*UndoSystem {
-        var self = try allocator.create(UndoSystem);
-        self.* = UndoSystem{
-            .allocator = allocator,
-            .stack = ArrayList(UndoStep).init(allocator),
-        };
-        return self;
-    }
-
-    fn deinit(self: *UndoSystem) void {
-        for (self.stack.items) |step| {
-            step.deinit(self.allocator);
-        }
-        self.stack.deinit();
-        self.allocator.destroy(self);
-    }
-
-    fn clearAndFreeStack(self: *UndoSystem) void {
-        for (self.stack.items) |step| {
-            step.deinit(self.allocator);
-        }
-        self.stack.shrinkRetainingCapacity(0);
-        self.index = 0;
-    }
-
-    fn reset(self: *UndoSystem, document: *Document) !void {
-        self.clearAndFreeStack();
-        try self.stack.append(try UndoStep.make(self.allocator, document));
-        self.notifyChanged(document);
-    }
-
-    fn notifyChanged(self: UndoSystem, document: *Document) void {
-        if (self.onUndoChangedFn) |onUndoChanged| onUndoChanged(document);
-    }
-
-    fn canUndo(self: UndoSystem) bool {
-        return self.index > 0;
-    }
-
-    fn undo(self: *UndoSystem, allocator: Allocator, document: *Document) !void {
-        if (!self.canUndo()) return;
-        self.index -= 1;
-        const step = self.stack.items[self.index];
-        try step.undo(allocator, document);
-        document.clearPreview();
-        self.notifyChanged(document);
-    }
-
-    fn canRedo(self: UndoSystem) bool {
-        return self.index + 1 < self.stack.items.len;
-    }
-
-    fn redo(self: *UndoSystem, allocator: Allocator, document: *Document) !void {
-        if (!self.canRedo()) return;
-        self.index += 1;
-        const step = self.stack.items[self.index];
-        try step.redo(allocator, document);
-        document.clearPreview();
-        self.notifyChanged(document);
-    }
-
-    fn pushFrame(self: *UndoSystem, document: *Document) !void { // TODO: handle error cases
-        // do comparison
-        const top = self.stack.items[self.index];
-        if (!top.hasChanges(document)) return;
-
-        // create new step
-        self.index += 1;
-        for (self.stack.items[self.index..self.stack.items.len]) |step| {
-            step.deinit(self.allocator);
-        }
-        self.stack.shrinkRetainingCapacity(self.index);
-        try self.stack.append(try UndoStep.make(self.allocator, document));
-        self.notifyChanged(document);
-    }
 };
 
 const PrimitiveTag = enum {
@@ -193,7 +58,7 @@ dirty: bool = false, // bitmap needs to be uploaded to gpu on next draw call
 selection: ?Selection = null,
 copy_location: ?Pointi = null, // where the source was copied from
 
-undo_system: *UndoSystem,
+history: *HistoryBuffer,
 foreground_color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
 
@@ -206,7 +71,7 @@ pub fn init(allocator: Allocator) !*Self {
         .texture = undefined,
         .bitmap = undefined,
         .preview_bitmap = undefined,
-        .undo_system = try UndoSystem.init(allocator),
+        .history = try HistoryBuffer.init(allocator),
     };
 
     self.bitmap = try self.allocator.alloc(u8, 4 * self.width * self.height);
@@ -217,13 +82,13 @@ pub fn init(allocator: Allocator) !*Self {
     self.preview_bitmap = try self.allocator.alloc(u8, 4 * self.width * self.height);
     std.mem.copy(u8, self.preview_bitmap, self.bitmap);
     self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
-    try self.undo_system.reset(self);
+    try self.history.reset(self);
 
     return self;
 }
 
 pub fn deinit(self: *Self) void {
-    self.undo_system.deinit();
+    self.history.deinit();
     self.allocator.free(self.bitmap);
     self.allocator.free(self.preview_bitmap);
     nvg.deleteImage(self.texture);
@@ -248,7 +113,7 @@ pub fn createNew(self: *Self, width: u32, height: u32) !void {
     self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
 
     self.freeSelection();
-    try self.undo_system.reset(self);
+    try self.history.reset(self);
 }
 
 pub fn load(self: *Self, file_path: []const u8) !void {
@@ -266,7 +131,7 @@ pub fn load(self: *Self, file_path: []const u8) !void {
     self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
 
     self.freeSelection();
-    try self.undo_system.reset(self);
+    try self.history.reset(self);
 }
 
 pub fn save(self: *Self, file_path: []const u8) !void {
@@ -281,20 +146,35 @@ pub fn save(self: *Self, file_path: []const u8) !void {
     //if (c.stbi_write_png(file_path.ptr, @intCast(c_int, self.width), @intCast(c_int, self.height), 4, self.bitmap.ptr, 0) == 0) return error.Fail;
 }
 
+pub fn restoreFromSnapshot(self: *Self, allocator: Allocator, snapshot: HistorySnapshot) !void {
+    if (self.width != snapshot.width or self.height != snapshot.height) {
+        self.bitmap = try allocator.realloc(self.bitmap, snapshot.bitmap.len);
+        self.preview_bitmap = try allocator.realloc(self.preview_bitmap, snapshot.bitmap.len);
+
+        // recreate texture
+        nvg.deleteImage(self.texture);
+        self.texture = nvg.createImageRgba(snapshot.width, snapshot.height, .{ .nearest = true }, snapshot.bitmap);
+    }
+    std.mem.copy(u8, self.bitmap, snapshot.bitmap);
+    self.width = snapshot.width;
+    self.height = snapshot.height;
+    self.clearPreview();
+}
+
 pub fn canUndo(self: Self) bool {
-    return self.undo_system.canUndo();
+    return self.history.canUndo();
 }
 
 pub fn undo(self: *Self) !void {
-    try self.undo_system.undo(self.allocator, self);
+    try self.history.undo(self.allocator, self);
 }
 
 pub fn canRedo(self: Self) bool {
-    return self.undo_system.canRedo();
+    return self.history.canRedo();
 }
 
 pub fn redo(self: *Self) !void {
-    try self.undo_system.redo(self.allocator, self);
+    try self.history.redo(self.allocator, self);
 }
 
 pub fn cut(self: *Self) !void {
@@ -404,7 +284,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
     self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
 
     // TODO: undo stuff handle new dimensions
-    try self.undo_system.pushFrame(self);
+    try self.history.pushFrame(self);
 }
 
 fn mul8(a: u8, b: u8) u8 {
@@ -468,7 +348,7 @@ pub fn clearSelection(self: *Self) !void {
 
         self.freeSelection();
 
-        try self.undo_system.pushFrame(self);
+        try self.history.pushFrame(self);
     }
 }
 
@@ -676,7 +556,7 @@ pub fn fill(self: *Self, color: [4]u8) !void {
             }
         }
         self.clearPreview();
-        try self.undo_system.pushFrame(self);
+        try self.history.pushFrame(self);
     }
 }
 
@@ -713,7 +593,7 @@ pub fn mirrorHorizontally(self: *Self) !void {
             }
         }
         self.clearPreview();
-        try self.undo_system.pushFrame(self);
+        try self.history.pushFrame(self);
     }
 }
 
@@ -748,7 +628,7 @@ pub fn mirrorVertically(self: *Self) !void {
         nvg.updateImage(selection.texture, selection.bitmap);
     } else {
         self.clearPreview();
-        try self.undo_system.pushFrame(self);
+        try self.history.pushFrame(self);
     }
 }
 
@@ -787,7 +667,7 @@ pub fn rotateCw(self: *Self) !void {
     } else {
         std.mem.swap(u32, &self.width, &self.height);
         self.clearPreview();
-        try self.undo_system.pushFrame(self);
+        try self.history.pushFrame(self);
     }
 }
 
@@ -826,7 +706,7 @@ pub fn rotateCcw(self: *Self) !void {
     } else {
         std.mem.swap(u32, &self.width, &self.height);
         self.clearPreview();
-        try self.undo_system.pushFrame(self);
+        try self.history.pushFrame(self);
     }
 }
 
@@ -859,7 +739,7 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
         }
     }
     self.clearPreview();
-    try self.undo_system.pushFrame(self);
+    try self.history.pushFrame(self);
 }
 
 pub fn beginStroke(self: *Self, x: i32, y: i32) void {
@@ -876,7 +756,7 @@ pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
 }
 
 pub fn endStroke(self: *Self) !void {
-    try self.undo_system.pushFrame(self);
+    try self.history.pushFrame(self);
 }
 
 pub fn pickColor(self: *Self, x: i32, y: i32) ?[4]u8 {

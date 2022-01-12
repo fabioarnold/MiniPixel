@@ -213,10 +213,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         }
     }.changed;
 
-    self.document.undo_system.undo_listener_address = @ptrToInt(self);
-    self.document.undo_system.onUndoChangedFn = struct {
+    self.document.history.listener_address = @ptrToInt(self);
+    self.document.history.onUndoChangedFn = struct {
         fn undoChanged(document: *Document) void {
-            var editor = @intToPtr(*EditorWidget, document.undo_system.undo_listener_address);
+            var editor = @intToPtr(*EditorWidget, document.history.listener_address);
             editor.undo_button.enabled = document.canUndo();
             editor.undo_button.iconFn = if (editor.undo_button.enabled)
                 icons.iconUndoEnabled
