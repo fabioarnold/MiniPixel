@@ -61,7 +61,12 @@ pub fn build(b: *Builder) !void {
     const nfd_lib = try @import("deps/nfd-zig/build.zig").makeLib(b, mode, target, "deps/nfd-zig/");
     exe.linkLibrary(nfd_lib);
     exe.linkSystemLibrary("SDL2");
-    exe.linkSystemLibraryName("libpng16"); // Workaround for CI: Zig detects pkg-config and resolves -lpng16 which doesn't exist
+    if (exe.target.isWindows()) {
+        // Workaround for CI: Zig detects pkg-config and resolves -lpng16 which doesn't exist
+        exe.linkSystemLibraryName("libpng16");
+    } else {
+        exe.linkSystemLibrary("libpng16");
+    }
     if (exe.target.isDarwin()) {
         exe.linkFramework("OpenGL");
     } else if (exe.target.isWindows()) {
