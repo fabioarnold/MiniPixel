@@ -676,7 +676,11 @@ pub fn rotateCw(self: *Self) !void {
         nvg.deleteImage(selection.texture);
         selection.texture = nvg.createImageRgba(h, w, .{ .nearest = true }, selection.bitmap);
     } else {
-        std.mem.swap(u32, &self.width, &self.height);
+        if (self.width != self.height) {
+            std.mem.swap(u32, &self.width, &self.height);
+            nvg.deleteImage(self.texture);
+            self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
+        }
         self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
@@ -716,7 +720,11 @@ pub fn rotateCcw(self: *Self) !void {
         nvg.deleteImage(selection.texture);
         selection.texture = nvg.createImageRgba(h, w, .{ .nearest = true }, selection.bitmap);
     } else {
-        std.mem.swap(u32, &self.width, &self.height);
+        if (self.width != self.height) {
+            std.mem.swap(u32, &self.width, &self.height);
+            nvg.deleteImage(self.texture);
+            self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
+        }
         self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
