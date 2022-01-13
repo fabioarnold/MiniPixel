@@ -2,6 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
+const EditorWidget = @import("EditorWidget.zig");
 const Document = @import("Document.zig");
 
 pub const Snapshot = struct {
@@ -33,8 +34,7 @@ pub const Buffer = struct {
     stack: ArrayList(Snapshot),
     index: usize = 0,
 
-    listener_address: usize = 0, // TODO: this is pretty hacky
-    onUndoChangedFn: ?fn (*Document) void = null,
+    editor: ?*EditorWidget = null,
 
     pub fn init(allocator: Allocator) !*Buffer {
         var self = try allocator.create(Buffer);
@@ -68,7 +68,7 @@ pub const Buffer = struct {
     }
 
     fn notifyChanged(self: Buffer, document: *Document) void {
-        if (self.onUndoChangedFn) |onUndoChanged| onUndoChanged(document);
+        if (self.editor) |editor| editor.onUndoChanged(document);
     }
 
     pub fn canUndo(self: Buffer) bool {

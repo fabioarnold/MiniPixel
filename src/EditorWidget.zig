@@ -219,23 +219,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         }
     }.changed;
 
-    self.document.history.listener_address = @ptrToInt(self);
-    self.document.history.onUndoChangedFn = struct {
-        fn undoChanged(document: *Document) void {
-            var editor = @intToPtr(*EditorWidget, document.history.listener_address);
-            editor.undo_button.enabled = document.canUndo();
-            editor.undo_button.iconFn = if (editor.undo_button.enabled)
-                icons.iconUndoEnabled
-            else
-                icons.iconUndoDisabled;
-            editor.redo_button.enabled = document.canRedo();
-            editor.redo_button.iconFn = if (editor.redo_button.enabled)
-                icons.iconRedoEnabled
-            else
-                icons.iconRedoDisabled;
-            editor.updateImageStatus();
-        }
-    }.undoChanged;
+    self.document.history.editor = self; // Register for updates
 
     self.updateLayout();
     self.setTool(.draw);
@@ -579,6 +563,20 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
     } else {
         key_event.event.ignore();
     }
+}
+
+pub fn onUndoChanged(self: *Self, document: *Document) void {
+    self.undo_button.enabled = document.canUndo();
+    self.undo_button.iconFn = if (self.undo_button.enabled)
+        icons.iconUndoEnabled
+    else
+        icons.iconUndoDisabled;
+    self.redo_button.enabled = document.canRedo();
+    self.redo_button.iconFn = if (self.redo_button.enabled)
+        icons.iconRedoEnabled
+    else
+        icons.iconRedoDisabled;
+    self.updateImageStatus();
 }
 
 fn onClipboardUpdate(widget: *gui.Widget) void {
