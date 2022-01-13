@@ -705,33 +705,50 @@ pub fn rotateCcw(self: *Self) !void {
 }
 
 pub fn floodFill(self: *Self, x: i32, y: i32) !void {
-    const old_color = self.pickColor(x, y) orelse return;
-    if (std.mem.eql(u8, old_color[0..], self.foreground_color[0..])) return;
-
     const bitmap = self.bitmap;
+    const old_color = getPixel(bitmap, self.width, self.height, x, y) orelse return;
+    if (std.mem.eql(u8, &old_color, &self.foreground_color)) return;
 
-    var stack = std.ArrayList(struct { x: i32, y: i32 }).init(self.allocator);
+    const start_coords = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) };
+    setPixelUnchecked(bitmap, self.width, start_coords.x, start_coords.y, self.foreground_color);
+
+    var stack = std.ArrayList(struct { x: u32, y: u32 }).init(self.allocator);
+    try stack.ensureTotalCapacity(self.width * self.height / 2);
     defer stack.deinit();
+    try stack.append(start_coords);
 
-    try stack.append(.{ .x = x, .y = y });
     while (stack.items.len > 0) {
         const coords = stack.pop();
-        if (getPixel(self.bitmap, self.width, self.height, coords.x, coords.y)) |color| {
-            if (std.mem.eql(u8, color[0..], old_color[0..])) {
-                setPixelUnchecked(
-                    bitmap,
-                    self.width,
-                    @intCast(u32, coords.x),
-                    @intCast(u32, coords.y),
-                    self.foreground_color,
-                );
-                try stack.append(.{ .x = coords.x, .y = coords.y - 1 });
-                try stack.append(.{ .x = coords.x, .y = coords.y + 1 });
-                try stack.append(.{ .x = coords.x - 1, .y = coords.y });
-                try stack.append(.{ .x = coords.x + 1, .y = coords.y });
+        if (coords.y > 0) {
+            const new_coords = .{ .x = coords.x, .y = coords.y - 1 };
+            if (std.mem.eql(u8, &getPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y), &old_color)) {
+                setPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y, self.foreground_color);
+                stack.appendAssumeCapacity(new_coords);
+            }
+        }
+        if (coords.y < self.height - 1) {
+            const new_coords = .{ .x = coords.x, .y = coords.y + 1 };
+            if (std.mem.eql(u8, &getPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y), &old_color)) {
+                setPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y, self.foreground_color);
+                stack.appendAssumeCapacity(new_coords);
+            }
+        }
+        if (coords.x > 0) {
+            const new_coords = .{ .x = coords.x - 1, .y = coords.y };
+            if (std.mem.eql(u8, &getPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y), &old_color)) {
+                setPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y, self.foreground_color);
+                stack.appendAssumeCapacity(new_coords);
+            }
+        }
+        if (coords.x < self.width - 1) {
+            const new_coords = .{ .x = coords.x + 1, .y = coords.y };
+            if (std.mem.eql(u8, &getPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y), &old_color)) {
+                setPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y, self.foreground_color);
+                stack.appendAssumeCapacity(new_coords);
             }
         }
     }
+
     self.last_preview = .none;
     self.clearPreview();
     try self.history.pushFrame(self);
