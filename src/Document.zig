@@ -75,10 +75,7 @@ pub fn init(allocator: Allocator) !*Self {
     };
 
     self.bitmap = try self.allocator.alloc(u8, 4 * self.width * self.height);
-    var i: usize = 0;
-    while (i < self.bitmap.len) : (i += 1) {
-        self.bitmap[i] = self.background_color[i % 4];
-    }
+    fillBitmapWithColor(self.bitmap, self.background_color);
     self.preview_bitmap = try self.allocator.alloc(u8, 4 * self.width * self.height);
     std.mem.copy(u8, self.preview_bitmap, self.bitmap);
     self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
@@ -102,10 +99,7 @@ pub fn createNew(self: *Self, width: u32, height: u32) !void {
     self.bitmap = new_bitmap;
     self.width = width;
     self.height = height;
-    var i: usize = 0;
-    while (i < self.bitmap.len) : (i += 1) {
-        self.bitmap[i] = self.background_color[i % 4];
-    }
+    fillBitmapWithColor(self.bitmap, self.background_color);
     self.allocator.free(self.preview_bitmap);
     self.preview_bitmap = try self.allocator.dupe(u8, self.bitmap);
 
@@ -248,7 +242,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
     const height = @intCast(u32, rect.h);
     const new_bitmap = try self.allocator.alloc(u8, 4 * width * height);
     //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
-    std.mem.set(u8, new_bitmap, 0xff); // TODO: custom background
+    fillBitmapWithColor(new_bitmap, self.background_color);
 
     const intersection = rect.intersection(.{
         .x = 0,
@@ -508,6 +502,13 @@ fn copyLine(dst_bitmap: []u8, src_bitmap: []u8, w: u32, h: u32, x0: i32, y0: i32
     }
 }
 
+fn fillBitmapWithColor(bitmap: []u8, color: [4]u8) void {
+    var i: usize = 0;
+    while (i < bitmap.len) : (i += 1) {
+        bitmap[i] = color[i % 4];
+    }
+}
+
 pub fn previewBrush(self: *Self, x: i32, y: i32) void {
     self.clearPreview();
     if (setPixel(self.preview_bitmap, self.width, self.height, x, y, self.foreground_color)) {
@@ -537,24 +538,10 @@ pub fn clearPreview(self: *Self) void {
 
 pub fn fill(self: *Self, color: [4]u8) !void {
     if (self.selection) |*selection| {
-        const w = @intCast(u32, selection.rect.w);
-        const h = @intCast(u32, selection.rect.h);
-        var y: u32 = 0;
-        while (y < h) : (y += 1) {
-            var x: u32 = 0;
-            while (x < w) : (x += 1) {
-                setPixelUnchecked(selection.bitmap, w, x, y, color);
-            }
-        }
+        fillBitmapWithColor(selection.bitmap, color);
         nvg.updateImage(selection.texture, selection.bitmap);
     } else {
-        var y: u32 = 0;
-        while (y < self.height) : (y += 1) {
-            var x: u32 = 0;
-            while (x < self.width) : (x += 1) {
-                setPixelUnchecked(self.bitmap, self.width, x, y, color);
-            }
-        }
+        fillBitmapWithColor(self.bitmap, color);
         self.clearPreview();
         try self.history.pushFrame(self);
     }
