@@ -11,6 +11,7 @@ const Pointu = Point(u32);
 const Rect = geometry.Rect;
 const Recti = Rect(i32);
 
+const CanvasWidget = @import("CanvasWidget.zig");
 const Image = @import("Image.zig");
 const Clipboard = @import("Clipboard.zig");
 const HistoryBuffer = @import("history.zig").Buffer;
@@ -45,6 +46,8 @@ const PrimitivePreview = union(PrimitiveTag) {
 
 allocator: Allocator,
 
+x: i32 = 0,
+y: i32 = 0,
 width: u32 = 32,
 height: u32 = 32,
 
@@ -61,6 +64,8 @@ copy_location: ?Pointi = null, // where the source was copied from
 history: *HistoryBuffer,
 foreground_color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
+
+canvas: *CanvasWidget = undefined,
 
 const Self = @This();
 
@@ -97,6 +102,8 @@ pub fn createNew(self: *Self, width: u32, height: u32) !void {
     const new_bitmap = try self.allocator.alloc(u8, 4 * width * height);
     self.allocator.free(self.bitmap);
     self.bitmap = new_bitmap;
+    self.x = 0;
+    self.y = 0;
     self.width = width;
     self.height = height;
     fillBitmapWithColor(self.bitmap, self.background_color);
@@ -115,6 +122,8 @@ pub fn load(self: *Self, file_path: []const u8) !void {
     std.debug.assert(image.colormap == null); // TODO: handle palette
     self.allocator.free(self.bitmap);
     self.bitmap = image.pixels;
+    self.x = 0;
+    self.y = 0;
     self.width = image.width;
     self.height = image.height;
     self.allocator.free(self.preview_bitmap);
@@ -152,6 +161,13 @@ pub fn restoreFromSnapshot(self: *Self, allocator: Allocator, snapshot: HistoryS
     std.mem.copy(u8, self.bitmap, snapshot.bitmap);
     self.width = snapshot.width;
     self.height = snapshot.height;
+    if (self.x != snapshot.x or self.y != snapshot.y) {
+        const dx = snapshot.x - self.x;
+        const dy = snapshot.y - self.y;
+        self.x = snapshot.x;
+        self.y = snapshot.y;
+        self.canvas.translateByPixel(dx, dy);
+    }
     self.last_preview = .none;
     self.clearPreview();
 }
@@ -279,7 +295,10 @@ pub fn crop(self: *Self, rect: Recti) !void {
     nvg.deleteImage(self.texture);
     self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
 
-    // TODO: undo stuff handle new dimensions
+    self.x += rect.x;
+    self.y += rect.y;
+    self.canvas.translateByPixel(rect.x, rect.y);
+
     try self.history.pushFrame(self);
 }
 

@@ -197,10 +197,6 @@ const CropTool = struct {
 
             canvas.updateImageStatus();
 
-            const dx = itof(crop_rect.x) * canvas.scale;
-            const dy = itof(crop_rect.y) * canvas.scale;
-            canvas.translation.x += dx;
-            canvas.translation.y += dy;
             if (self.edit_point) |*edit_point| {
                 edit_point.x -= crop_rect.x;
                 edit_point.y -= crop_rect.y;
@@ -827,6 +823,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
 
     self.updateLayout();
 
+    self.document.canvas = self;
+
     return self;
 }
 
@@ -871,6 +869,12 @@ fn setTranslation(self: *Self, x: f32, y: f32) void {
     self.translation.x = @round(std.math.clamp(x, min_x, max_x));
     self.translation.y = @round(std.math.clamp(y, min_y, max_y));
     self.updateScrollbars();
+}
+
+pub fn translateByPixel(self: *Self, x: i32, y: i32) void {
+    const dx = itof(x) * self.scale;
+    const dy = itof(y) * self.scale;
+    self.setTranslation(self.translation.x + dx, self.translation.y + dy);
 }
 
 fn updateScrollbars(self: *Self) void {

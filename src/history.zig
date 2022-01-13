@@ -6,12 +6,16 @@ const EditorWidget = @import("EditorWidget.zig");
 const Document = @import("Document.zig");
 
 pub const Snapshot = struct {
+    x: i32,
+    y: i32,
     width: u32,
     height: u32,
     bitmap: []u8,
 
     fn make(allocator: Allocator, document: *Document) !Snapshot {
         return Snapshot{
+            .x = document.x,
+            .y = document.y,
             .width = document.width,
             .height = document.height,
             .bitmap = try allocator.dupe(u8, document.bitmap),
