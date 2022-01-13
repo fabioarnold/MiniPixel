@@ -152,6 +152,7 @@ pub fn restoreFromSnapshot(self: *Self, allocator: Allocator, snapshot: HistoryS
     std.mem.copy(u8, self.bitmap, snapshot.bitmap);
     self.width = snapshot.width;
     self.height = snapshot.height;
+    self.last_preview = .none;
     self.clearPreview();
 }
 
@@ -179,6 +180,7 @@ pub fn cut(self: *Self) !void {
     } else {
         // clear image
         std.mem.set(u8, self.bitmap, 0);
+        self.last_preview = .none;
         self.clearPreview();
     }
 }
@@ -542,6 +544,7 @@ pub fn fill(self: *Self, color: [4]u8) !void {
         nvg.updateImage(selection.texture, selection.bitmap);
     } else {
         fillBitmapWithColor(self.bitmap, color);
+        self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -579,6 +582,7 @@ pub fn mirrorHorizontally(self: *Self) !void {
                 x1 -= 1;
             }
         }
+        self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -614,6 +618,7 @@ pub fn mirrorVertically(self: *Self) !void {
     if (self.selection) |*selection| {
         nvg.updateImage(selection.texture, selection.bitmap);
     } else {
+        self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -653,6 +658,7 @@ pub fn rotateCw(self: *Self) !void {
         selection.texture = nvg.createImageRgba(h, w, .{ .nearest = true }, selection.bitmap);
     } else {
         std.mem.swap(u32, &self.width, &self.height);
+        self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -692,6 +698,7 @@ pub fn rotateCcw(self: *Self) !void {
         selection.texture = nvg.createImageRgba(h, w, .{ .nearest = true }, selection.bitmap);
     } else {
         std.mem.swap(u32, &self.width, &self.height);
+        self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -725,6 +732,7 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
             }
         }
     }
+    self.last_preview = .none;
     self.clearPreview();
     try self.history.pushFrame(self);
 }
