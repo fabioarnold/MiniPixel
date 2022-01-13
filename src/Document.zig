@@ -678,6 +678,10 @@ pub fn rotateCw(self: *Self) !void {
     } else {
         if (self.width != self.height) {
             std.mem.swap(u32, &self.width, &self.height);
+            const d = @divTrunc(@intCast(i32, self.height) - @intCast(i32, self.width), 2);
+            self.x += d;
+            self.y -= d;
+            self.canvas.translateByPixel(d, -d);
             nvg.deleteImage(self.texture);
             self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
         }
@@ -722,6 +726,10 @@ pub fn rotateCcw(self: *Self) !void {
     } else {
         if (self.width != self.height) {
             std.mem.swap(u32, &self.width, &self.height);
+            const d = @divTrunc(@intCast(i32, self.height) - @intCast(i32, self.width), 2);
+            self.x += d;
+            self.y -= d;
+            self.canvas.translateByPixel(d, -d);
             nvg.deleteImage(self.texture);
             self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
         }
