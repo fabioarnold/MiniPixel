@@ -743,8 +743,8 @@ fn pasteDocument(self: *Self) void {
     self.setTool(.select);
 }
 
-fn fillDocument(self: *Self, color_type: ColorForegroundBackgroundWidget.ColorType) void {
-    const color = self.color_foreground_background.getRgba(color_type);
+fn fillDocument(self: *Self, color_layer: ColorForegroundBackgroundWidget.ColorLayer) void {
+    const color = self.color_foreground_background.getRgba(color_layer);
     self.document.fill(color) catch {}; // TODO: handle
 }
 

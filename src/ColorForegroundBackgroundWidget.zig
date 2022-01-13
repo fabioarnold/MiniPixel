@@ -8,7 +8,7 @@ const Point = @import("gui/geometry.zig").Point;
 
 const ColorForegroundBackgroundWidget = @This();
 
-pub const ColorType = enum {
+pub const ColorLayer = enum(u1) {
     foreground,
     background,
 };
@@ -16,7 +16,7 @@ pub const ColorType = enum {
 widget: gui.Widget,
 allocator: Allocator,
 
-active: ColorType = .foreground,
+active: ColorLayer = .foreground,
 colors: [2][4]u8 = [_][4]u8{
     [_]u8{ 0, 0, 0, 0xff }, // foregorund
     [_]u8{0xff} ** 4, // background
@@ -62,7 +62,7 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn setActive(self: *Self, active: ColorType) void {
+pub fn setActive(self: *Self, active: ColorLayer) void {
     if (self.active != active) {
         self.active = active;
         if (self.onChangedFn) |onChanged| onChanged(self);
@@ -74,12 +74,12 @@ pub fn swap(self: *Self) void {
     if (self.onChangedFn) |onChanged| onChanged(self);
 }
 
-pub fn getRgba(self: Self, color_type: ColorType) [4]u8 {
-    return self.colors[@enumToInt(color_type)];
+pub fn getRgba(self: Self, color_layer: ColorLayer) [4]u8 {
+    return self.colors[@enumToInt(color_layer)];
 }
 
-pub fn setRgba(self: *Self, color_type: ColorType, color: [4]u8) void {
-    const t = @enumToInt(color_type);
+pub fn setRgba(self: *Self, color_layer: ColorLayer, color: [4]u8) void {
+    const t = @enumToInt(color_layer);
     if (!std.mem.eql(u8, self.colors[t][0..], color[0..])) {
         std.mem.copy(u8, self.colors[t][0..], color[0..]);
         if (self.onChangedFn) |onChanged| onChanged(self);
@@ -100,7 +100,7 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
         const point = Point(f32).make(event.x, event.y);
         for (self.rects) |rect, i| {
             if (rect.contains(point)) {
-                self.setActive(@intToEnum(ColorType, @intCast(u1, i)));
+                self.setActive(@intToEnum(ColorLayer, @intCast(u1, i)));
                 break;
             }
         }
