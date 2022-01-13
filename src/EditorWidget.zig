@@ -203,11 +203,17 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         fn changed(color_foreground_background: *ColorForegroundBackgroundWidget) void {
             if (color_foreground_background.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
-                editor.color_picker.setRgba(color_foreground_background.getActiveRgba());
-                //editor.color_palette.clearSelection();
+                const color = color_foreground_background.getActiveRgba();
+                if (editor.color_palette.selected) |selected| {
+                    const palette_color = editor.color_palette.colors[selected];
+                    if (!std.mem.eql(u8, palette_color[0..], color[0..3])) {
+                        editor.color_palette.clearSelection();
+                    }
+                }
+                editor.color_picker.setRgba(color);
                 switch (editor.color_foreground_background.active) {
-                    .foreground => editor.document.setForegroundColorRgba(editor.color_picker.color),
-                    .background => editor.document.setBackgroundColorRgba(editor.color_picker.color),
+                    .foreground => editor.document.setForegroundColorRgba(color),
+                    .background => editor.document.setBackgroundColorRgba(color),
                 }
             }
         }
