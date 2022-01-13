@@ -227,6 +227,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                 icons.iconRedoEnabled
             else
                 icons.iconRedoDisabled;
+            editor.updateImageStatus();
         }
     }.undoChanged;
 
