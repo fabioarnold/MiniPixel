@@ -40,8 +40,8 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
     };
     self.widget.onKeyDownFn = onKeyDown;
 
-    self.width_spinner.setValue(@intCast(i32, editor_widget.document.width));
-    self.height_spinner.setValue(@intCast(i32, editor_widget.document.height));
+    self.width_spinner.setValue(@intCast(i32, editor_widget.document.bitmap.width));
+    self.height_spinner.setValue(@intCast(i32, editor_widget.document.bitmap.height));
     self.width_spinner.min_value = 1;
     self.height_spinner.min_value = 1;
     self.width_spinner.max_value = 1 << 14; // 16k

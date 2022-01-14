@@ -714,8 +714,8 @@ fn selectAll(self: *Self) void {
     if (self.document.selection) |_| {
         self.document.clearSelection() catch {}; // TODO
     }
-    const w = @intCast(i32, self.document.width);
-    const h = @intCast(i32, self.document.height);
+    const w = @intCast(i32, self.document.bitmap.width);
+    const h = @intCast(i32, self.document.bitmap.height);
     self.document.makeSelection(Rect(i32).make(0, 0, w, h)) catch {}; // TODO
 }
 
@@ -812,7 +812,7 @@ pub fn updateImageStatus(self: *Self) void {
     self.image_status_label.text = std.fmt.bufPrintZ(
         self.image_text[0..],
         "{d}x{d}",
-        .{ self.document.width, self.document.height },
+        .{ self.document.bitmap.width, self.document.bitmap.height },
     ) catch unreachable;
 }
 

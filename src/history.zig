@@ -4,32 +4,27 @@ const ArrayList = std.ArrayList;
 
 const EditorWidget = @import("EditorWidget.zig");
 const Document = @import("Document.zig");
+const Bitmap = @import("Bitmap.zig");
 
 pub const Snapshot = struct {
     x: i32,
     y: i32,
-    width: u32,
-    height: u32,
-    bitmap: []u8,
+    bitmap: Bitmap,
 
-    fn make(allocator: Allocator, document: *Document) !Snapshot {
+    fn make(document: *Document) !Snapshot {
         return Snapshot{
             .x = document.x,
             .y = document.y,
-            .width = document.width,
-            .height = document.height,
-            .bitmap = try allocator.dupe(u8, document.bitmap),
+            .bitmap = try document.bitmap.clone(),
         };
     }
 
-    fn deinit(self: Snapshot, allocator: Allocator) void {
-        allocator.free(self.bitmap);
+    fn deinit(self: Snapshot) void {
+        self.bitmap.deinit();
     }
 
     fn hasChanges(self: Snapshot, document: *Document) bool {
-        return self.width != document.width or
-            self.width != document.width or
-            !std.mem.eql(u8, self.bitmap, document.bitmap);
+        return self.x != document.x or self.y != document.y or !self.bitmap.eql(document.bitmap);
     }
 };
 
@@ -51,7 +46,7 @@ pub const Buffer = struct {
 
     pub fn deinit(self: *Buffer) void {
         for (self.stack.items) |step| {
-            step.deinit(self.allocator);
+            step.deinit();
         }
         self.stack.deinit();
         self.allocator.destroy(self);
@@ -59,7 +54,7 @@ pub const Buffer = struct {
 
     pub fn clearAndFreeStack(self: *Buffer) void {
         for (self.stack.items) |step| {
-            step.deinit(self.allocator);
+            step.deinit();
         }
         self.stack.shrinkRetainingCapacity(0);
         self.index = 0;
@@ -67,7 +62,7 @@ pub const Buffer = struct {
 
     pub fn reset(self: *Buffer, document: *Document) !void {
         self.clearAndFreeStack();
-        try self.stack.append(try Snapshot.make(self.allocator, document));
+        try self.stack.append(try Snapshot.make(document));
         self.notifyChanged(document);
     }
 
@@ -107,10 +102,10 @@ pub const Buffer = struct {
         // create new step
         self.index += 1;
         for (self.stack.items[self.index..self.stack.items.len]) |step| {
-            step.deinit(self.allocator);
+            step.deinit();
         }
         self.stack.shrinkRetainingCapacity(self.index);
-        try self.stack.append(try Snapshot.make(self.allocator, document));
+        try self.stack.append(try Snapshot.make(document));
         self.notifyChanged(document);
     }
 };

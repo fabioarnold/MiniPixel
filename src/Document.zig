@@ -12,6 +12,9 @@ const Rect = geometry.Rect;
 const Recti = Rect(i32);
 
 const CanvasWidget = @import("CanvasWidget.zig");
+const Bitmap = @import("Bitmap.zig");
+const col = @import("color.zig");
+const Color = col.Color;
 const Image = @import("Image.zig");
 const Clipboard = @import("Clipboard.zig");
 const HistoryBuffer = @import("history.zig").Buffer;
@@ -21,7 +24,7 @@ const Document = @This();
 
 pub const Selection = struct {
     rect: Recti,
-    bitmap: []u8,
+    bitmap: Bitmap,
     texture: nvg.Image,
 };
 
@@ -46,16 +49,14 @@ const PrimitivePreview = union(PrimitiveTag) {
 
 allocator: Allocator,
 
+// For tracking offset after cropping operation
 x: i32 = 0,
 y: i32 = 0,
-width: u32 = 32,
-height: u32 = 32,
 
 texture: nvg.Image, // image for display using nvg
-bitmap: []u8,
-preview_bitmap: []u8, // preview brush and lines
+bitmap: Bitmap,
+preview_bitmap: Bitmap, // preview brush and lines
 last_preview: PrimitivePreview = .none,
-colormap: ?[]u8 = null, // if this is set bitmap is an indexmap into this colormap
 dirty: bool = false, // bitmap needs to be uploaded to gpu on next draw call
 
 selection: ?Selection = null,
@@ -79,11 +80,10 @@ pub fn init(allocator: Allocator) !*Self {
         .history = try HistoryBuffer.init(allocator),
     };
 
-    self.bitmap = try self.allocator.alloc(u8, 4 * self.width * self.height);
-    fillBitmapWithColor(self.bitmap, self.background_color);
-    self.preview_bitmap = try self.allocator.alloc(u8, 4 * self.width * self.height);
-    std.mem.copy(u8, self.preview_bitmap, self.bitmap);
-    self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
+    self.bitmap = try Bitmap.init(allocator, 32, 32);
+    self.bitmap.fill(self.background_color);
+    self.preview_bitmap = try self.bitmap.clone();
+    self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
     try self.history.reset(self);
 
     return self;
@@ -91,27 +91,24 @@ pub fn init(allocator: Allocator) !*Self {
 
 pub fn deinit(self: *Self) void {
     self.history.deinit();
-    self.allocator.free(self.bitmap);
-    self.allocator.free(self.preview_bitmap);
+    self.bitmap.deinit();
+    self.preview_bitmap.deinit();
     nvg.deleteImage(self.texture);
     self.freeSelection();
     self.allocator.destroy(self);
 }
 
 pub fn createNew(self: *Self, width: u32, height: u32) !void {
-    const new_bitmap = try self.allocator.alloc(u8, 4 * width * height);
-    self.allocator.free(self.bitmap);
-    self.bitmap = new_bitmap;
+    self.bitmap.deinit();
+    self.bitmap = try Bitmap.init(self.allocator, width, height);
     self.x = 0;
     self.y = 0;
-    self.width = width;
-    self.height = height;
-    fillBitmapWithColor(self.bitmap, self.background_color);
-    self.allocator.free(self.preview_bitmap);
-    self.preview_bitmap = try self.allocator.dupe(u8, self.bitmap);
+    self.bitmap.fill(self.background_color);
+    self.preview_bitmap.deinit();
+    self.preview_bitmap = try self.bitmap.clone();
 
     nvg.deleteImage(self.texture);
-    self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
+    self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
 
     self.freeSelection();
     try self.history.reset(self);
@@ -119,19 +116,21 @@ pub fn createNew(self: *Self, width: u32, height: u32) !void {
 
 pub fn load(self: *Self, file_path: []const u8) !void {
     const image = try Image.initFromFile(self.allocator, file_path);
-    std.debug.assert(image.colormap == null); // TODO: handle palette
-    self.allocator.free(self.bitmap);
-    self.bitmap = image.pixels;
+    self.bitmap.deinit();
+    self.bitmap = Bitmap{
+        .allocator = self.allocator,
+        .width = image.width,
+        .height = image.height,
+        .pixels = image.pixels,
+    };
     self.x = 0;
     self.y = 0;
-    self.width = image.width;
-    self.height = image.height;
-    self.allocator.free(self.preview_bitmap);
-    self.preview_bitmap = try self.allocator.dupe(u8, self.bitmap);
+    self.preview_bitmap.deinit();
+    self.preview_bitmap = try self.bitmap.clone();
 
     // resolution might have changed so recreate image
     nvg.deleteImage(self.texture);
-    self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
+    self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
 
     self.freeSelection();
     try self.history.reset(self);
@@ -139,9 +138,9 @@ pub fn load(self: *Self, file_path: []const u8) !void {
 
 pub fn save(self: *Self, file_path: []const u8) !void {
     var image = Image{
-        .width = self.width,
-        .height = self.height,
-        .pixels = self.bitmap,
+        .width = self.bitmap.width,
+        .height = self.bitmap.height,
+        .pixels = self.bitmap.pixels,
         .allocator = self.allocator,
     };
     try image.writeToFile(file_path);
@@ -150,17 +149,19 @@ pub fn save(self: *Self, file_path: []const u8) !void {
 }
 
 pub fn restoreFromSnapshot(self: *Self, allocator: Allocator, snapshot: HistorySnapshot) !void {
-    if (self.width != snapshot.width or self.height != snapshot.height) {
-        self.bitmap = try allocator.realloc(self.bitmap, snapshot.bitmap.len);
-        self.preview_bitmap = try allocator.realloc(self.preview_bitmap, snapshot.bitmap.len);
+    if (self.bitmap.width != snapshot.bitmap.width or self.bitmap.height != snapshot.bitmap.height) {
+        self.bitmap.width = snapshot.bitmap.width;
+        self.bitmap.height = snapshot.bitmap.height;
+        self.bitmap.pixels = try allocator.realloc(self.bitmap.pixels, snapshot.bitmap.pixels.len);
+        self.preview_bitmap.width = snapshot.bitmap.width;
+        self.preview_bitmap.height = snapshot.bitmap.height;
+        self.preview_bitmap.pixels = try allocator.realloc(self.preview_bitmap.pixels, snapshot.bitmap.pixels.len);
 
         // recreate texture
         nvg.deleteImage(self.texture);
-        self.texture = nvg.createImageRgba(snapshot.width, snapshot.height, .{ .nearest = true }, snapshot.bitmap);
+        self.texture = nvg.createImageRgba(snapshot.bitmap.width, snapshot.bitmap.height, .{ .nearest = true }, snapshot.bitmap.pixels);
     }
-    std.mem.copy(u8, self.bitmap, snapshot.bitmap);
-    self.width = snapshot.width;
-    self.height = snapshot.height;
+    std.mem.copy(u8, self.bitmap.pixels, snapshot.bitmap.pixels);
     if (self.x != snapshot.x or self.y != snapshot.y) {
         const dx = snapshot.x - self.x;
         const dy = snapshot.y - self.y;
@@ -194,8 +195,7 @@ pub fn cut(self: *Self) !void {
     if (self.selection != null) {
         self.freeSelection();
     } else {
-        // clear image
-        std.mem.set(u8, self.bitmap, 0);
+        self.bitmap.clear();
         self.last_preview = .none;
         self.clearPreview();
     }
@@ -206,7 +206,7 @@ pub fn copy(self: *Self) !void {
         try Clipboard.setImage(self.allocator, Image{
             .width = @intCast(u32, selection.rect.w),
             .height = @intCast(u32, selection.rect.h),
-            .pixels = selection.bitmap,
+            .pixels = selection.bitmap.pixels,
             .allocator = self.allocator,
         });
         self.copy_location = Pointi{
@@ -215,9 +215,9 @@ pub fn copy(self: *Self) !void {
         };
     } else {
         try Clipboard.setImage(self.allocator, Image{
-            .width = self.width,
-            .height = self.height,
-            .pixels = self.bitmap,
+            .width = self.bitmap.width,
+            .height = self.bitmap.height,
+            .pixels = self.bitmap.pixels,
             .allocator = self.allocator,
         });
         self.copy_location = null;
@@ -232,8 +232,8 @@ pub fn paste(self: *Self) !void {
             try self.clearSelection();
         }
 
-        const x = @intCast(i32, self.width / 2) - @intCast(i32, image.width / 2);
-        const y = @intCast(i32, self.height / 2) - @intCast(i32, image.height / 2);
+        const x = @intCast(i32, self.bitmap.width / 2) - @intCast(i32, image.width / 2);
+        const y = @intCast(i32, self.bitmap.height / 2) - @intCast(i32, image.height / 2);
         var selection_rect = Recti.make(x, y, @intCast(i32, image.width), @intCast(i32, image.height));
 
         if (self.copy_location) |copy_location| {
@@ -243,7 +243,12 @@ pub fn paste(self: *Self) !void {
 
         self.selection = Selection{
             .rect = selection_rect,
-            .bitmap = image.pixels,
+            .bitmap = Bitmap{
+                .allocator = self.allocator,
+                .width = image.width,
+                .height = image.height,
+                .pixels = image.pixels,
+            },
             .texture = nvg.createImageRgba(
                 image.width,
                 image.height,
@@ -258,15 +263,15 @@ pub fn crop(self: *Self, rect: Recti) !void {
     if (rect.w < 1 or rect.h < 1) return error.InvalidCropRect;
     const width = @intCast(u32, rect.w);
     const height = @intCast(u32, rect.h);
-    const new_bitmap = try self.allocator.alloc(u8, 4 * width * height);
+    const new_bitmap = try Bitmap.init(self.allocator, width, height);
     //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
-    fillBitmapWithColor(new_bitmap, self.background_color);
+    new_bitmap.fill(self.background_color);
 
     const intersection = rect.intersection(.{
         .x = 0,
         .y = 0,
-        .w = @intCast(i32, self.width),
-        .h = @intCast(i32, self.height),
+        .w = @intCast(i32, self.bitmap.width),
+        .h = @intCast(i32, self.bitmap.height),
     });
     if (intersection.w > 0 and intersection.h > 0) {
         const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
@@ -279,48 +284,25 @@ pub fn crop(self: *Self, rect: Recti) !void {
         var y: u32 = 0;
         while (y < h) : (y += 1) {
             const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
-            const di = 4 * ((sy + y) * self.width + sx);
+            const di = 4 * ((sy + y) * self.bitmap.width + sx);
             // copy entire line
-            std.mem.copy(u8, new_bitmap[si .. si + 4 * w], self.bitmap[di .. di + 4 * w]);
+            std.mem.copy(u8, new_bitmap.pixels[si .. si + 4 * w], self.bitmap.pixels[di .. di + 4 * w]);
         }
     }
 
-    self.allocator.free(self.bitmap);
+    self.bitmap.deinit();
     self.bitmap = new_bitmap;
-    self.width = width;
-    self.height = height;
-    self.allocator.free(self.preview_bitmap);
-    self.preview_bitmap = try self.allocator.dupe(u8, self.bitmap);
+    self.preview_bitmap.deinit();
+    self.preview_bitmap = try self.bitmap.clone();
 
     nvg.deleteImage(self.texture);
-    self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
+    self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
 
     self.x += rect.x;
     self.y += rect.y;
     self.canvas.translateByPixel(rect.x, rect.y);
 
     try self.history.pushFrame(self);
-}
-
-fn mul8(a: u8, b: u8) u8 {
-    return @truncate(u8, (@as(u16, a) * @as(u16, b)) / 0xff);
-}
-fn div8(a: u8, b: u8) u8 {
-    return @truncate(u8, @divTrunc(@as(u16, a) * 0xff, @as(u16, b)));
-}
-// blend color a over b (Porter Duff)
-// a_out = a_a + a_b * (1 - a_a)
-// c_out = (c_a * a_a + c_b * a_b * (1 - a_a)) / a_out
-fn blendColor(a: []u8, b: []u8) [4]u8 {
-    var out: [4]u8 = [_]u8{0} ** 4;
-    const fac = mul8(b[3], 0xff - a[3]);
-    out[3] = a[3] + fac;
-    if (out[3] > 0) {
-        out[0] = div8(mul8(a[0], a[3]) + mul8(b[0], fac), out[3]);
-        out[1] = div8(mul8(a[1], a[3]) + mul8(b[1], fac), out[3]);
-        out[2] = div8(mul8(a[2], a[3]) + mul8(b[2], fac), out[3]);
-    }
-    return out;
 }
 
 pub fn clearSelection(self: *Self) !void {
@@ -331,8 +313,8 @@ pub fn clearSelection(self: *Self) !void {
         const intersection = rect.intersection(.{
             .x = 0,
             .y = 0,
-            .w = @intCast(i32, self.width),
-            .h = @intCast(i32, self.height),
+            .w = @intCast(i32, self.bitmap.width),
+            .h = @intCast(i32, self.bitmap.height),
         });
         if (intersection.w > 0 and intersection.h > 0) {
             const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
@@ -345,17 +327,17 @@ pub fn clearSelection(self: *Self) !void {
             var y: u32 = 0;
             while (y < h) : (y += 1) {
                 const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
-                const di = 4 * ((sy + y) * self.width + sx);
+                const di = 4 * ((sy + y) * self.bitmap.width + sx);
                 // copy entire line
                 // std.mem.copy(u8, self.bitmap[di .. di + 4 * w], bitmap[si .. si + 4 * w]);
 
                 // blend each pixel
                 var x: u32 = 0;
                 while (x < w) : (x += 1) {
-                    const src = bitmap[si + 4 * x .. si + 4 * x + 4];
-                    const dst = self.bitmap[di + 4 * x .. di + 4 * x + 4];
-                    const out = blendColor(src, dst);
-                    std.mem.copy(u8, dst, out[0..]);
+                    const src = bitmap.pixels[si + 4 * x .. si + 4 * x + 4];
+                    const dst = self.bitmap.pixels[di + 4 * x .. di + 4 * x + 4];
+                    const out = col.blend(src, dst);
+                    std.mem.copy(u8, dst, &out);
                 }
             }
             self.clearPreview();
@@ -368,20 +350,18 @@ pub fn clearSelection(self: *Self) !void {
 }
 
 pub fn makeSelection(self: *Self, rect: Recti) !void {
-    std.debug.assert(self.colormap == null); // TODO
-
     std.debug.assert(rect.w > 0 and rect.h > 0);
 
     const intersection = rect.intersection(.{
         .x = 0,
         .y = 0,
-        .w = @intCast(i32, self.width),
-        .h = @intCast(i32, self.height),
+        .w = @intCast(i32, self.bitmap.width),
+        .h = @intCast(i32, self.bitmap.height),
     });
     if (intersection.w > 0 and intersection.h > 0) {
         const w = @intCast(u32, intersection.w);
         const h = @intCast(u32, intersection.h);
-        const bitmap = try self.allocator.alloc(u8, 4 * w * h); // RGBA
+        const bitmap = try Bitmap.init(self.allocator, w, h);
 
         // move pixels
         var y: u32 = 0;
@@ -389,9 +369,9 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
             const di = 4 * (y * w);
             const sx = @intCast(u32, intersection.x);
             const sy = @intCast(u32, intersection.y);
-            const si = 4 * ((sy + y) * self.width + sx);
-            std.mem.copy(u8, bitmap[di .. di + 4 * w], self.bitmap[si .. si + 4 * w]);
-            const dst_line = self.bitmap[si .. si + 4 * w];
+            const si = 4 * ((sy + y) * self.bitmap.width + sx);
+            std.mem.copy(u8, bitmap.pixels[di .. di + 4 * w], self.bitmap.pixels[si .. si + 4 * w]);
+            const dst_line = self.bitmap.pixels[si .. si + 4 * w];
             var i: usize = 0;
             while (i < dst_line.len) : (i += 1) {
                 dst_line[i] = self.background_color[i % 4];
@@ -402,7 +382,7 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
         var selection = Selection{
             .rect = intersection,
             .bitmap = bitmap,
-            .texture = nvg.createImageRgba(w, h, .{ .nearest = true }, bitmap),
+            .texture = nvg.createImageRgba(w, h, .{ .nearest = true }, bitmap.pixels),
         };
         self.freeSelection(); // clean up previous selection
         self.selection = selection;
@@ -411,7 +391,7 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
 
 pub fn freeSelection(self: *Self) void {
     if (self.selection) |selection| {
-        self.allocator.free(selection.bitmap);
+        selection.bitmap.deinit();
         nvg.deleteImage(selection.texture);
         self.selection = null;
     }
@@ -425,133 +405,28 @@ pub fn setBackgroundColorRgba(self: *Self, color: [4]u8) void {
     self.background_color = color;
 }
 
-fn setPixel(bitmap: []u8, w: u32, h: u32, x: i32, y: i32, color: [4]u8) bool {
-    if (x >= 0 and y >= 0) {
-        const ux = @intCast(u32, x);
-        const uy = @intCast(u32, y);
-        if (ux < w and uy < h) {
-            setPixelUnchecked(bitmap, w, ux, uy, color);
-            return true;
-        }
-    }
-    return false;
-}
-
-fn setPixelUnchecked(bitmap: []u8, w: u32, x: u32, y: u32, color: [4]u8) void {
-    std.debug.assert(x < w);
-    const i = (y * w + x) * 4;
-    bitmap[i + 0] = color[0];
-    bitmap[i + 1] = color[1];
-    bitmap[i + 2] = color[2];
-    bitmap[i + 3] = color[3];
-}
-
-fn getPixel(bitmap: []u8, w: u32, h: u32, x: i32, y: i32) ?[4]u8 {
-    if (x >= 0 and y >= 0) {
-        const ux = @intCast(u32, x);
-        const uy = @intCast(u32, y);
-        if (ux < w and uy < h) {
-            return getPixelUnchecked(bitmap, w, ux, uy);
-        }
-    }
-    return null;
-}
-
-fn getPixelUnchecked(bitmap: []u8, w: u32, x: u32, y: u32) [4]u8 {
-    std.debug.assert(x < w);
-    const i = (y * w + x) * 4;
-    return [_]u8{
-        bitmap[i + 0],
-        bitmap[i + 1],
-        bitmap[i + 2],
-        bitmap[i + 3],
-    };
-}
-
-fn copyPixelUnchecked(dst_bitmap: []u8, src_bitmap: []u8, w: u32, x: u32, y: u32) void {
-    const src_color = getPixelUnchecked(src_bitmap, w, x, y);
-    setPixelUnchecked(dst_bitmap, w, x, y, src_color);
-}
-
-fn drawLine(bitmap: []u8, w: u32, h: u32, x0: i32, y0: i32, x1: i32, y1: i32, color: [4]u8) void {
-    const dx = std.math.absInt(x1 - x0) catch unreachable;
-    const sx: i32 = if (x0 < x1) 1 else -1;
-    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
-    const sy: i32 = if (y0 < y1) 1 else -1;
-    var err = dx + dy;
-
-    var x = x0;
-    var y = y0;
-    while (true) {
-        if (!setPixel(bitmap, w, h, x, y, color)) break;
-        if (x == x1 and y == y1) break;
-        const e2 = 2 * err;
-        if (e2 >= dy) {
-            err += dy;
-            x += sx;
-        }
-        if (e2 <= dx) {
-            err += dx;
-            y += sy;
-        }
-    }
-}
-
-fn copyLine(dst_bitmap: []u8, src_bitmap: []u8, w: u32, h: u32, x0: i32, y0: i32, x1: i32, y1: i32) void {
-    const dx = std.math.absInt(x1 - x0) catch unreachable;
-    const sx: i32 = if (x0 < x1) 1 else -1;
-    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
-    const sy: i32 = if (y0 < y1) 1 else -1;
-    var err = dx + dy;
-
-    var x = x0;
-    var y = y0;
-    while (true) {
-        if (getPixel(src_bitmap, w, h, x, y)) |src_color| {
-            setPixelUnchecked(dst_bitmap, w, @intCast(u32, x), @intCast(u32, y), src_color);
-        } else break;
-        if (x == x1 and y == y1) break;
-        const e2 = 2 * err;
-        if (e2 >= dy) {
-            err += dy;
-            x += sx;
-        }
-        if (e2 <= dx) {
-            err += dx;
-            y += sy;
-        }
-    }
-}
-
-fn fillBitmapWithColor(bitmap: []u8, color: [4]u8) void {
-    var i: usize = 0;
-    while (i < bitmap.len) : (i += 1) {
-        bitmap[i] = color[i % 4];
-    }
-}
-
 pub fn previewBrush(self: *Self, x: i32, y: i32) void {
     self.clearPreview();
-    if (setPixel(self.preview_bitmap, self.width, self.height, x, y, self.foreground_color)) {
+    if (self.preview_bitmap.setPixel(x, y, self.foreground_color)) {
         self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
     }
 }
 
 pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
     self.clearPreview();
-    drawLine(self.preview_bitmap, self.width, self.height, x0, y0, x1, y1, self.foreground_color);
+    self.preview_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color);
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
 }
 
 pub fn clearPreview(self: *Self) void {
     switch (self.last_preview) {
         .brush => |brush| {
-            copyPixelUnchecked(self.preview_bitmap, self.bitmap, self.width, brush.x, brush.y);
+            self.bitmap.copyPixelUnchecked(self.preview_bitmap, brush.x, brush.y);
         },
         .line => |line| {
-            copyLine(self.preview_bitmap, self.bitmap, self.width, self.height, line.x0, line.y0, line.x1, line.y1);
+            self.bitmap.copyLine(self.preview_bitmap, line.x0, line.y0, line.x1, line.y1);
         },
-        else => std.mem.copy(u8, self.preview_bitmap, self.bitmap),
+        else => std.mem.copy(u8, self.preview_bitmap.pixels, self.bitmap.pixels),
     }
     self.last_preview = .none;
     self.dirty = true;
@@ -559,10 +434,10 @@ pub fn clearPreview(self: *Self) void {
 
 pub fn fill(self: *Self, color: [4]u8) !void {
     if (self.selection) |*selection| {
-        fillBitmapWithColor(selection.bitmap, color);
-        nvg.updateImage(selection.texture, selection.bitmap);
+        selection.bitmap.fill(color);
+        nvg.updateImage(selection.texture, selection.bitmap.pixels);
     } else {
-        fillBitmapWithColor(self.bitmap, color);
+        self.bitmap.fill(color);
         self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
@@ -571,36 +446,10 @@ pub fn fill(self: *Self, color: [4]u8) !void {
 
 pub fn mirrorHorizontally(self: *Self) !void {
     if (self.selection) |*selection| {
-        const w = @intCast(u32, selection.rect.w);
-        const h = @intCast(u32, selection.rect.h);
-        var y: u32 = 0;
-        while (y < h) : (y += 1) {
-            var x0: u32 = 0;
-            var x1: u32 = w - 1;
-            while (x0 < x1) {
-                const color0 = getPixelUnchecked(selection.bitmap, w, x0, y);
-                const color1 = getPixelUnchecked(selection.bitmap, w, x1, y);
-                setPixelUnchecked(selection.bitmap, w, x0, y, color1);
-                setPixelUnchecked(selection.bitmap, w, x1, y, color0);
-                x0 += 1;
-                x1 -= 1;
-            }
-        }
-        nvg.updateImage(selection.texture, selection.bitmap);
+        selection.bitmap.mirrorHorizontally();
+        nvg.updateImage(selection.texture, selection.bitmap.pixels);
     } else {
-        var y: u32 = 0;
-        while (y < self.height) : (y += 1) {
-            var x0: u32 = 0;
-            var x1: u32 = self.width - 1;
-            while (x0 < x1) {
-                const color0 = getPixelUnchecked(self.bitmap, self.width, x0, y);
-                const color1 = getPixelUnchecked(self.bitmap, self.width, x1, y);
-                setPixelUnchecked(self.bitmap, self.width, x0, y, color1);
-                setPixelUnchecked(self.bitmap, self.width, x1, y, color0);
-                x0 += 1;
-                x1 -= 1;
-            }
-        }
+        self.bitmap.mirrorHorizontally();
         self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
@@ -608,35 +457,11 @@ pub fn mirrorHorizontally(self: *Self) !void {
 }
 
 pub fn mirrorVertically(self: *Self) !void {
-    var w: u32 = undefined;
-    var h: u32 = undefined;
-    var bitmap: []u8 = undefined;
     if (self.selection) |*selection| {
-        w = @intCast(u32, selection.rect.w);
-        h = @intCast(u32, selection.rect.h);
-        bitmap = selection.bitmap;
+        try selection.bitmap.mirrorVertically();
+        nvg.updateImage(selection.texture, selection.bitmap.pixels);
     } else {
-        w = self.width;
-        h = self.height;
-        bitmap = self.bitmap;
-    }
-    const pitch = 4 * w;
-    var tmp = try self.allocator.alloc(u8, pitch);
-    defer self.allocator.free(tmp);
-    var y0: u32 = 0;
-    var y1: u32 = h - 1;
-    while (y0 < y1) {
-        const line0 = bitmap[y0 * pitch .. (y0 + 1) * pitch];
-        const line1 = bitmap[y1 * pitch .. (y1 + 1) * pitch];
-        std.mem.copy(u8, tmp, line0);
-        std.mem.copy(u8, line0, line1);
-        std.mem.copy(u8, line1, tmp);
-        y0 += 1;
-        y1 -= 1;
-    }
-    if (self.selection) |*selection| {
-        nvg.updateImage(selection.texture, selection.bitmap);
-    } else {
+        try self.bitmap.mirrorVertically();
         self.last_preview = .none;
         self.clearPreview();
         try self.history.pushFrame(self);
@@ -644,46 +469,29 @@ pub fn mirrorVertically(self: *Self) !void {
 }
 
 pub fn rotateCw(self: *Self) !void {
-    var w: u32 = undefined;
-    var h: u32 = undefined;
-    var bitmap: []u8 = undefined;
     if (self.selection) |*selection| {
-        w = @intCast(u32, selection.rect.w);
-        h = @intCast(u32, selection.rect.h);
-        bitmap = selection.bitmap;
-    } else {
-        w = self.width;
-        h = self.height;
-        bitmap = self.bitmap;
-    }
-
-    const tmp_bitmap = try self.allocator.dupe(u8, bitmap);
-    var y: u32 = 0;
-    while (y < h) : (y += 1) {
-        var x: u32 = 0;
-        while (x < w) : (x += 1) {
-            const color = getPixelUnchecked(tmp_bitmap, w, x, y);
-            setPixelUnchecked(bitmap, h, h - 1 - y, x, color);
-        }
-    }
-    self.allocator.free(tmp_bitmap);
-
-    if (self.selection) |*selection| {
+        try selection.bitmap.rotateCw();
+        selection.rect.w = @intCast(i32, selection.bitmap.width);
+        selection.rect.h = @intCast(i32, selection.bitmap.height);
         const d = @divTrunc(selection.rect.w - selection.rect.h, 2);
-        selection.rect.x += d;
-        selection.rect.y -= d;
-        std.mem.swap(i32, &selection.rect.w, &selection.rect.h);
+        selection.rect.x -= d;
+        selection.rect.y += d;
         nvg.deleteImage(selection.texture);
-        selection.texture = nvg.createImageRgba(h, w, .{ .nearest = true }, selection.bitmap);
+        selection.texture = nvg.createImageRgba(
+            selection.bitmap.width,
+            selection.bitmap.height,
+            .{ .nearest = true },
+            selection.bitmap.pixels,
+        );
     } else {
-        if (self.width != self.height) {
-            std.mem.swap(u32, &self.width, &self.height);
-            const d = @divTrunc(@intCast(i32, self.height) - @intCast(i32, self.width), 2);
-            self.x += d;
-            self.y -= d;
+        try self.bitmap.rotateCw();
+        if (self.bitmap.width != self.bitmap.height) {
+            const d = @divTrunc(@intCast(i32, self.bitmap.height) - @intCast(i32, self.bitmap.width), 2);
+            self.x -= d;
+            self.y += d;
             self.canvas.translateByPixel(d, -d);
             nvg.deleteImage(self.texture);
-            self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
+            self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
         }
         self.last_preview = .none;
         self.clearPreview();
@@ -692,46 +500,29 @@ pub fn rotateCw(self: *Self) !void {
 }
 
 pub fn rotateCcw(self: *Self) !void {
-    var w: u32 = undefined;
-    var h: u32 = undefined;
-    var bitmap: []u8 = undefined;
     if (self.selection) |*selection| {
-        w = @intCast(u32, selection.rect.w);
-        h = @intCast(u32, selection.rect.h);
-        bitmap = selection.bitmap;
-    } else {
-        w = self.width;
-        h = self.height;
-        bitmap = self.bitmap;
-    }
-
-    const tmp_bitmap = try self.allocator.dupe(u8, bitmap);
-    var y: u32 = 0;
-    while (y < h) : (y += 1) {
-        var x: u32 = 0;
-        while (x < w) : (x += 1) {
-            const color = getPixelUnchecked(tmp_bitmap, w, x, y);
-            setPixelUnchecked(bitmap, h, y, w - 1 - x, color);
-        }
-    }
-    self.allocator.free(tmp_bitmap);
-
-    if (self.selection) |*selection| {
+        try selection.bitmap.rotateCcw();
+        selection.rect.w = @intCast(i32, selection.bitmap.width);
+        selection.rect.h = @intCast(i32, selection.bitmap.height);
         const d = @divTrunc(selection.rect.w - selection.rect.h, 2);
-        selection.rect.x += d;
-        selection.rect.y -= d;
-        std.mem.swap(i32, &selection.rect.w, &selection.rect.h);
+        selection.rect.x -= d;
+        selection.rect.y += d;
         nvg.deleteImage(selection.texture);
-        selection.texture = nvg.createImageRgba(h, w, .{ .nearest = true }, selection.bitmap);
+        selection.texture = nvg.createImageRgba(
+            selection.bitmap.width,
+            selection.bitmap.height,
+            .{ .nearest = true },
+            selection.bitmap.pixels,
+        );
     } else {
-        if (self.width != self.height) {
-            std.mem.swap(u32, &self.width, &self.height);
-            const d = @divTrunc(@intCast(i32, self.height) - @intCast(i32, self.width), 2);
-            self.x += d;
-            self.y -= d;
+        try self.bitmap.rotateCcw();
+        if (self.bitmap.width != self.bitmap.height) {
+            const d = @divTrunc(@intCast(i32, self.bitmap.height) - @intCast(i32, self.bitmap.width), 2);
+            self.x -= d;
+            self.y += d;
             self.canvas.translateByPixel(d, -d);
             nvg.deleteImage(self.texture);
-            self.texture = nvg.createImageRgba(self.width, self.height, .{ .nearest = true }, self.bitmap);
+            self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
         }
         self.last_preview = .none;
         self.clearPreview();
@@ -739,65 +530,15 @@ pub fn rotateCcw(self: *Self) !void {
     }
 }
 
-pub fn floodFill(self: *Self, x: i32, y: i32) !void {
-    const bitmap = self.bitmap;
-    const old_color = getPixel(bitmap, self.width, self.height, x, y) orelse return;
-    if (std.mem.eql(u8, &old_color, &self.foreground_color)) return;
-
-    const start_coords = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) };
-    setPixelUnchecked(bitmap, self.width, start_coords.x, start_coords.y, self.foreground_color);
-
-    var stack = std.ArrayList(struct { x: u32, y: u32 }).init(self.allocator);
-    try stack.ensureTotalCapacity(self.width * self.height / 2);
-    defer stack.deinit();
-    try stack.append(start_coords);
-
-    while (stack.items.len > 0) {
-        const coords = stack.pop();
-        if (coords.y > 0) {
-            const new_coords = .{ .x = coords.x, .y = coords.y - 1 };
-            if (std.mem.eql(u8, &getPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y), &old_color)) {
-                setPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y, self.foreground_color);
-                stack.appendAssumeCapacity(new_coords);
-            }
-        }
-        if (coords.y < self.height - 1) {
-            const new_coords = .{ .x = coords.x, .y = coords.y + 1 };
-            if (std.mem.eql(u8, &getPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y), &old_color)) {
-                setPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y, self.foreground_color);
-                stack.appendAssumeCapacity(new_coords);
-            }
-        }
-        if (coords.x > 0) {
-            const new_coords = .{ .x = coords.x - 1, .y = coords.y };
-            if (std.mem.eql(u8, &getPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y), &old_color)) {
-                setPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y, self.foreground_color);
-                stack.appendAssumeCapacity(new_coords);
-            }
-        }
-        if (coords.x < self.width - 1) {
-            const new_coords = .{ .x = coords.x + 1, .y = coords.y };
-            if (std.mem.eql(u8, &getPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y), &old_color)) {
-                setPixelUnchecked(bitmap, self.width, new_coords.x, new_coords.y, self.foreground_color);
-                stack.appendAssumeCapacity(new_coords);
-            }
-        }
-    }
-
-    self.last_preview = .none;
-    self.clearPreview();
-    try self.history.pushFrame(self);
-}
-
 pub fn beginStroke(self: *Self, x: i32, y: i32) void {
-    if (setPixel(self.bitmap, self.width, self.height, x, y, self.foreground_color)) {
+    if (self.bitmap.setPixel(x, y, self.foreground_color)) {
         self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
         self.clearPreview();
     }
 }
 
 pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
-    drawLine(self.bitmap, self.width, self.height, x0, y0, x1, y1, self.foreground_color);
+    self.bitmap.drawLine(x0, y0, x1, y1, self.foreground_color);
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
     self.clearPreview();
 }
@@ -807,16 +548,23 @@ pub fn endStroke(self: *Self) !void {
 }
 
 pub fn pickColor(self: *Self, x: i32, y: i32) ?[4]u8 {
-    return getPixel(self.bitmap, self.width, self.height, x, y);
+    return self.bitmap.getPixel(x, y);
+}
+
+pub fn floodFill(self: *Self, x: i32, y: i32) !void {
+    try self.bitmap.floodFill(x, y, self.foreground_color);
+    self.last_preview = .none;
+    self.clearPreview();
+    try self.history.pushFrame(self);
 }
 
 pub fn draw(self: *Self) void {
     if (self.dirty) {
-        nvg.updateImage(self.texture, self.preview_bitmap);
+        nvg.updateImage(self.texture, self.preview_bitmap.pixels);
         self.dirty = false;
     }
     nvg.beginPath();
-    nvg.rect(0, 0, @intToFloat(f32, self.width), @intToFloat(f32, self.height));
-    nvg.fillPaint(nvg.imagePattern(0, 0, @intToFloat(f32, self.width), @intToFloat(f32, self.height), 0, self.texture, 1));
+    nvg.rect(0, 0, @intToFloat(f32, self.bitmap.width), @intToFloat(f32, self.bitmap.height));
+    nvg.fillPaint(nvg.imagePattern(0, 0, @intToFloat(f32, self.bitmap.width), @intToFloat(f32, self.bitmap.height), 0, self.texture, 1));
     nvg.fill();
 }

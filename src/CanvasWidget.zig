@@ -860,8 +860,8 @@ fn getClientRect(self: Self) Rectf {
 
 fn setTranslation(self: *Self, x: f32, y: f32) void {
     const client_rect = self.getClientRect();
-    const document_w = self.scale * @intToFloat(f32, self.document.width);
-    const document_h = self.scale * @intToFloat(f32, self.document.height);
+    const document_w = self.scale * @intToFloat(f32, self.document.bitmap.width);
+    const document_h = self.scale * @intToFloat(f32, self.document.bitmap.height);
     const min_x = 0.5 * client_rect.w - document_w;
     const min_y = 0.5 * client_rect.h - document_h;
     const max_x = 0.5 * client_rect.w;
@@ -879,8 +879,8 @@ pub fn translateByPixel(self: *Self, x: i32, y: i32) void {
 
 fn updateScrollbars(self: *Self) void {
     const client_rect = self.getClientRect();
-    const document_w = self.scale * @intToFloat(f32, self.document.width);
-    const document_h = self.scale * @intToFloat(f32, self.document.height);
+    const document_w = self.scale * @intToFloat(f32, self.document.bitmap.width);
+    const document_h = self.scale * @intToFloat(f32, self.document.bitmap.height);
     const translation = self.translation;
     self.horizontal_scrollbar.setMaxValue(document_w);
     self.horizontal_scrollbar.setValue(0.5 * client_rect.w - translation.x);
@@ -891,8 +891,8 @@ fn updateScrollbars(self: *Self) void {
 pub fn centerDocument(self: *Self) void {
     const rect = self.widget.relative_rect;
     self.setTranslation(
-        0.5 * (rect.w - self.scale * @intToFloat(f32, self.document.width)),
-        0.5 * (rect.h - self.scale * @intToFloat(f32, self.document.height)),
+        0.5 * (rect.w - self.scale * @intToFloat(f32, self.document.bitmap.width)),
+        0.5 * (rect.h - self.scale * @intToFloat(f32, self.document.bitmap.height)),
     );
 }
 
@@ -1052,8 +1052,8 @@ fn zoom(self: *Self, factor: f32, center_x: f32, center_y: f32) void {
 }
 
 pub fn zoomToDocumentCenter(self: *Self, factor: f32) void {
-    const center_x = self.translation.x + self.scale * 0.5 * @intToFloat(f32, self.document.width);
-    const center_y = self.translation.y + self.scale * 0.5 * @intToFloat(f32, self.document.height);
+    const center_x = self.translation.x + self.scale * 0.5 * @intToFloat(f32, self.document.bitmap.width);
+    const center_y = self.translation.y + self.scale * 0.5 * @intToFloat(f32, self.document.bitmap.height);
     self.zoom(factor, center_x, center_y);
 }
 
@@ -1147,7 +1147,7 @@ fn draw(widget: *gui.Widget) void {
 
 fn drawDocumentBackground(self: Self) void {
     nvg.beginPath();
-    nvg.rect(0, 0, self.scale * @intToFloat(f32, self.document.width), self.scale * @intToFloat(f32, self.document.height));
+    nvg.rect(0, 0, self.scale * @intToFloat(f32, self.document.bitmap.width), self.scale * @intToFloat(f32, self.document.bitmap.height));
     nvg.fillPaint(nvg.imagePattern(0, 0, 8, 8, 0, self.document_background_image, 1));
     nvg.fill();
 }
@@ -1156,14 +1156,14 @@ fn drawGrid(self: Self) void {
     if (self.grid_enabled and self.scale > 3) {
         nvg.beginPath();
         var x: u32 = 0;
-        while (x <= self.document.width) : (x += 1) {
+        while (x <= self.document.bitmap.width) : (x += 1) {
             const fx = @trunc(@intToFloat(f32, x) * self.scale);
-            nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.height) * self.scale);
+            nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.bitmap.height) * self.scale);
         }
         var y: u32 = 0;
-        while (y <= self.document.height) : (y += 1) {
+        while (y <= self.document.bitmap.height) : (y += 1) {
             const fy = @trunc(@intToFloat(f32, y) * self.scale);
-            nvg.rect(0, fy, @intToFloat(f32, self.document.width) * self.scale, 1);
+            nvg.rect(0, fy, @intToFloat(f32, self.document.bitmap.width) * self.scale, 1);
         }
         nvg.fillPaint(nvg.imagePattern(0, 0, 2, 2, 0, self.grid_image, 0.5));
         nvg.fill();
@@ -1184,7 +1184,7 @@ fn drawSelection(self: Self, selection: Document.Selection) void {
         nvg.save();
         defer nvg.restore();
         nvg.scale(s, s);
-        nvg.scissor(0, 0, @intToFloat(f32, self.document.width), @intToFloat(f32, self.document.height));
+        nvg.scissor(0, 0, @intToFloat(f32, self.document.bitmap.width), @intToFloat(f32, self.document.bitmap.height));
         nvg.beginPath();
         nvg.rect(fx, fy, fw, fh);
         nvg.fillPaint(nvg.imagePattern(fx, fy, fw, fh, 0, selection.texture, 1));

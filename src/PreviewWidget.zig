@@ -88,8 +88,8 @@ pub fn draw(widget: *gui.Widget) void {
     nvg.fillPaint(nvg.imagePattern(0, 0, 8, 8, 0, self.background_image, 1));
     nvg.fill();
 
-    const d_x = client_w - @intToFloat(f32, self.document.width);
-    const d_y = client_h - @intToFloat(f32, self.document.height);
+    const d_x = client_w - @intToFloat(f32, self.document.bitmap.width);
+    const d_y = client_h - @intToFloat(f32, self.document.bitmap.height);
     self.translation.x = std.math.clamp(self.translation.x, std.math.min(0, d_x), std.math.max(0, d_x));
     self.translation.y = std.math.clamp(self.translation.y, std.math.min(0, d_y), std.math.max(0, d_y));
     nvg.translate(self.translation.x, self.translation.y);
