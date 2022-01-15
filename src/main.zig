@@ -623,7 +623,7 @@ fn sdlProcessUserEvent(user_event: c.SDL_UserEvent) void {
 fn sdlProcessDropFile(drop_event: c.SDL_DropEvent) void {
     markAllWindowsAsDirty();
     const file_path = std.mem.sliceTo(drop_event.file, 0);
-    editor_widget.loadDocument(file_path);
+    editor_widget.tryLoadDocument(file_path);
     c.SDL_free(drop_event.file);
 }
 
@@ -842,7 +842,7 @@ pub fn main() !void {
     // parse command line arguments
     const args = try std.process.argsAlloc(allocator);
     if (args.len > 1) {
-        editor_widget.loadDocument(args[1]);
+        editor_widget.tryLoadDocument(args[1]);
     }
     std.process.argsFree(allocator, args);
 

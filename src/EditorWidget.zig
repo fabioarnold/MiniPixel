@@ -27,6 +27,7 @@ widget: gui.Widget,
 allocator: Allocator,
 
 document: *Document,
+document_file_path: ?[]const u8 = null,
 
 menu_bar: *gui.Toolbar,
 new_button: *gui.Button,
@@ -245,7 +246,7 @@ fn initMenubar(self: *Self) !void {
     self.open_button.iconFn = icons.iconOpen;
     self.open_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).openDocument();
+            getEditorFromMenuButton(button).tryOpenDocument();
         }
     }.click;
     self.open_button.onEnterFn = struct {
@@ -257,7 +258,7 @@ fn initMenubar(self: *Self) !void {
     self.save_button.iconFn = icons.iconSave;
     self.save_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).saveDocument();
+            getEditorFromMenuButton(button).trySaveDocument(false); // TODO: shif modifier
         }
     }.click;
     self.save_button.onEnterFn = struct {
@@ -270,7 +271,7 @@ fn initMenubar(self: *Self) !void {
     self.undo_button.enabled = false;
     self.undo_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).undoDocument();
+            getEditorFromMenuButton(button).tryUndoDocument();
         }
     }.click;
     self.undo_button.onEnterFn = struct {
@@ -283,7 +284,7 @@ fn initMenubar(self: *Self) !void {
     self.redo_button.enabled = false;
     self.redo_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).redoDocument();
+            getEditorFromMenuButton(button).tryRedoDocument();
         }
     }.click;
     self.redo_button.onEnterFn = struct {
@@ -486,6 +487,9 @@ fn initMenubar(self: *Self) !void {
 
 pub fn deinit(self: *Self) void {
     self.document.deinit();
+    if (self.document_file_path) |document_file_path| {
+        self.allocator.free(document_file_path);
+    }
 
     self.menu_bar.deinit();
     self.new_button.deinit();
@@ -535,13 +539,14 @@ fn onResize(widget: *gui.Widget, event: *const gui.ResizeEvent) void {
 
 fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
     const self = @fieldParentPtr(Self, "widget", widget);
+    const shift_held = key_event.isModifierPressed(.shift);
     if (key_event.isModifierPressed(.ctrl)) {
         switch (key_event.key) {
             .N => self.newDocument(),
-            .O => self.openDocument(),
-            .S => self.saveDocument(),
-            .Z => self.undoDocument(),
-            .Y => self.redoDocument(),
+            .O => self.tryOpenDocument(),
+            .S => self.trySaveDocument(shift_held),
+            .Z => self.tryUndoDocument(),
+            .Y => self.tryRedoDocument(),
             .A => self.selectAll(),
             .X => self.cutDocument(),
             .C => self.copyDocument(),
@@ -660,53 +665,71 @@ pub fn createNewDocument(self: *Self, width: u32, height: u32) !void {
     try self.document.createNew(width, height);
     self.canvas.centerDocument(); // TODO: also zoom
     self.updateImageStatus();
-    self.updateWindowTitle("Untitled");
+    self.setDocumentFilePath(null);
 }
 
-fn openDocument(self: *Self) void {
-    if (nfd.openFileDialog("png", null)) |result| {
-        if (result) |file_path| {
-            defer nfd.freePath(file_path);
-            self.loadDocument(file_path);
-        }
-    } else |_| {
-        // TODO: could not open dialog
+fn loadDocument(self: *Self, file_path: []const u8) !void {
+    try self.document.load(file_path);
+    self.canvas.centerDocument();
+    self.updateImageStatus();
+    self.updateWindowTitle(file_path);
+}
+
+pub fn tryLoadDocument(self: *Self, file_path: []const u8) void {
+    self.loadDocument(file_path) catch {
+        self.showErrorMessageBox("Load document", "Could not load document.");
+    };
+}
+
+fn openDocument(self: *Self) !void {
+    if (try nfd.openFileDialog("png", null)) |nfd_file_path| {
+        defer nfd.freePath(nfd_file_path);
+        try self.loadDocument(nfd_file_path);
+        self.setDocumentFilePath(try self.allocator.dupe(u8, nfd_file_path));
     }
 }
 
-fn saveDocument(self: *Self) void {
-    if (nfd.saveFileDialog("png", null)) |result| {
-        if (result) |file_path| {
-            defer nfd.freePath(file_path);
+fn tryOpenDocument(self: *Self) void {
+    self.openDocument() catch {
+        self.showErrorMessageBox("Open document", "Could not open document.");
+    };
+}
+
+fn saveDocument(self: *Self, force_save_as: bool) !void {
+    if (force_save_as or self.document_file_path == null) {
+        if (try nfd.saveFileDialog("png", null)) |nfd_file_path| {
+            defer nfd.freePath(nfd_file_path);
 
             // check extension
-            var png_file_path_or_error = (if (!isExtPng(file_path))
-                std.mem.concat(self.allocator, u8, &.{ file_path, ".png" })
+            var png_file_path = (if (!isExtPng(nfd_file_path))
+                try std.mem.concat(self.allocator, u8, &.{ nfd_file_path, ".png" })
             else
-                self.allocator.dupe(u8, file_path));
+                try self.allocator.dupe(u8, nfd_file_path));
 
-            if (png_file_path_or_error) |png_file_path| {
-                defer self.allocator.free(png_file_path);
-                self.document.save(png_file_path) catch {
-                    self.showErrorMessageBox("Save document", "Could not save document.");
-                    return;
-                };
-                self.updateWindowTitle(png_file_path);
-            } else |_| {
-                // TODO: show error message
-            }
+            try self.document.save(png_file_path);
+            self.setDocumentFilePath(png_file_path);
         }
-    } else |_| {
-        // TODO: could not open dialog
+    } else if (self.document_file_path) |document_file_path| {
+        try self.document.save(document_file_path);
     }
 }
 
-fn undoDocument(self: *Self) void {
-    self.document.undo() catch {}; // TODO
+fn trySaveDocument(self: *Self, force_save_as: bool) void {
+    self.saveDocument(force_save_as) catch {
+        self.showErrorMessageBox("Save document", "Could not save document.");
+    };
 }
 
-fn redoDocument(self: *Self) void {
-    self.document.redo() catch {}; // TODO
+fn tryUndoDocument(self: *Self) void {
+    self.document.undo() catch {
+        self.showErrorMessageBox("Undo", "Could not undo.");
+    };
+}
+
+fn tryRedoDocument(self: *Self) void {
+    self.document.redo() catch {
+        self.showErrorMessageBox("Redo", "Could not redo.");
+    };
 }
 
 fn selectAll(self: *Self) void {
@@ -776,14 +799,13 @@ fn toggleGrid(self: *Self) void {
     self.grid_button.checked = self.canvas.grid_enabled;
 }
 
-pub fn loadDocument(self: *Self, file_path: []const u8) void {
-    self.document.load(file_path) catch {
-        self.showErrorMessageBox("Load document", "Could not open document.");
-        return;
-    };
-    self.canvas.centerDocument();
-    self.updateImageStatus();
-    self.updateWindowTitle(file_path);
+fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) void {
+    if (self.document_file_path) |document_file_path| {
+        self.allocator.free(document_file_path);
+    }
+    self.document_file_path = maybe_file_path;
+
+    self.updateWindowTitle(if (maybe_file_path) |file_path| file_path else "Untitled");
 }
 
 var buf: [1024]u8 = undefined;
