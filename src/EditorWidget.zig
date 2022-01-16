@@ -263,7 +263,7 @@ fn initMenubar(self: *Self) !void {
     }.click;
     self.save_button.onEnterFn = struct {
         fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Save Document (Ctrl+S)");
+            getEditorFromMenuButton(button).setHelpText("Save Document (Ctrl+S), Save As (Ctrl+Shift+S)");
         }
     }.enter;
     self.save_button.onLeaveFn = menuButtonOnLeave;
