@@ -114,8 +114,33 @@ pub fn createNew(self: *Self, width: u32, height: u32) !void {
     try self.history.reset(self);
 }
 
+fn imageConvertIndexedToRgba(allocator: Allocator, indexed_image: Image) !Image {
+    const image = try Image.initEmptyRgba(allocator, indexed_image.width, indexed_image.height);
+    const colormap = indexed_image.colormap.?;
+    const pixel_count = indexed_image.width * indexed_image.height;
+    var i: usize = 0;
+    while (i < pixel_count) : (i += 1) {
+        const index = @intCast(usize, indexed_image.pixels[i]);
+        const pixel = colormap[4 * index .. 4 * index + 4];
+        image.pixels[4 * i + 0] = pixel[0];
+        image.pixels[4 * i + 1] = pixel[1];
+        image.pixels[4 * i + 2] = pixel[2];
+        image.pixels[4 * i + 3] = pixel[3];
+    }
+
+    return image;
+}
+
 pub fn load(self: *Self, file_path: []const u8) !void {
-    const image = try Image.initFromFile(self.allocator, file_path);
+    var image = try Image.initFromFile(self.allocator, file_path);
+
+    // TODO: support editing indexed images
+    if (image.colormap != null) {
+        const rgba_image = try imageConvertIndexedToRgba(self.allocator, image);
+        image.deinit();
+        image = rgba_image;
+    }
+
     self.bitmap.deinit();
     self.bitmap = Bitmap{
         .allocator = self.allocator,
