@@ -9,12 +9,31 @@ on:
     - cron: '0 5 * * *' # run at 5 AM UTC
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: master
+      - run: zig fmt --check src/*.zig
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: master
+      - run: zig build test
+
   build-windows:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
         with:
           submodules: 'recursive'
 
@@ -31,10 +50,8 @@ jobs:
       # So Zig finds vcpkg
       - run: vcpkg integrate install
 
-      - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v1
+      - uses: goto-bus-stop/setup-zig@v1
         with:
           version: master
 
-      - name: Build
-        run: zig build
+      - run: zig build install
