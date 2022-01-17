@@ -234,27 +234,27 @@ pub fn mirrorVertically(self: Self) !void {
 pub fn rotateCw(self: *Self) !void {
     const tmp_bitmap = try self.clone();
     defer tmp_bitmap.deinit();
+    std.mem.swap(u32, &self.width, &self.height);
     var y: u32 = 0;
-    while (y < self.height) : (y += 1) {
+    while (y < self.width) : (y += 1) {
         var x: u32 = 0;
-        while (x < self.width) : (x += 1) {
+        while (x < self.height) : (x += 1) {
             const color = tmp_bitmap.getPixelUnchecked(x, y);
-            self.setPixelUnchecked(self.height - 1 - y, x, color);
+            self.setPixelUnchecked(self.width - 1 - y, x, color);
         }
     }
-    std.mem.swap(u32, &self.width, &self.height);
 }
 
 pub fn rotateCcw(self: *Self) !void {
     const tmp_bitmap = try self.clone();
     defer tmp_bitmap.deinit();
+    std.mem.swap(u32, &self.width, &self.height);
     var y: u32 = 0;
-    while (y < self.height) : (y += 1) {
+    while (y < self.width) : (y += 1) {
         var x: u32 = 0;
-        while (x < self.width) : (x += 1) {
+        while (x < self.height) : (x += 1) {
             const color = tmp_bitmap.getPixelUnchecked(x, y);
-            self.setPixelUnchecked(y, self.width - 1 - x, color);
+            self.setPixelUnchecked(y, self.height - 1 - x, color);
         }
     }
-    std.mem.swap(u32, &self.width, &self.height);
 }
