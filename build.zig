@@ -79,9 +79,13 @@ pub fn build(b: *Builder) !void {
     if (b.is_release) exe.strip = true;
     exe.install();
 
+    const test_cmd = b.addTest("src/tests.zig");
+    test_cmd.setBuildMode(mode);
+    const test_step = b.step("test", "Run tests");
+    test_step.dependOn(&test_cmd.step);
+
     const run_cmd = exe.run();
     run_cmd.step.dependOn(b.getInstallStep());
-
-    const run_step = b.step("run", "Run MiniPixel");
+    const run_step = b.step("run", "Run Mini Pixel");
     run_step.dependOn(&run_cmd.step);
 }

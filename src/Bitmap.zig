@@ -1,5 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const testing = std.testing;
 
 const col = @import("color.zig");
 const Color = col.Color;
@@ -257,4 +258,37 @@ pub fn rotateCcw(self: *Self) !void {
             self.setPixelUnchecked(y, self.height - 1 - x, color);
         }
     }
+}
+
+test "rotate" {
+    const initial = Bitmap{
+        .width = 2,
+        .height = 3,
+        .pixels = try testing.allocator.dupe(u8, &[_]u8{
+            0x01, 0x02, 0x03, 0x04, 0x11, 0x12, 0x13, 0x14,
+            0x21, 0x22, 0x23, 0x24, 0x31, 0x32, 0x33, 0x34,
+            0x41, 0x42, 0x43, 0x44, 0x51, 0x52, 0x53, 0x54,
+        }),
+        .allocator = testing.allocator,
+    };
+    defer initial.deinit();
+
+    const rotated = Bitmap{
+        .width = 3,
+        .height = 2,
+        .pixels = try testing.allocator.dupe(u8, &[_]u8{
+            0x41, 0x42, 0x43, 0x44, 0x21, 0x22, 0x23, 0x24, 0x01, 0x02, 0x03, 0x04,
+            0x51, 0x52, 0x53, 0x54, 0x31, 0x32, 0x33, 0x34, 0x11, 0x12, 0x13, 0x14,
+        }),
+        .allocator = testing.allocator,
+    };
+    defer rotated.deinit();
+
+    var bmp = try initial.clone();
+    defer bmp.deinit();
+
+    try bmp.rotateCw();
+    try testing.expect(bmp.eql(rotated));
+    try bmp.rotateCcw();
+    try testing.expect(bmp.eql(initial));
 }
