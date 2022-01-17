@@ -220,7 +220,7 @@ pub fn cut(self: *Self) !void {
     if (self.selection != null) {
         self.freeSelection();
     } else {
-        self.bitmap.clear();
+        self.bitmap.fill(self.background_color);
         self.last_preview = .none;
         self.clearPreview();
     }
