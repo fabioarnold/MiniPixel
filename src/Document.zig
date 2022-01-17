@@ -223,6 +223,8 @@ pub fn cut(self: *Self) !void {
         self.bitmap.fill(self.background_color);
         self.last_preview = .none;
         self.clearPreview();
+
+        try self.history.pushFrame(self);
     }
 }
 
