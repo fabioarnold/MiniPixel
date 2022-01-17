@@ -426,7 +426,7 @@ const SelectTool = struct {
             if (event.modifiers == 0) {
                 switch (event.key) {
                     .Escape => canvas.document.clearSelection() catch {},
-                    .Delete => canvas.document.freeSelection(),
+                    .Delete => canvas.document.deleteSelection() catch {},
                     .Left => selection.rect.x -= 1,
                     .Right => selection.rect.x += 1,
                     .Up => selection.rect.y -= 1,

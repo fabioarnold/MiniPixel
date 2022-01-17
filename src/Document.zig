@@ -196,6 +196,8 @@ pub fn restoreFromSnapshot(self: *Self, allocator: Allocator, snapshot: HistoryS
     }
     self.last_preview = .none;
     self.clearPreview();
+
+    self.freeSelection();
 }
 
 pub fn canUndo(self: Self) bool {
@@ -223,9 +225,9 @@ pub fn cut(self: *Self) !void {
         self.bitmap.fill(self.background_color);
         self.last_preview = .none;
         self.clearPreview();
-
-        try self.history.pushFrame(self);
     }
+
+    try self.history.pushFrame(self);
 }
 
 pub fn copy(self: *Self) !void {
@@ -414,6 +416,12 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
         self.freeSelection(); // clean up previous selection
         self.selection = selection;
     }
+}
+
+pub fn deleteSelection(self: *Self) !void {
+    self.freeSelection();
+
+    try self.history.pushFrame(self);
 }
 
 pub fn freeSelection(self: *Self) void {
