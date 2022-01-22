@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const builtin = @import("builtin");
 
-const c = @import ("c.zig");
+const c = @import("c.zig");
 const gui = @import("gui");
 const nvg = @import("nanovg");
 const geometry = @import("gui/geometry.zig");
