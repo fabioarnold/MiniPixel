@@ -1,6 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const builtin = @import("builtin");
 
+const c = @import ("c.zig");
 const gui = @import("gui");
 const nvg = @import("nanovg");
 const geometry = @import("gui/geometry.zig");
@@ -26,6 +28,7 @@ pub fn init(allocator: Allocator) !*Self {
         .close_button = try gui.Button.init(allocator, Rect(f32).make((dialog_rect.w - 80) / 2, dialog_rect.h - 25 - 10, 80, 25), "Close"),
     };
     self.widget.onMouseMoveFn = onMouseMove;
+    self.widget.onMouseDownFn = onMouseDown;
     self.widget.onKeyDownFn = onKeyDown;
 
     self.close_button.onClickFn = onCloseButtonClick;
@@ -47,6 +50,24 @@ var link_itchio_bounds: [4]f32 = undefined;
 var link_itchio_hover: bool = false;
 var link_github_bounds: [4]f32 = undefined;
 var link_github_hover: bool = false;
+
+fn onMouseDown(widget: *gui.Widget, mouse_event: *gui.MouseEvent) void {
+    _ = widget;
+    if (mouse_event.button == .left) {
+        const open_cmd = switch (builtin.os.tag) {
+            .macos => "open ",
+            .linux => "xdg-open ",
+            .windows => "start ",
+            else => @compileError("Unsupported OS"),
+        };
+        if (link_itchio_hover) {
+            _ = c.system(open_cmd ++ info.link_itchio);
+        }
+        if (link_github_hover) {
+            _ = c.system(open_cmd ++ info.link_github);
+        }
+    }
+}
 
 fn onMouseMove(widget: *gui.Widget, mouse_event: *gui.MouseEvent) void {
     var self = @fieldParentPtr(Self, "widget", widget);
