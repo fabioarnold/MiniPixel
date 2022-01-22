@@ -13,8 +13,9 @@ const Rect = geometry.Rect;
 const Clipboard = @import("Clipboard.zig");
 const Document = @import("Document.zig");
 
-const NewDocumentWidget = @import("NewDocumentWidget.zig");
 const ErrorMessageWidget = @import("ErrorMessageWidget.zig");
+const NewDocumentWidget = @import("NewDocumentWidget.zig");
+const AboutDialogWidget = @import("AboutDialogWidget.zig");
 const CanvasWidget = @import("CanvasWidget.zig");
 const ColorPaletteWidget = @import("ColorPaletteWidget.zig");
 const ColorPickerWidget = @import("ColorPickerWidget.zig");
@@ -64,6 +65,7 @@ memory_text: [100]u8 = .{0} ** 100,
 
 error_message_widget: *ErrorMessageWidget,
 new_document_widget: *NewDocumentWidget,
+about_dialog_widget: *AboutDialogWidget,
 canvas: *CanvasWidget,
 color_palette: *ColorPaletteWidget,
 color_picker: *ColorPickerWidget,
@@ -111,6 +113,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
         .error_message_widget = try ErrorMessageWidget.init(allocator, ""),
         .new_document_widget = try NewDocumentWidget.init(allocator, self),
+        .about_dialog_widget = try AboutDialogWidget.init(allocator),
         .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
@@ -461,7 +464,7 @@ fn initMenubar(self: *Self) !void {
     self.about_button.iconFn = icons.iconAbout;
     self.about_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).showErrorMessageBox("About dialog", "Not implement, yet. :(");
+            getEditorFromMenuButton(button).showAboutDialog();
         }
     }.click;
     self.about_button.onEnterFn = struct {
@@ -537,6 +540,7 @@ pub fn deinit(self: *Self) void {
 
     self.error_message_widget.deinit();
     self.new_document_widget.deinit();
+    self.about_dialog_widget.deinit();
     self.canvas.deinit();
     self.color_palette.deinit();
     self.color_picker.deinit();
@@ -672,6 +676,23 @@ fn newDocument(self: *Self) void {
             window.is_modal = true;
             window.setMainWidget(&self.new_document_widget.widget);
             self.new_document_widget.width_spinner.setFocus(true, .keyboard); // keyboard will select text
+        } else |_| {
+            // TODO: show error
+        }
+    }
+}
+
+fn showAboutDialog(self: *Self) void {
+    if (self.widget.getWindow()) |parent_window| {
+        var window_or_error = parent_window.createChildWindow(
+            "About",
+            self.about_dialog_widget.widget.relative_rect.w,
+            self.about_dialog_widget.widget.relative_rect.h,
+            gui.Window.CreateOptions{ .resizable = false },
+        );
+        if (window_or_error) |window| {
+            window.is_modal = true;
+            window.setMainWidget(&self.about_dialog_widget.widget);
         } else |_| {
             // TODO: show error
         }
