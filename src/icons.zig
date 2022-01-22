@@ -589,6 +589,31 @@ pub fn iconSnap() void {
     nvg.fill();
 }
 
+pub fn iconAbout() void {
+    nvg.beginPath();
+    nvg.ellipse(8, 8, 6.5, 6.5);
+    nvg.fillColor(nvg.rgb(40, 140, 200));
+    nvg.fill();
+    nvg.strokeColor(nvg.rgb(66, 66, 66));
+    nvg.stroke();
+
+    nvg.beginPath();
+    nvg.ellipse(8, 5, 1, 1);
+    nvg.moveTo(6, 12);
+    nvg.lineTo(10, 12);
+    nvg.lineTo(10, 11);
+    nvg.lineTo(9, 11);
+    nvg.lineTo(9, 7);
+    nvg.lineTo(6, 7);
+    nvg.lineTo(6, 8);
+    nvg.lineTo(7, 8);
+    nvg.lineTo(7, 11);
+    nvg.lineTo(6, 11);
+    nvg.closePath();
+    nvg.fillColor(nvg.rgbf(1, 1, 1));
+    nvg.fill();
+}
+
 pub fn iconPlus() void {
     nvg.beginPath();
     nvg.moveTo(10.5, 8.5);

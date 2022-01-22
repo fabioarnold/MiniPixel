@@ -49,6 +49,7 @@ rotate_cw_tool_button: *gui.Button,
 grid_button: *gui.Button,
 zoom_label: *gui.Label,
 zoom_spinner: *gui.Spinner(f32),
+about_button: *gui.Button,
 
 status_bar: *gui.Toolbar,
 help_status_label: *gui.Label,
@@ -100,6 +101,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .grid_button = try gui.Button.init(allocator, rect, ""),
         .zoom_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 37, 20), "Zoom:"),
         .zoom_spinner = try gui.Spinner(f32).init(allocator, Rect(f32).make(0, 0, 53, 20)),
+        .about_button = try gui.Button.init(allocator, rect, ""),
 
         .status_bar = try gui.Toolbar.init(allocator, rect),
         .help_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 450, 20), ""),
@@ -456,6 +458,18 @@ fn initMenubar(self: *Self) !void {
             }
         }
     }.changed;
+    self.about_button.iconFn = icons.iconAbout;
+    self.about_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).showErrorMessageBox("About dialog", "Not implement, yet. :(");
+        }
+    }.click;
+    self.about_button.onEnterFn = struct {
+        fn enter(button: *gui.Button) void {
+            getEditorFromMenuButton(button).setHelpText("About Mini Pixel");
+        }
+    }.enter;
+    self.about_button.onLeaveFn = menuButtonOnLeave;
 
     // build menu bar
     try self.menu_bar.addButton(self.new_button);
@@ -483,6 +497,8 @@ fn initMenubar(self: *Self) !void {
     try self.menu_bar.addSeparator();
     try self.menu_bar.addWidget(&self.zoom_label.widget);
     try self.menu_bar.addWidget(&self.zoom_spinner.widget);
+    try self.menu_bar.addSeparator();
+    try self.menu_bar.addButton(self.about_button);
 }
 
 pub fn deinit(self: *Self) void {
@@ -511,6 +527,7 @@ pub fn deinit(self: *Self) void {
     self.grid_button.deinit();
     self.zoom_label.deinit();
     self.zoom_spinner.deinit();
+    self.about_button.deinit();
 
     self.status_bar.deinit();
     self.help_status_label.deinit();
