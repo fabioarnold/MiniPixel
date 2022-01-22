@@ -163,14 +163,14 @@ fn handleMouseEvent(self: *Self, mouse_event: *event.MouseEvent) void {
     self.mouse_pos = Point(f32).make(mouse_event.x, mouse_event.y);
 
     if (self.automatic_cursor_tracking_widget) |widget| {
+        if (mouse_event.event.type == .MouseUp and mouse_event.state == 0) {
+            self.automatic_cursor_tracking_widget = null;
+        }
         const window_relative_rect = widget.getWindowRelativeRect();
         var local_event = mouse_event.*;
         local_event.x -= window_relative_rect.x;
         local_event.y -= window_relative_rect.y;
         widget.dispatchEvent(&local_event.event);
-        if (mouse_event.event.type == .MouseUp and mouse_event.state == 0) {
-            self.automatic_cursor_tracking_widget = null;
-        }
     } else if (self.main_widget) |main_widget| {
         const position = Point(f32).make(mouse_event.x, mouse_event.y);
         const result = main_widget.hitTest(position);
