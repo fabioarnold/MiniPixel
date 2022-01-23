@@ -1,6 +1,3 @@
-const ORG_NAME = "FabioWare";
-const APP_NAME = "Mini Pixel";
-
 const std = @import("std");
 const builtin = @import("builtin");
 const win32 = @import("win32");
@@ -14,6 +11,7 @@ const nvg = @import("nanovg");
 const gui = @import("gui");
 const Rect = @import("gui/geometry.zig").Rect;
 const EditorWidget = @import("EditorWidget.zig");
+const info = @import("info.zig");
 
 extern fn gladLoadGL() callconv(.C) c_int; // init OpenGL function pointers on Windows and Linux
 extern fn SetProcessDPIAware() callconv(.C) c_int;
@@ -98,12 +96,12 @@ const SdlWindow = struct {
         }
 
         if (!options.resizable) {
-            var info: c.SDL_SysWMinfo = undefined;
-            c.SDL_GetVersion(&info.version);
-            _ = c.SDL_GetWindowWMInfo(self.handle, &info);
+            var sys_info: c.SDL_SysWMinfo = undefined;
+            c.SDL_GetVersion(&sys_info.version);
+            _ = c.SDL_GetWindowWMInfo(self.handle, &sys_info);
             if (builtin.os.tag == .windows) {
-                if (info.subsystem == c.SDL_SYSWM_WINDOWS) {
-                    const hwnd = @ptrCast(foundation.HWND, info.info.win.window);
+                if (sys_info.subsystem == c.SDL_SYSWM_WINDOWS) {
+                    const hwnd = @ptrCast(foundation.HWND, sys_info.info.win.window);
                     const style = windows.GetWindowLong(hwnd, windows.GWL_STYLE);
                     const no_minimizebox = ~@bitCast(i32, @enumToInt(windows.WS_MINIMIZEBOX));
                     _ = windows.SetWindowLong(hwnd, windows.GWL_STYLE, style & no_minimizebox);
@@ -182,11 +180,11 @@ const SdlWindow = struct {
 
     fn getLogicalDpi(self: SdlWindow) f32 {
         if (builtin.os.tag == .linux) { // SDL_GetDisplayDPI returns physical DPI on Linux/X11
-            var info: c.SDL_SysWMinfo = undefined;
-            c.SDL_GetVersion(&info.version);
-            _ = c.SDL_GetWindowWMInfo(self.handle, &info);
-            if (info.subsystem == c.SDL_SYSWM_X11) {
-                const str = c.XGetDefault(info.info.x11.display, "Xft", "dpi");
+            var sys_info: c.SDL_SysWMinfo = undefined;
+            c.SDL_GetVersion(&sys_info.version);
+            _ = c.SDL_GetWindowWMInfo(self.handle, &sys_info);
+            if (sys_info.subsystem == c.SDL_SYSWM_X11) {
+                const str = c.XGetDefault(sys_info.info.x11.display, "Xft", "dpi");
                 const dpi_or_error = std.fmt.parseFloat(f32, std.mem.sliceTo(str, 0));
                 if (dpi_or_error) |dpi| {
                     return dpi;
@@ -758,7 +756,7 @@ pub fn main() !void {
         enableAppleMomentumScroll();
     }
 
-    if (c.SDL_GetPrefPath(ORG_NAME, APP_NAME)) |sdl_pref_path| {
+    if (c.SDL_GetPrefPath(info.org_name, info.app_name)) |sdl_pref_path| {
         defer c.SDL_free(sdl_pref_path);
         const user_pref_path = std.mem.sliceTo(sdl_pref_path, 0);
         window_config_file_path = try std.fs.path.join(allocator, &.{ user_pref_path, "window.json" });
@@ -816,10 +814,13 @@ pub fn main() !void {
         const gui_id = nvg.createFont("guifont", "C:\\Windows\\Fonts\\segoeui.ttf");
         const emoji_id = nvg.createFont("emoji", "C:\\Windows\\Fonts\\seguiemj.ttf");
         _ = nvg.addFallbackFontId(gui_id, emoji_id);
+        _ = nvg.createFont("guifontbold", "C:\\Windows\\Fonts\\segoeuib.ttf");
     } else if (builtin.os.tag == .macos) {
         _ = nvg.createFont("guifont", "/System/Library/Fonts/SFNS.ttf");
+        _ = nvg.createFont("guifontbold", "/System/Library/Fonts/SFCompact.ttf");
     } else if (builtin.os.tag == .linux) {
         _ = nvg.createFont("guifont", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+        _ = nvg.createFont("guifontbold", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf");
     }
 
     const rect = Rect(f32).make(0, 0, main_window.width, main_window.height);

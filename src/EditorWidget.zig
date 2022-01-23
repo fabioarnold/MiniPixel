@@ -13,8 +13,9 @@ const Rect = geometry.Rect;
 const Clipboard = @import("Clipboard.zig");
 const Document = @import("Document.zig");
 
-const NewDocumentWidget = @import("NewDocumentWidget.zig");
 const ErrorMessageWidget = @import("ErrorMessageWidget.zig");
+const NewDocumentWidget = @import("NewDocumentWidget.zig");
+const AboutDialogWidget = @import("AboutDialogWidget.zig");
 const CanvasWidget = @import("CanvasWidget.zig");
 const ColorPaletteWidget = @import("ColorPaletteWidget.zig");
 const ColorPickerWidget = @import("ColorPickerWidget.zig");
@@ -49,6 +50,7 @@ rotate_cw_tool_button: *gui.Button,
 grid_button: *gui.Button,
 zoom_label: *gui.Label,
 zoom_spinner: *gui.Spinner(f32),
+about_button: *gui.Button,
 
 status_bar: *gui.Toolbar,
 help_status_label: *gui.Label,
@@ -63,6 +65,7 @@ memory_text: [100]u8 = .{0} ** 100,
 
 error_message_widget: *ErrorMessageWidget,
 new_document_widget: *NewDocumentWidget,
+about_dialog_widget: *AboutDialogWidget,
 canvas: *CanvasWidget,
 color_palette: *ColorPaletteWidget,
 color_picker: *ColorPickerWidget,
@@ -100,6 +103,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .grid_button = try gui.Button.init(allocator, rect, ""),
         .zoom_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 37, 20), "Zoom:"),
         .zoom_spinner = try gui.Spinner(f32).init(allocator, Rect(f32).make(0, 0, 53, 20)),
+        .about_button = try gui.Button.init(allocator, rect, ""),
 
         .status_bar = try gui.Toolbar.init(allocator, rect),
         .help_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 450, 20), ""),
@@ -109,6 +113,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
         .error_message_widget = try ErrorMessageWidget.init(allocator, ""),
         .new_document_widget = try NewDocumentWidget.init(allocator, self),
+        .about_dialog_widget = try AboutDialogWidget.init(allocator),
         .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
@@ -456,6 +461,18 @@ fn initMenubar(self: *Self) !void {
             }
         }
     }.changed;
+    self.about_button.iconFn = icons.iconAbout;
+    self.about_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).showAboutDialog();
+        }
+    }.click;
+    self.about_button.onEnterFn = struct {
+        fn enter(button: *gui.Button) void {
+            getEditorFromMenuButton(button).setHelpText("About Mini Pixel");
+        }
+    }.enter;
+    self.about_button.onLeaveFn = menuButtonOnLeave;
 
     // build menu bar
     try self.menu_bar.addButton(self.new_button);
@@ -483,6 +500,8 @@ fn initMenubar(self: *Self) !void {
     try self.menu_bar.addSeparator();
     try self.menu_bar.addWidget(&self.zoom_label.widget);
     try self.menu_bar.addWidget(&self.zoom_spinner.widget);
+    try self.menu_bar.addSeparator();
+    try self.menu_bar.addButton(self.about_button);
 }
 
 pub fn deinit(self: *Self) void {
@@ -511,6 +530,7 @@ pub fn deinit(self: *Self) void {
     self.grid_button.deinit();
     self.zoom_label.deinit();
     self.zoom_spinner.deinit();
+    self.about_button.deinit();
 
     self.status_bar.deinit();
     self.help_status_label.deinit();
@@ -520,6 +540,7 @@ pub fn deinit(self: *Self) void {
 
     self.error_message_widget.deinit();
     self.new_document_widget.deinit();
+    self.about_dialog_widget.deinit();
     self.canvas.deinit();
     self.color_palette.deinit();
     self.color_picker.deinit();
@@ -655,6 +676,23 @@ fn newDocument(self: *Self) void {
             window.is_modal = true;
             window.setMainWidget(&self.new_document_widget.widget);
             self.new_document_widget.width_spinner.setFocus(true, .keyboard); // keyboard will select text
+        } else |_| {
+            // TODO: show error
+        }
+    }
+}
+
+fn showAboutDialog(self: *Self) void {
+    if (self.widget.getWindow()) |parent_window| {
+        var window_or_error = parent_window.createChildWindow(
+            "About",
+            self.about_dialog_widget.widget.relative_rect.w,
+            self.about_dialog_widget.widget.relative_rect.h,
+            gui.Window.CreateOptions{ .resizable = false },
+        );
+        if (window_or_error) |window| {
+            window.is_modal = true;
+            window.setMainWidget(&self.about_dialog_widget.widget);
         } else |_| {
             // TODO: show error
         }
