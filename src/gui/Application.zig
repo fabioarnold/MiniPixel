@@ -22,7 +22,7 @@ pub const SystemCallbacks = struct {
 
 // TODO: get rid of globals (Timer might need a reference to Application)
 var startTimerFn: ?fn (*gui.Timer, u32) u32 = null;
-var cancelTimerFn : ?fn (u32) void = null;
+var cancelTimerFn: ?fn (u32) void = null;
 
 allocator: std.mem.Allocator,
 system_callbacks: SystemCallbacks,
