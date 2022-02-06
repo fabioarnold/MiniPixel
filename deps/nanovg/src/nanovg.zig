@@ -293,7 +293,9 @@ pub fn translate(x: f32, y: f32) void {
 }
 
 // Rotates current coordinate system. Angle is specified in radians.
-// void nvgRotate(NVGcontext* ctx, float angle);
+pub fn rotate(angle: f32) void {
+    c.nvgRotate(ctx, angle);
+}
 
 // Skews the current coordinate system along X axis. Angle is specified in radians.
 // void nvgSkewX(NVGcontext* ctx, float angle);

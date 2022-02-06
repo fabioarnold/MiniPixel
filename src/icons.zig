@@ -459,6 +459,17 @@ pub fn iconMirrorHorizontally() void {
     nvg.strokeColor(nvg.rgb(66, 66, 66));
     nvg.stroke();
     nvg.beginPath();
+    nvg.moveTo(5, 2);
+    nvg.lineTo(5, 3);
+    nvg.lineTo(9, 3);
+    nvg.lineTo(9, 5);
+    nvg.lineTo(11.5, 2.5);
+    nvg.lineTo(9, 0);
+    nvg.lineTo(9, 2);
+    nvg.closePath();
+    nvg.fillColor(nvg.rgb(66, 66, 66));
+    nvg.fill();
+    nvg.beginPath();
     nvg.rect(0.5, 5.5, 5, 5);
     nvg.strokeColor(nvg.rgb(170, 170, 170));
     nvg.stroke();
@@ -471,24 +482,11 @@ pub fn iconMirrorHorizontally() void {
 }
 
 pub fn iconMirrorVertically() void {
-    nvg.beginPath();
-    var x: f32 = 0;
-    while (x < 16) : (x += 2) {
-        nvg.moveTo(x + 0, 7.5);
-        nvg.lineTo(x + 1, 7.5);
-    }
-    nvg.strokeColor(nvg.rgb(66, 66, 66));
-    nvg.stroke();
-    nvg.beginPath();
-    nvg.rect(5.5, 0.5, 5, 5);
-    nvg.strokeColor(nvg.rgb(170, 170, 170));
-    nvg.stroke();
-    nvg.beginPath();
-    nvg.rect(5.5, 9.5, 5, 5);
-    nvg.fillColor(nvg.rgb(247, 226, 107));
-    nvg.fill();
-    nvg.strokeColor(nvg.rgb(164, 100, 34));
-    nvg.stroke();
+    nvg.save();
+    defer nvg.restore();
+    nvg.scale(-1, 1);
+    nvg.rotate(0.5 * nvg.Pi);
+    iconMirrorHorizontally();
 }
 
 pub fn iconRotateCw() void {
