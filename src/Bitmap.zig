@@ -103,7 +103,7 @@ pub fn drawLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) vo
     var x = x0;
     var y = y0;
     while (true) {
-        if (!self.setPixel(x, y, color)) break;
+        _ = self.setPixel(x, y, color);
         if (x == x1 and y == y1) break;
         const e2 = 2 * err;
         if (e2 >= dy) {
@@ -129,7 +129,7 @@ pub fn copyLine(self: Self, dst: Bitmap, x0: i32, y0: i32, x1: i32, y1: i32) voi
     while (true) {
         if (self.getPixel(x, y)) |src_color| {
             dst.setPixelUnchecked(@intCast(u32, x), @intCast(u32, y), src_color);
-        } else break;
+        }
         if (x == x1 and y == y1) break;
         const e2 = 2 * err;
         if (e2 >= dy) {
