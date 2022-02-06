@@ -5,14 +5,10 @@ const gui = @import("gui");
 const nvg = @import("nanovg");
 const Rect = @import("gui/geometry.zig").Rect;
 const Point = @import("gui/geometry.zig").Point;
+const BlendMode = @import("color.zig").BlendMode;
 
 const image_alpha_data = @embedFile("../data/blendmodealpha.png");
 const image_replace_data = @embedFile("../data/blendmodereplace.png");
-
-pub const BlendMode = enum(u1) {
-    alpha,
-    replace,
-};
 
 widget: gui.Widget,
 allocator: Allocator,

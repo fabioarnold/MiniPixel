@@ -229,6 +229,15 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         }
     }.changed;
 
+    self.blend_mode.onChangedFn = struct {
+        fn changed(blend_mode: *BlendModeWidget) void {
+            if (blend_mode.widget.parent) |parent| {
+                var editor = @fieldParentPtr(EditorWidget, "widget", parent);
+                editor.document.blend_mode = blend_mode.active;
+            }
+        }
+    }.changed;
+
     self.document.history.editor = self; // Register for updates
 
     self.updateLayout();

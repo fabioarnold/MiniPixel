@@ -57,6 +57,15 @@ pub fn setPixel(self: Self, x: i32, y: i32, color: Color) bool {
     return false;
 }
 
+pub fn blendPixel(self: Self, x: i32, y: i32, color: Color) bool {
+    if (self.getPixel(x, y)) |dst| {
+        const blended = col.blend(color[0..], dst[0..]);
+        self.setPixelUnchecked(@intCast(u32, x), @intCast(u32, y), blended);
+        return true;
+    }
+    return false;
+}
+
 pub fn setPixelUnchecked(self: Self, x: u32, y: u32, color: Color) void {
     std.debug.assert(x < self.width);
     const i = (y * self.width + x) * @sizeOf(Color);
@@ -104,6 +113,30 @@ pub fn drawLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) vo
     var y = y0;
     while (true) {
         _ = self.setPixel(x, y, color);
+        if (x == x1 and y == y1) break;
+        const e2 = 2 * err;
+        if (e2 >= dy) {
+            err += dy;
+            x += sx;
+        }
+        if (e2 <= dx) {
+            err += dx;
+            y += sy;
+        }
+    }
+}
+
+pub fn blendLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) void {
+    const dx = std.math.absInt(x1 - x0) catch unreachable;
+    const sx: i32 = if (x0 < x1) 1 else -1;
+    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
+    const sy: i32 = if (y0 < y1) 1 else -1;
+    var err = dx + dy;
+
+    var x = x0;
+    var y = y0;
+    while (true) {
+        _ = self.blendPixel(x, y, color);
         if (x == x1 and y == y1) break;
         const e2 = 2 * err;
         if (e2 >= dy) {

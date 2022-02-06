@@ -15,6 +15,7 @@ const CanvasWidget = @import("CanvasWidget.zig");
 const Bitmap = @import("Bitmap.zig");
 const col = @import("color.zig");
 const Color = col.Color;
+const BlendMode = col.BlendMode;
 const Image = @import("Image.zig");
 const Clipboard = @import("Clipboard.zig");
 const HistoryBuffer = @import("history.zig").Buffer;
@@ -67,6 +68,7 @@ copy_location: ?Pointi = null, // where the source was copied from
 history: *HistoryBuffer,
 foreground_color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
+blend_mode: BlendMode = .alpha,
 
 canvas: *CanvasWidget = undefined,
 
@@ -178,7 +180,7 @@ pub fn save(self: *Self, file_path: []const u8) !void {
 pub fn createSnapshot(self: Document) ![]u8 {
     const allocator = self.allocator;
     var output = ArrayList(u8).init(allocator);
-    
+
     var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{});
     defer comp.deinit();
     var writer = comp.writer();
@@ -477,14 +479,21 @@ pub fn setBackgroundColorRgba(self: *Self, color: [4]u8) void {
 
 pub fn previewBrush(self: *Self, x: i32, y: i32) void {
     self.clearPreview();
-    if (self.preview_bitmap.setPixel(x, y, self.foreground_color)) {
+    const success = switch (self.blend_mode) {
+        .alpha => self.preview_bitmap.blendPixel(x, y, self.foreground_color),
+        .replace => self.preview_bitmap.setPixel(x, y, self.foreground_color),
+    };
+    if (success) {
         self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
     }
 }
 
 pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
     self.clearPreview();
-    self.preview_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color);
+    switch (self.blend_mode) {
+        .alpha => self.preview_bitmap.blendLine(x0, y0, x1, y1, self.foreground_color),
+        .replace => self.preview_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color),
+    }
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
 }
 
@@ -602,14 +611,21 @@ pub fn rotateCcw(self: *Self) !void {
 }
 
 pub fn beginStroke(self: *Self, x: i32, y: i32) void {
-    if (self.bitmap.setPixel(x, y, self.foreground_color)) {
+    const success = switch (self.blend_mode) {
+        .alpha => self.bitmap.blendPixel(x, y, self.foreground_color),
+        .replace => self.bitmap.setPixel(x, y, self.foreground_color),
+    };
+    if (success) {
         self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
         self.clearPreview();
     }
 }
 
 pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
-    self.bitmap.drawLine(x0, y0, x1, y1, self.foreground_color);
+    switch (self.blend_mode) {
+        .alpha => self.bitmap.blendLine(x0, y0, x1, y1, self.foreground_color),
+        .replace => self.bitmap.drawLine(x0, y0, x1, y1, self.foreground_color),
+    }
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
     self.clearPreview();
 }

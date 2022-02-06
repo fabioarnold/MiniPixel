@@ -1,5 +1,10 @@
 pub const Color = [4]u8;
 
+pub const BlendMode = enum(u1) {
+    alpha,
+    replace,
+};
+
 pub fn eql(a: Color, b: Color) bool {
     return a[0] == b[0] and a[1] == b[1] and a[2] == b[2] and a[3] == b[3];
 }
@@ -15,7 +20,7 @@ fn div8(a: u8, b: u8) u8 {
 // blend color a over b (Porter Duff)
 // a_out = a_a + a_b * (1 - a_a)
 // c_out = (c_a * a_a + c_b * a_b * (1 - a_a)) / a_out
-pub fn blend(a: []u8, b: []u8) Color {
+pub fn blend(a: []const u8, b: []const u8) Color {
     var out: Color = [_]u8{0} ** 4;
     const fac = mul8(b[3], 0xff - a[3]);
     out[3] = a[3] + fac;
