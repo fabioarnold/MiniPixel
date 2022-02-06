@@ -94,4 +94,24 @@ pub fn draw(widget: *gui.Widget) void {
     self.translation.y = std.math.clamp(self.translation.y, std.math.min(0, d_y), std.math.max(0, d_y));
     nvg.translate(self.translation.x, self.translation.y);
     self.document.draw();
+
+    if (self.document.selection) |selection| {
+        self.drawSelection(selection);
+    }
+}
+
+fn drawSelection(self: Self, selection: Document.Selection) void {
+    const fx = @intToFloat(f32, selection.rect.x);
+    const fy = @intToFloat(f32, selection.rect.y);
+    const fw = @intToFloat(f32, selection.rect.w);
+    const fh = @intToFloat(f32, selection.rect.h);
+    {
+        nvg.save();
+        defer nvg.restore();
+        nvg.scissor(0, 0, @intToFloat(f32, self.document.bitmap.width), @intToFloat(f32, self.document.bitmap.height));
+        nvg.beginPath();
+        nvg.rect(fx, fy, fw, fh);
+        nvg.fillPaint(nvg.imagePattern(fx, fy, fw, fh, 0, selection.texture, 1));
+        nvg.fill();
+    }
 }
