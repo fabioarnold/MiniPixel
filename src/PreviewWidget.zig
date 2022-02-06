@@ -83,10 +83,8 @@ pub fn draw(widget: *gui.Widget) void {
     const client_h = rect.h - 12;
     nvg.scissor(6, 6, client_w, client_h);
     nvg.translate(6, 6);
-    nvg.beginPath();
-    nvg.rect(0, 0, client_w, client_h);
-    nvg.fillPaint(nvg.imagePattern(0, 0, 8, 8, 0, self.background_image, 1));
-    nvg.fill();
+    const client_rect = Rect(f32).make(0, 0, client_w, client_h);
+    self.drawBackground(client_rect);
 
     const d_x = client_w - @intToFloat(f32, self.document.bitmap.width);
     const d_y = client_h - @intToFloat(f32, self.document.bitmap.height);
@@ -96,22 +94,32 @@ pub fn draw(widget: *gui.Widget) void {
     self.document.draw();
 
     if (self.document.selection) |selection| {
-        self.drawSelection(selection);
+        self.drawSelection(selection, client_rect.translated(self.translation.scaled(-1)));
     }
 }
 
-fn drawSelection(self: Self, selection: Document.Selection) void {
-    const fx = @intToFloat(f32, selection.rect.x);
-    const fy = @intToFloat(f32, selection.rect.y);
-    const fw = @intToFloat(f32, selection.rect.w);
-    const fh = @intToFloat(f32, selection.rect.h);
-    {
-        nvg.save();
-        defer nvg.restore();
-        nvg.scissor(0, 0, @intToFloat(f32, self.document.bitmap.width), @intToFloat(f32, self.document.bitmap.height));
-        nvg.beginPath();
-        nvg.rect(fx, fy, fw, fh);
-        nvg.fillPaint(nvg.imagePattern(fx, fy, fw, fh, 0, selection.texture, 1));
-        nvg.fill();
+fn drawBackground(self: Self, rect: Rect(f32)) void {
+    nvg.beginPath();
+    nvg.rect(rect.x, rect.y, rect.w, rect.h);
+    nvg.fillPaint(nvg.imagePattern(0, 0, 8, 8, 0, self.background_image, 1));
+    nvg.fill();
+}
+
+fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) void {
+    const document_rect = Rect(f32).make(0, 0, @intToFloat(f32, self.document.bitmap.width), @intToFloat(f32, self.document.bitmap.height));
+    const selection_rect = Rect(f32).make(
+        @intToFloat(f32, selection.rect.x),
+        @intToFloat(f32, selection.rect.y),
+        @intToFloat(f32, selection.rect.w),
+        @intToFloat(f32, selection.rect.h),
+    );
+    const intersection = rect.intersection(document_rect.intersection(selection_rect));
+    nvg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);
+    if (self.document.blend_mode == .replace) {
+        self.drawBackground(selection_rect);
     }
+    nvg.beginPath();
+    nvg.rect(selection_rect.x, selection_rect.y, selection_rect.w, selection_rect.h);
+    nvg.fillPaint(nvg.imagePattern(selection_rect.x, selection_rect.y, selection_rect.w, selection_rect.h, 0, selection.texture, 1));
+    nvg.fill();
 }

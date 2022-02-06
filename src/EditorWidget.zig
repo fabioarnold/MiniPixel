@@ -20,6 +20,7 @@ const CanvasWidget = @import("CanvasWidget.zig");
 const ColorPaletteWidget = @import("ColorPaletteWidget.zig");
 const ColorPickerWidget = @import("ColorPickerWidget.zig");
 const ColorForegroundBackgroundWidget = @import("ColorForegroundBackgroundWidget.zig");
+const BlendModeWidget = @import("BlendModeWidget.zig");
 const PreviewWidget = @import("PreviewWidget.zig");
 
 pub const EditorWidget = @This();
@@ -71,6 +72,7 @@ canvas: *CanvasWidget,
 color_palette: *ColorPaletteWidget,
 color_picker: *ColorPickerWidget,
 color_foreground_background: *ColorForegroundBackgroundWidget,
+blend_mode: *BlendModeWidget,
 preview: *PreviewWidget,
 panel_right: *gui.Panel,
 
@@ -119,7 +121,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
-        .color_foreground_background = try ColorForegroundBackgroundWidget.init(allocator, Rect(f32).make(0, 0, 163, 66)),
+        .color_foreground_background = try ColorForegroundBackgroundWidget.init(allocator, Rect(f32).make(0, 0, 66, 66)),
+        .blend_mode = try BlendModeWidget.init(allocator, Rect(f32).make(66, 0, 163 - 66, 66)),
         .preview = try PreviewWidget.init(allocator, Rect(f32).make(0, 0, 163, 120), self.document),
         .panel_right = try gui.Panel.init(allocator, Rect(f32).make(0, 0, 163, 200)),
     };
@@ -152,6 +155,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     try self.widget.addChild(&self.color_palette.widget);
     try self.widget.addChild(&self.color_picker.widget);
     try self.widget.addChild(&self.color_foreground_background.widget);
+    try self.widget.addChild(&self.blend_mode.widget);
     try self.widget.addChild(&self.preview.widget);
     try self.widget.addChild(&self.panel_right.widget);
     try self.widget.addChild(&self.status_bar.widget);
@@ -221,6 +225,15 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                 editor.color_picker.setRgba(color);
                 editor.document.setForegroundColorRgba(editor.color_foreground_background.getRgba(.foreground));
                 editor.document.setBackgroundColorRgba(editor.color_foreground_background.getRgba(.background));
+            }
+        }
+    }.changed;
+
+    self.blend_mode.onChangedFn = struct {
+        fn changed(blend_mode: *BlendModeWidget) void {
+            if (blend_mode.widget.parent) |parent| {
+                var editor = @fieldParentPtr(EditorWidget, "widget", parent);
+                editor.document.blend_mode = blend_mode.active;
             }
         }
     }.changed;
@@ -559,6 +572,7 @@ pub fn deinit(self: *Self) void {
     self.color_palette.deinit();
     self.color_picker.deinit();
     self.color_foreground_background.deinit();
+    self.blend_mode.deinit();
     self.preview.deinit();
     self.panel_right.deinit();
 
@@ -645,6 +659,7 @@ fn updateLayout(self: *Self) void {
     self.color_palette.widget.relative_rect.x = canvas_w;
     self.color_picker.widget.relative_rect.x = canvas_w;
     self.color_foreground_background.widget.relative_rect.x = canvas_w;
+    self.blend_mode.widget.relative_rect.x = canvas_w + self.color_foreground_background.widget.relative_rect.w;
     self.preview.widget.relative_rect.x = canvas_w;
     self.panel_right.widget.relative_rect.x = canvas_w;
 
@@ -652,7 +667,8 @@ fn updateLayout(self: *Self) void {
     self.color_palette.widget.relative_rect.y = menu_bar_h;
     self.color_picker.widget.relative_rect.y = self.color_palette.widget.relative_rect.y + self.color_palette.widget.relative_rect.h;
     self.color_foreground_background.widget.relative_rect.y = self.color_picker.widget.relative_rect.y + self.color_picker.widget.relative_rect.h;
-    self.preview.widget.relative_rect.y = self.color_foreground_background.widget.relative_rect.y + self.color_foreground_background.widget.relative_rect.h;
+    self.blend_mode.widget.relative_rect.y = self.color_picker.widget.relative_rect.y + self.color_picker.widget.relative_rect.h;
+    self.preview.widget.relative_rect.y = self.blend_mode.widget.relative_rect.y + self.blend_mode.widget.relative_rect.h;
     self.panel_right.widget.relative_rect.y = self.preview.widget.relative_rect.y + self.preview.widget.relative_rect.h;
     self.status_bar.widget.relative_rect.y = rect.h - menu_bar_h;
 

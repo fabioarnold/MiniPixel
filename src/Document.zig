@@ -15,6 +15,7 @@ const CanvasWidget = @import("CanvasWidget.zig");
 const Bitmap = @import("Bitmap.zig");
 const col = @import("color.zig");
 const Color = col.Color;
+const BlendMode = col.BlendMode;
 const Image = @import("Image.zig");
 const Clipboard = @import("Clipboard.zig");
 const HistoryBuffer = @import("history.zig").Buffer;
@@ -67,6 +68,7 @@ copy_location: ?Pointi = null, // where the source was copied from
 history: *HistoryBuffer,
 foreground_color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
+blend_mode: BlendMode = .alpha,
 
 canvas: *CanvasWidget = undefined,
 
@@ -178,7 +180,7 @@ pub fn save(self: *Self, file_path: []const u8) !void {
 pub fn createSnapshot(self: Document) ![]u8 {
     const allocator = self.allocator;
     var output = ArrayList(u8).init(allocator);
-    
+
     var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{});
     defer comp.deinit();
     var writer = comp.writer();
@@ -390,16 +392,17 @@ pub fn clearSelection(self: *Self) !void {
             while (y < h) : (y += 1) {
                 const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
                 const di = 4 * ((sy + y) * self.bitmap.width + sx);
-                // copy entire line
-                // std.mem.copy(u8, self.bitmap[di .. di + 4 * w], bitmap[si .. si + 4 * w]);
-
-                // blend each pixel
-                var x: u32 = 0;
-                while (x < w) : (x += 1) {
-                    const src = bitmap.pixels[si + 4 * x .. si + 4 * x + 4];
-                    const dst = self.bitmap.pixels[di + 4 * x .. di + 4 * x + 4];
-                    const out = col.blend(src, dst);
-                    std.mem.copy(u8, dst, &out);
+                switch (self.blend_mode) {
+                    .alpha => {
+                        var x: u32 = 0;
+                        while (x < w) : (x += 1) {
+                            const src = bitmap.pixels[si + 4 * x .. si + 4 * x + 4];
+                            const dst = self.bitmap.pixels[di + 4 * x .. di + 4 * x + 4];
+                            const out = col.blend(src, dst);
+                            std.mem.copy(u8, dst, &out);
+                        }
+                    },
+                    .replace => std.mem.copy(u8, self.bitmap.pixels[di .. di + 4 * w], bitmap.pixels[si .. si + 4 * w]),
                 }
             }
             self.last_preview = .full; // TODO: just a rect?
@@ -477,14 +480,21 @@ pub fn setBackgroundColorRgba(self: *Self, color: [4]u8) void {
 
 pub fn previewBrush(self: *Self, x: i32, y: i32) void {
     self.clearPreview();
-    if (self.preview_bitmap.setPixel(x, y, self.foreground_color)) {
+    const success = switch (self.blend_mode) {
+        .alpha => self.preview_bitmap.blendPixel(x, y, self.foreground_color),
+        .replace => self.preview_bitmap.setPixel(x, y, self.foreground_color),
+    };
+    if (success) {
         self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
     }
 }
 
 pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
     self.clearPreview();
-    self.preview_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color);
+    switch (self.blend_mode) {
+        .alpha => self.preview_bitmap.blendLine(x0, y0, x1, y1, self.foreground_color, true),
+        .replace => self.preview_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color, true),
+    }
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
 }
 
@@ -602,14 +612,21 @@ pub fn rotateCcw(self: *Self) !void {
 }
 
 pub fn beginStroke(self: *Self, x: i32, y: i32) void {
-    if (self.bitmap.setPixel(x, y, self.foreground_color)) {
+    const success = switch (self.blend_mode) {
+        .alpha => self.bitmap.blendPixel(x, y, self.foreground_color),
+        .replace => self.bitmap.setPixel(x, y, self.foreground_color),
+    };
+    if (success) {
         self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
         self.clearPreview();
     }
 }
 
 pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
-    self.bitmap.drawLine(x0, y0, x1, y1, self.foreground_color);
+    switch (self.blend_mode) {
+        .alpha => self.bitmap.blendLine(x0, y0, x1, y1, self.foreground_color, true),
+        .replace => self.bitmap.drawLine(x0, y0, x1, y1, self.foreground_color, true),
+    }
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
     self.clearPreview();
 }
@@ -623,7 +640,15 @@ pub fn pickColor(self: *Self, x: i32, y: i32) ?[4]u8 {
 }
 
 pub fn floodFill(self: *Self, x: i32, y: i32) !void {
-    try self.bitmap.floodFill(x, y, self.foreground_color);
+    switch (self.blend_mode) {
+        .alpha => {
+            if (self.bitmap.getPixel(x, y)) |dst| {
+                const blended = col.blend(self.foreground_color[0..], dst[0..]);
+                try self.bitmap.floodFill(x, y, blended);
+            }
+        },
+        .replace => try self.bitmap.floodFill(x, y, self.foreground_color),
+    }
     self.last_preview = .full;
     self.clearPreview();
     try self.history.pushFrame(self);
