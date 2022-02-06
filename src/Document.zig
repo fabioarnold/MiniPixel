@@ -392,16 +392,17 @@ pub fn clearSelection(self: *Self) !void {
             while (y < h) : (y += 1) {
                 const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
                 const di = 4 * ((sy + y) * self.bitmap.width + sx);
-                // copy entire line
-                // std.mem.copy(u8, self.bitmap[di .. di + 4 * w], bitmap[si .. si + 4 * w]);
-
-                // blend each pixel
-                var x: u32 = 0;
-                while (x < w) : (x += 1) {
-                    const src = bitmap.pixels[si + 4 * x .. si + 4 * x + 4];
-                    const dst = self.bitmap.pixels[di + 4 * x .. di + 4 * x + 4];
-                    const out = col.blend(src, dst);
-                    std.mem.copy(u8, dst, &out);
+                switch (self.blend_mode) {
+                    .alpha => {
+                        var x: u32 = 0;
+                        while (x < w) : (x += 1) {
+                            const src = bitmap.pixels[si + 4 * x .. si + 4 * x + 4];
+                            const dst = self.bitmap.pixels[di + 4 * x .. di + 4 * x + 4];
+                            const out = col.blend(src, dst);
+                            std.mem.copy(u8, dst, &out);
+                        }
+                    },
+                    .replace => std.mem.copy(u8, self.bitmap.pixels[di .. di + 4 * w], bitmap.pixels[si .. si + 4 * w]),
                 }
             }
             self.last_preview = .full; // TODO: just a rect?
