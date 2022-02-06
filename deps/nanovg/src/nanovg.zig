@@ -366,9 +366,12 @@ pub fn createImage(filename: [:0]const u8, flags: ImageFlags) Image {
     return Image{ .handle = c.nvgCreateImage(ctx, filename.ptr, @bitCast(u6, flags)) };
 }
 
-// // Creates image by loading it from the specified chunk of memory.
-// // Returns handle to the image.
-// int nvgCreateImageMem(NVGcontext* ctx, int imageFlags, unsigned char* data, int ndata);
+// Creates image by loading it from the specified chunk of memory.
+// Returns handle to the image.
+pub fn createImageMem(data: []const u8, flags: ImageFlags) Image {
+    return Image{ .handle = c.nvgCreateImageMem(ctx, @bitCast(u6, flags), data.ptr, @intCast(c_int, data.len)) };
+}
+//int nvgCreateImageMem(NVGcontext* ctx, int imageFlags, unsigned char* data, int ndata);
 
 // Creates image from specified image data.
 // Returns handle to the image.
