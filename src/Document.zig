@@ -639,7 +639,15 @@ pub fn pickColor(self: *Self, x: i32, y: i32) ?[4]u8 {
 }
 
 pub fn floodFill(self: *Self, x: i32, y: i32) !void {
-    try self.bitmap.floodFill(x, y, self.foreground_color);
+    switch (self.blend_mode) {
+        .alpha => {
+            if (self.bitmap.getPixel(x, y)) |dst| {
+                const blended = col.blend(self.foreground_color[0..], dst[0..]);
+                try self.bitmap.floodFill(x, y, blended);
+            }
+        },
+        .replace => try self.bitmap.floodFill(x, y, self.foreground_color),
+    }
     self.last_preview = .full;
     self.clearPreview();
     try self.history.pushFrame(self);
