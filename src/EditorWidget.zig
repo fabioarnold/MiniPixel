@@ -34,6 +34,7 @@ menu_bar: *gui.Toolbar,
 new_button: *gui.Button,
 open_button: *gui.Button,
 save_button: *gui.Button,
+saveas_button: *gui.Button,
 undo_button: *gui.Button,
 redo_button: *gui.Button,
 cut_button: *gui.Button,
@@ -87,6 +88,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .new_button = try gui.Button.init(allocator, rect, ""),
         .open_button = try gui.Button.init(allocator, rect, ""),
         .save_button = try gui.Button.init(allocator, rect, ""),
+        .saveas_button = try gui.Button.init(allocator, rect, ""),
         .undo_button = try gui.Button.init(allocator, rect, ""),
         .redo_button = try gui.Button.init(allocator, rect, ""),
         .cut_button = try gui.Button.init(allocator, rect, ""),
@@ -261,15 +263,27 @@ fn initMenubar(self: *Self) !void {
     self.save_button.iconFn = icons.iconSave;
     self.save_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).trySaveDocument(false); // TODO: shif modifier
+            getEditorFromMenuButton(button).trySaveDocument(false);
         }
     }.click;
     self.save_button.onEnterFn = struct {
         fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Save Document (Ctrl+S), Save As (Ctrl+Shift+S)");
+            getEditorFromMenuButton(button).setHelpText("Save Document (Ctrl+S)");
         }
     }.enter;
     self.save_button.onLeaveFn = menuButtonOnLeave;
+    self.saveas_button.iconFn = icons.iconSaveAs;
+    self.saveas_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).trySaveDocument(true);
+        }
+    }.click;
+    self.saveas_button.onEnterFn = struct {
+        fn enter(button: *gui.Button) void {
+            getEditorFromMenuButton(button).setHelpText("Save Document As (Ctrl+Shift+S)");
+        }
+    }.enter;
+    self.saveas_button.onLeaveFn = menuButtonOnLeave;
     self.undo_button.iconFn = icons.iconUndoDisabled;
     self.undo_button.enabled = false;
     self.undo_button.onClickFn = struct {
@@ -476,6 +490,7 @@ fn initMenubar(self: *Self) !void {
     try self.menu_bar.addButton(self.new_button);
     try self.menu_bar.addButton(self.open_button);
     try self.menu_bar.addButton(self.save_button);
+    try self.menu_bar.addButton(self.saveas_button);
     try self.menu_bar.addSeparator();
     try self.menu_bar.addButton(self.undo_button);
     try self.menu_bar.addButton(self.redo_button);
@@ -512,6 +527,7 @@ pub fn deinit(self: *Self) void {
     self.new_button.deinit();
     self.open_button.deinit();
     self.save_button.deinit();
+    self.saveas_button.deinit();
     self.undo_button.deinit();
     self.redo_button.deinit();
     self.cut_button.deinit();

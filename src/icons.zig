@@ -97,6 +97,14 @@ pub fn iconSave() void {
     nvg.fill();
 }
 
+pub fn iconSaveAs() void {
+    nvg.save();
+    defer nvg.restore();
+    iconSave();
+    nvg.translate(1, 1);
+    iconToolPen();
+}
+
 pub fn iconUndoEnabled() void {
     iconUndo(true);
 }
