@@ -29,11 +29,13 @@ pub const Selection = struct {
 };
 
 const PrimitiveTag = enum {
+    none,
     brush,
     line,
-    none,
+    full,
 };
 const PrimitivePreview = union(PrimitiveTag) {
+    none: void,
     brush: struct {
         x: u32,
         y: u32,
@@ -44,7 +46,7 @@ const PrimitivePreview = union(PrimitiveTag) {
         x1: i32,
         y1: i32,
     },
-    none: void,
+    full: void,
 };
 
 allocator: Allocator,
@@ -225,7 +227,7 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
         self.y = y;
         self.canvas.translateByPixel(dx, dy);
     }
-    self.last_preview = .none;
+    self.last_preview = .full;
     self.clearPreview();
 
     self.freeSelection();
@@ -254,7 +256,7 @@ pub fn cut(self: *Self) !void {
         self.freeSelection();
     } else {
         self.bitmap.fill(self.background_color);
-        self.last_preview = .none;
+        self.last_preview = .full;
         self.clearPreview();
     }
 
@@ -486,13 +488,14 @@ pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
 
 pub fn clearPreview(self: *Self) void {
     switch (self.last_preview) {
+        .none => {},
         .brush => |brush| {
             self.bitmap.copyPixelUnchecked(self.preview_bitmap, brush.x, brush.y);
         },
         .line => |line| {
             self.bitmap.copyLine(self.preview_bitmap, line.x0, line.y0, line.x1, line.y1);
         },
-        else => std.mem.copy(u8, self.preview_bitmap.pixels, self.bitmap.pixels),
+        .full => std.mem.copy(u8, self.preview_bitmap.pixels, self.bitmap.pixels),
     }
     self.last_preview = .none;
     self.dirty = true;
@@ -504,7 +507,7 @@ pub fn fill(self: *Self, color: [4]u8) !void {
         nvg.updateImage(selection.texture, selection.bitmap.pixels);
     } else {
         self.bitmap.fill(color);
-        self.last_preview = .none;
+        self.last_preview = .full;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -516,7 +519,7 @@ pub fn mirrorHorizontally(self: *Self) !void {
         nvg.updateImage(selection.texture, selection.bitmap.pixels);
     } else {
         self.bitmap.mirrorHorizontally();
-        self.last_preview = .none;
+        self.last_preview = .full;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -528,7 +531,7 @@ pub fn mirrorVertically(self: *Self) !void {
         nvg.updateImage(selection.texture, selection.bitmap.pixels);
     } else {
         try self.bitmap.mirrorVertically();
-        self.last_preview = .none;
+        self.last_preview = .full;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -559,7 +562,7 @@ pub fn rotateCw(self: *Self) !void {
             nvg.deleteImage(self.texture);
             self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
         }
-        self.last_preview = .none;
+        self.last_preview = .full;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -590,7 +593,7 @@ pub fn rotateCcw(self: *Self) !void {
             nvg.deleteImage(self.texture);
             self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
         }
-        self.last_preview = .none;
+        self.last_preview = .full;
         self.clearPreview();
         try self.history.pushFrame(self);
     }
@@ -619,7 +622,7 @@ pub fn pickColor(self: *Self, x: i32, y: i32) ?[4]u8 {
 
 pub fn floodFill(self: *Self, x: i32, y: i32) !void {
     try self.bitmap.floodFill(x, y, self.foreground_color);
-    self.last_preview = .none;
+    self.last_preview = .full;
     self.clearPreview();
     try self.history.pushFrame(self);
 }
