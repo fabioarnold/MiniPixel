@@ -108,6 +108,10 @@ pub fn Rect(comptime T: type) type {
             return .{ .x = self.x + point.x, .y = self.y + point.y, .w = self.w, .h = self.h };
         }
 
+        pub fn scaled(self: Self, s: T) Rect(T) {
+            return .{ .x = self.x * s, .y = self.y * s, .w = self.w * s, .h = self.h * s};
+        }
+
         pub fn contains(self: Self, point: Point(T)) bool {
             return point.x >= self.x and point.x < self.x + self.w and point.y >= self.y and point.y < self.y + self.h;
         }
