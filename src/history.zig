@@ -6,27 +6,7 @@ const EditorWidget = @import("EditorWidget.zig");
 const Document = @import("Document.zig");
 const Bitmap = @import("Bitmap.zig");
 
-pub const Snapshot = struct {
-    x: i32,
-    y: i32,
-    bitmap: Bitmap,
-
-    fn make(document: *Document) !Snapshot {
-        return Snapshot{
-            .x = document.x,
-            .y = document.y,
-            .bitmap = try document.bitmap.clone(),
-        };
-    }
-
-    fn deinit(self: Snapshot) void {
-        self.bitmap.deinit();
-    }
-
-    fn hasChanges(self: Snapshot, document: *Document) bool {
-        return self.x != document.x or self.y != document.y or !self.bitmap.eql(document.bitmap);
-    }
-};
+const Snapshot = []u8;
 
 pub const Buffer = struct {
     allocator: Allocator,
@@ -45,16 +25,16 @@ pub const Buffer = struct {
     }
 
     pub fn deinit(self: *Buffer) void {
-        for (self.stack.items) |step| {
-            step.deinit();
+        for (self.stack.items) |snapshot| {
+            self.allocator.free(snapshot);
         }
         self.stack.deinit();
         self.allocator.destroy(self);
     }
 
     pub fn clearAndFreeStack(self: *Buffer) void {
-        for (self.stack.items) |step| {
-            step.deinit();
+        for (self.stack.items) |snapshot| {
+            self.allocator.free(snapshot);
         }
         self.stack.shrinkRetainingCapacity(0);
         self.index = 0;
@@ -62,7 +42,7 @@ pub const Buffer = struct {
 
     pub fn reset(self: *Buffer, document: *Document) !void {
         self.clearAndFreeStack();
-        try self.stack.append(try Snapshot.make(document));
+        try self.stack.append(try document.createSnapshot());
         self.notifyChanged(document);
     }
 
@@ -74,11 +54,11 @@ pub const Buffer = struct {
         return self.index > 0;
     }
 
-    pub fn undo(self: *Buffer, allocator: Allocator, document: *Document) !void {
+    pub fn undo(self: *Buffer, document: *Document) !void {
         if (!self.canUndo()) return;
         self.index -= 1;
         const snapshot = self.stack.items[self.index];
-        try document.restoreFromSnapshot(allocator, snapshot);
+        try document.restoreFromSnapshot(snapshot);
         self.notifyChanged(document);
     }
 
@@ -86,26 +66,31 @@ pub const Buffer = struct {
         return self.index + 1 < self.stack.items.len;
     }
 
-    pub fn redo(self: *Buffer, allocator: Allocator, document: *Document) !void {
+    pub fn redo(self: *Buffer, document: *Document) !void {
         if (!self.canRedo()) return;
         self.index += 1;
         const snapshot = self.stack.items[self.index];
-        try document.restoreFromSnapshot(allocator, snapshot);
+        try document.restoreFromSnapshot(snapshot);
         self.notifyChanged(document);
     }
 
     pub fn pushFrame(self: *Buffer, document: *Document) !void { // TODO: handle error cases
         // do comparison
         const top = self.stack.items[self.index];
-        if (!top.hasChanges(document)) return;
+        const snapshot = try document.createSnapshot();
+        if (std.mem.eql(u8, top, snapshot)) {
+            document.allocator.free(snapshot);
+            return;
+        }
 
-        // create new step
         self.index += 1;
-        for (self.stack.items[self.index..self.stack.items.len]) |step| {
-            step.deinit();
+        // clear redo stack
+        for (self.stack.items[self.index..self.stack.items.len]) |snap| {
+            document.allocator.free(snap);
         }
         self.stack.shrinkRetainingCapacity(self.index);
-        try self.stack.append(try Snapshot.make(document));
+
+        try self.stack.append(snapshot);
         self.notifyChanged(document);
     }
 };

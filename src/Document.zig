@@ -173,25 +173,56 @@ pub fn save(self: *Self, file_path: []const u8) !void {
     //if (c.stbi_write_png(file_path.ptr, @intCast(c_int, self.width), @intCast(c_int, self.height), 4, self.bitmap.ptr, 0) == 0) return error.Fail;
 }
 
-pub fn restoreFromSnapshot(self: *Self, allocator: Allocator, snapshot: HistorySnapshot) !void {
-    if (self.bitmap.width != snapshot.bitmap.width or self.bitmap.height != snapshot.bitmap.height) {
-        self.bitmap.width = snapshot.bitmap.width;
-        self.bitmap.height = snapshot.bitmap.height;
-        self.bitmap.pixels = try allocator.realloc(self.bitmap.pixels, snapshot.bitmap.pixels.len);
-        self.preview_bitmap.width = snapshot.bitmap.width;
-        self.preview_bitmap.height = snapshot.bitmap.height;
-        self.preview_bitmap.pixels = try allocator.realloc(self.preview_bitmap.pixels, snapshot.bitmap.pixels.len);
+pub fn createSnapshot(self: Document) ![]u8 {
+    const allocator = self.allocator;
+    var output = ArrayList(u8).init(allocator);
+    
+    var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{});
+    defer comp.deinit();
+    var writer = comp.writer();
+    try writer.writeIntNative(i32, self.x);
+    try writer.writeIntNative(i32, self.y);
+    try writer.writeIntNative(u32, self.bitmap.width);
+    try writer.writeIntNative(u32, self.bitmap.height);
+    _ = try writer.write(self.bitmap.pixels);
+    // TODO: serialize selection
+    try comp.close();
+
+    return output.items;
+}
+
+pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
+    var input = std.io.fixedBufferStream(snapshot);
+    var decomp = try std.compress.deflate.decompressor(self.allocator, input.reader(), null);
+    defer decomp.deinit();
+
+    var reader = decomp.reader();
+    const x = try reader.readIntNative(i32);
+    const y = try reader.readIntNative(i32);
+    const width = try reader.readIntNative(u32);
+    const height = try reader.readIntNative(u32);
+    if (self.bitmap.width != width or self.bitmap.height != height) {
+        self.bitmap.width = width;
+        self.bitmap.height = height;
+        self.bitmap.pixels = try self.allocator.realloc(self.bitmap.pixels, 4 * width * height);
+        self.preview_bitmap.width = width;
+        self.preview_bitmap.height = height;
+        self.preview_bitmap.pixels = try self.allocator.realloc(self.preview_bitmap.pixels, 4 * width * height);
+        _ = try reader.readAll(self.bitmap.pixels);
 
         // recreate texture
         nvg.deleteImage(self.texture);
-        self.texture = nvg.createImageRgba(snapshot.bitmap.width, snapshot.bitmap.height, .{ .nearest = true }, snapshot.bitmap.pixels);
+        self.texture = nvg.createImageRgba(width, height, .{ .nearest = true }, self.bitmap.pixels);
+    } else {
+        _ = try reader.readAll(self.bitmap.pixels);
     }
-    std.mem.copy(u8, self.bitmap.pixels, snapshot.bitmap.pixels);
-    if (self.x != snapshot.x or self.y != snapshot.y) {
-        const dx = snapshot.x - self.x;
-        const dy = snapshot.y - self.y;
-        self.x = snapshot.x;
-        self.y = snapshot.y;
+    _ = decomp.close();
+
+    if (self.x != x or self.y != y) {
+        const dx = x - self.x;
+        const dy = y - self.y;
+        self.x = x;
+        self.y = y;
         self.canvas.translateByPixel(dx, dy);
     }
     self.last_preview = .none;
@@ -205,7 +236,7 @@ pub fn canUndo(self: Self) bool {
 }
 
 pub fn undo(self: *Self) !void {
-    try self.history.undo(self.allocator, self);
+    try self.history.undo(self);
 }
 
 pub fn canRedo(self: Self) bool {
@@ -213,7 +244,7 @@ pub fn canRedo(self: Self) bool {
 }
 
 pub fn redo(self: *Self) !void {
-    try self.history.redo(self.allocator, self);
+    try self.history.redo(self);
 }
 
 pub fn cut(self: *Self) !void {
