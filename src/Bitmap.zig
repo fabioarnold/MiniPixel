@@ -102,18 +102,20 @@ pub fn copyPixelUnchecked(self: Self, dst: Bitmap, x: u32, y: u32) void {
     dst.setPixelUnchecked(x, y, src_color);
 }
 
-pub fn drawLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) void {
+pub fn drawLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color, skip_first: bool) void {
     const dx = std.math.absInt(x1 - x0) catch unreachable;
     const sx: i32 = if (x0 < x1) 1 else -1;
     const dy = -(std.math.absInt(y1 - y0) catch unreachable);
     const sy: i32 = if (y0 < y1) 1 else -1;
     var err = dx + dy;
 
+    if (!skip_first) {
+        _ = self.setPixel(x0, y0, color);
+    }
+
     var x = x0;
     var y = y0;
-    while (true) {
-        _ = self.setPixel(x, y, color);
-        if (x == x1 and y == y1) break;
+    while (x != x1 or y != y1) {
         const e2 = 2 * err;
         if (e2 >= dy) {
             err += dy;
@@ -123,21 +125,24 @@ pub fn drawLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) vo
             err += dx;
             y += sy;
         }
+        _ = self.setPixel(x, y, color);
     }
 }
 
-pub fn blendLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) void {
+pub fn blendLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color, skip_first: bool) void {
     const dx = std.math.absInt(x1 - x0) catch unreachable;
     const sx: i32 = if (x0 < x1) 1 else -1;
     const dy = -(std.math.absInt(y1 - y0) catch unreachable);
     const sy: i32 = if (y0 < y1) 1 else -1;
     var err = dx + dy;
 
+    if (!skip_first) {
+        _ = self.blendPixel(x0, y0, color);
+    }
+
     var x = x0;
     var y = y0;
-    while (true) {
-        _ = self.blendPixel(x, y, color);
-        if (x == x1 and y == y1) break;
+    while (x != x1 or y != y1) {
         const e2 = 2 * err;
         if (e2 >= dy) {
             err += dy;
@@ -147,6 +152,7 @@ pub fn blendLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) v
             err += dx;
             y += sy;
         }
+        _ = self.blendPixel(x, y, color);
     }
 }
 

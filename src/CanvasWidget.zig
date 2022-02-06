@@ -542,12 +542,14 @@ const DrawTool = struct {
 
         if (event.isButtonPressed(.left) and self.drawing) {
             if (self.last_point) |last_point| {
-                canvas.document.stroke(
-                    last_point.x,
-                    last_point.y,
-                    self.edit_point.x,
-                    self.edit_point.y,
-                );
+                if (last_point.x != self.edit_point.x or last_point.y != self.edit_point.y) {
+                    canvas.document.stroke(
+                        last_point.x,
+                        last_point.y,
+                        self.edit_point.x,
+                        self.edit_point.y,
+                    );
+                }
             }
             self.last_point = self.edit_point;
         } else if (event.isModifierPressed(.shift)) {

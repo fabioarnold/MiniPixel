@@ -491,8 +491,8 @@ pub fn previewBrush(self: *Self, x: i32, y: i32) void {
 pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
     self.clearPreview();
     switch (self.blend_mode) {
-        .alpha => self.preview_bitmap.blendLine(x0, y0, x1, y1, self.foreground_color),
-        .replace => self.preview_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color),
+        .alpha => self.preview_bitmap.blendLine(x0, y0, x1, y1, self.foreground_color, true),
+        .replace => self.preview_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color, true),
     }
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
 }
@@ -623,8 +623,8 @@ pub fn beginStroke(self: *Self, x: i32, y: i32) void {
 
 pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
     switch (self.blend_mode) {
-        .alpha => self.bitmap.blendLine(x0, y0, x1, y1, self.foreground_color),
-        .replace => self.bitmap.drawLine(x0, y0, x1, y1, self.foreground_color),
+        .alpha => self.bitmap.blendLine(x0, y0, x1, y1, self.foreground_color, true),
+        .replace => self.bitmap.drawLine(x0, y0, x1, y1, self.foreground_color, true),
     }
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
     self.clearPreview();
