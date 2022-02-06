@@ -217,10 +217,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                     }
                 }
                 editor.color_picker.setRgba(color);
-                switch (editor.color_foreground_background.active) {
-                    .foreground => editor.document.setForegroundColorRgba(color),
-                    .background => editor.document.setBackgroundColorRgba(color),
-                }
+                editor.document.setForegroundColorRgba(editor.color_foreground_background.getRgba(.foreground));
+                editor.document.setBackgroundColorRgba(editor.color_foreground_background.getRgba(.background));
             }
         }
     }.changed;
