@@ -402,6 +402,7 @@ pub fn clearSelection(self: *Self) !void {
                     std.mem.copy(u8, dst, &out);
                 }
             }
+            self.last_preview = .full; // TODO: just a rect?
             self.clearPreview();
         }
 
@@ -439,6 +440,7 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
                 dst_line[i] = self.background_color[i % 4];
             }
         }
+        self.last_preview = .full; // TODO: just a rect?
         self.clearPreview();
 
         var selection = Selection{
