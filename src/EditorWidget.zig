@@ -471,8 +471,8 @@ fn initMenubar(self: *Self) !void {
     }.enter;
     self.grid_button.onLeaveFn = menuButtonOnLeave;
     self.zoom_spinner.setValue(self.canvas.scale);
-    self.zoom_spinner.min_value = 1.0 / 64.0;
-    self.zoom_spinner.max_value = 64;
+    self.zoom_spinner.min_value = CanvasWidget.min_scale;
+    self.zoom_spinner.max_value = CanvasWidget.max_scale;
     //self.zoom_spinner.step_value = 0.5;
     self.zoom_spinner.step_mode = .exponential;
     self.zoom_spinner.onChangedFn = struct {
@@ -731,14 +731,14 @@ fn showAboutDialog(self: *Self) void {
 
 pub fn createNewDocument(self: *Self, width: u32, height: u32) !void {
     try self.document.createNew(width, height);
-    self.canvas.centerDocument(); // TODO: also zoom
+    self.canvas.centerAndZoomDocument();
     self.updateImageStatus();
     self.setDocumentFilePath(null);
 }
 
 fn loadDocument(self: *Self, file_path: []const u8) !void {
     try self.document.load(file_path);
-    self.canvas.centerDocument();
+    self.canvas.centerAndZoomDocument();
     self.updateImageStatus();
     self.updateWindowTitle(file_path);
 }

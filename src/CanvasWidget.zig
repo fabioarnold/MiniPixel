@@ -768,6 +768,9 @@ scroll_offset: ?Pointf = null, // in document space
 onColorChangedFn: ?fn (*Self, [4]u8) void = null,
 onScaleChangedFn: ?fn (*Self, f32) void = null,
 
+pub const min_scale = 1.0 / 32.0;
+pub const max_scale = 64.0;
+
 const Self = @This();
 
 pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
@@ -896,6 +899,19 @@ pub fn centerDocument(self: *Self) void {
         0.5 * (rect.w - self.scale * @intToFloat(f32, self.document.bitmap.width)),
         0.5 * (rect.h - self.scale * @intToFloat(f32, self.document.bitmap.height)),
     );
+}
+
+pub fn centerAndZoomDocument(self: *Self) void {
+    const rect = self.widget.relative_rect;
+
+    const fx = rect.w / @intToFloat(f32, self.document.bitmap.width);
+    const fy = rect.h / @intToFloat(f32, self.document.bitmap.width);
+
+    const visible_portion = 0.8;
+    self.scale = visible_portion * std.math.min(fx, fy);
+    self.scale = std.math.clamp(self.scale, min_scale, max_scale);
+
+    self.centerDocument();
 }
 
 fn onResize(widget: *gui.Widget, event: *const gui.ResizeEvent) void {
@@ -1038,7 +1054,7 @@ fn updateToolMousePreview(self: *Self, mouse_x: f32, mouse_y: f32) void {
 fn zoom(self: *Self, factor: f32, center_x: f32, center_y: f32) void {
     const prev_scale = self.scale;
     self.scale *= factor;
-    self.scale = std.math.clamp(self.scale, 1.0 / 32.0, 64);
+    self.scale = std.math.clamp(self.scale, min_scale, max_scale);
     if (self.scale != prev_scale) {
         self.notifyScaleChanged();
 
