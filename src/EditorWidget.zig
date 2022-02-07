@@ -331,7 +331,7 @@ fn initMenubar(self: *Self) !void {
     }.click;
     self.cut_button.onEnterFn = struct {
         fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Cut Selection to clipboard (Ctrl+X)");
+            getEditorFromMenuButton(button).setHelpText("Cut Selection to Clipboard (Ctrl+X)");
         }
     }.enter;
     self.cut_button.onLeaveFn = menuButtonOnLeave;
@@ -826,7 +826,8 @@ fn copyDocument(self: *Self) void {
 
 fn pasteDocument(self: *Self) void {
     self.document.paste() catch {
-        // TODO handle
+        self.showErrorMessageBox("Paste image", "Could not paste from clipboard.");
+        return;
     };
     self.checkClipboard();
     self.setTool(.select);

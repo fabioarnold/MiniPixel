@@ -8,9 +8,9 @@ usingnamespace switch (@import("builtin").os.tag) {
             return false;
         }
 
-        pub fn getImage(allocator: std.mem.Allocator) !?Image {
+        pub fn getImage(allocator: std.mem.Allocator) !Image {
             _ = allocator;
-            return null;
+            return error.NotImplemented;
         }
 
         pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
