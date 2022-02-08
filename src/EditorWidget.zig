@@ -30,6 +30,7 @@ allocator: Allocator,
 
 document: *Document,
 document_file_path: ?[]const u8 = null,
+has_unsaved_changes: bool = false,
 
 menu_bar: *gui.Toolbar,
 new_button: *gui.Button,
@@ -631,6 +632,8 @@ pub fn onUndoChanged(self: *Self, document: *Document) void {
     else
         icons.iconRedoDisabled;
     self.updateImageStatus();
+    self.has_unsaved_changes = true;
+    self.updateWindowTitle();
 }
 
 fn onClipboardUpdate(widget: *gui.Widget) void {
@@ -731,16 +734,18 @@ fn showAboutDialog(self: *Self) void {
 
 pub fn createNewDocument(self: *Self, width: u32, height: u32) !void {
     try self.document.createNew(width, height);
+    self.has_unsaved_changes = false;
     self.canvas.centerAndZoomDocument();
     self.updateImageStatus();
-    self.setDocumentFilePath(null);
+    try self.setDocumentFilePath(null);
 }
 
 fn loadDocument(self: *Self, file_path: []const u8) !void {
     try self.document.load(file_path);
+    self.has_unsaved_changes = false;
     self.canvas.centerAndZoomDocument();
     self.updateImageStatus();
-    self.updateWindowTitle(file_path);
+    try self.setDocumentFilePath(file_path);
 }
 
 pub fn tryLoadDocument(self: *Self, file_path: []const u8) void {
@@ -753,7 +758,6 @@ fn openDocument(self: *Self) !void {
     if (try nfd.openFileDialog("png", null)) |nfd_file_path| {
         defer nfd.freePath(nfd_file_path);
         try self.loadDocument(nfd_file_path);
-        self.setDocumentFilePath(try self.allocator.dupe(u8, nfd_file_path));
     }
 }
 
@@ -773,12 +777,16 @@ fn saveDocument(self: *Self, force_save_as: bool) !void {
                 try std.mem.concat(self.allocator, u8, &.{ nfd_file_path, ".png" })
             else
                 try self.allocator.dupe(u8, nfd_file_path));
+            defer self.allocator.free(png_file_path);
 
             try self.document.save(png_file_path);
-            self.setDocumentFilePath(png_file_path);
+            self.has_unsaved_changes = false;
+            try self.setDocumentFilePath(png_file_path);
         }
     } else if (self.document_file_path) |document_file_path| {
         try self.document.save(document_file_path);
+        self.has_unsaved_changes = false;
+        self.updateWindowTitle();
     }
 }
 
@@ -868,20 +876,32 @@ fn toggleGrid(self: *Self) void {
     self.grid_button.checked = self.canvas.grid_enabled;
 }
 
-fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) void {
+fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {
     if (self.document_file_path) |document_file_path| {
         self.allocator.free(document_file_path);
     }
-    self.document_file_path = maybe_file_path;
+    if (maybe_file_path) |file_path| {
+        self.document_file_path = try self.allocator.dupe(u8, file_path);
+    } else {
+        self.document_file_path = null;
+    }
 
-    self.updateWindowTitle(if (maybe_file_path) |file_path| file_path else "Untitled");
+    self.updateWindowTitle();
 }
 
-var buf: [1024]u8 = undefined;
-fn updateWindowTitle(self: *Self, file_path: []const u8) void {
+var window_title_buffer: [1024]u8 = undefined;
+fn updateWindowTitle(self: *Self) void {
     if (self.widget.getWindow()) |window| {
-        const basename = std.fs.path.basename(file_path);
-        const title = std.fmt.bufPrintZ(&buf, "{s} - Mini Pixel", .{basename}) catch unreachable;
+        const unsaved_changes_indicator = if (self.has_unsaved_changes) "● " else "";
+        const document_title = if (self.document_file_path) |file_path|
+            std.fs.path.basename(file_path)
+        else
+            "Untitled";
+        const title = std.fmt.bufPrintZ(
+            &window_title_buffer,
+            "{s}{s} - Mini Pixel",
+            .{ unsaved_changes_indicator, document_title },
+        ) catch unreachable;
         window.setTitle(title);
     }
 }

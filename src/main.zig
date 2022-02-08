@@ -790,7 +790,7 @@ pub fn main() !void {
         .setClipboardText = sdlSetClipboardText,
     });
     defer app.deinit();
-    var main_window = try app.createWindow("Mini Pixel", 800, 600, .{});
+    var main_window = try app.createWindow("Untitled - Mini Pixel", 800, 600, .{});
     // if (findSdlWindow(main_window.id)) |main_sdl_window| {
     //     c.SDL_SetWindowMinimumSize(main_sdl_window.handle, 400, 200);
     // }
