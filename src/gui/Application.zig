@@ -80,10 +80,21 @@ pub fn requestWindowClose(self: *Self, window: *gui.Window) void {
     if (window.isBlockedByModal()) return;
 
     if (window.onCloseRequestFn) |onCloseRequest| {
-        if (!onCloseRequest(window)) return; // request denied
+        if (!onCloseRequest(window.close_request_context)) return; // request denied
     }
 
     self.system_callbacks.destroyWindow(window.id);
+
+    // remove reference from parent
+    if (window.parent) |parent| {
+        parent.removeChild(window);
+        window.parent = null;
+    }
+    // NOTE: isBlockedByModal is updated at this point
+
+    if (window.onClosedFn) |onClosed| {
+        onClosed(window.closed_context);
+    }
 
     if (std.mem.indexOfScalar(*gui.Window, self.windows.items, window)) |i| {
         _ = self.windows.swapRemove(i);

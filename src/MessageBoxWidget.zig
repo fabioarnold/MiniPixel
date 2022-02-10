@@ -6,6 +6,24 @@ const nvg = @import("nanovg");
 const geometry = @import("gui/geometry.zig");
 const Rect = geometry.Rect;
 
+pub const Buttons = enum {
+    ok,
+    yes_no_cancel,
+};
+
+pub const Icon = enum {
+    @"error",
+    question,
+};
+
+pub const Result = enum {
+    none,
+    ok,
+    cancel,
+    yes,
+    no,
+};
+
 const MessageBoxWidget = @This();
 
 widget: gui.Widget,
@@ -16,16 +34,7 @@ ok_button: *gui.Button,
 cancel_button: *gui.Button,
 yes_button: *gui.Button,
 no_button: *gui.Button,
-
-const Buttons = enum {
-    ok,
-    yes_no_cancel,
-};
-
-const Icon = enum {
-    @"error",
-    question,
-};
+result: Result = .none,
 
 pub fn init(allocator: Allocator, message: []const u8) !*MessageBoxWidget {
     const width = 240;
@@ -104,8 +113,8 @@ pub fn configure(self: *MessageBoxWidget, icon: Icon, buttons: Buttons, message:
 fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
     var self = @fieldParentPtr(MessageBoxWidget, "widget", widget);
     switch (event.key) {
-        .Return => self.accept(),
-        .Escape => self.cancel(),
+        .Return => self.setResult(if (self.ok_button.widget.visible) .ok else .yes),
+        .Escape => self.setResult(if (self.cancel_button.widget.visible) .cancel else .none),
         else => event.event.ignore(),
     }
 }
@@ -113,38 +122,33 @@ fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
 fn onOkButtonClick(button: *gui.Button) void {
     if (button.widget.parent) |parent| {
         var self = @fieldParentPtr(MessageBoxWidget, "widget", parent);
-        self.accept();
+        self.setResult(.ok);
     }
 }
 
 fn onCancelButtonClick(button: *gui.Button) void {
     if (button.widget.parent) |parent| {
         var self = @fieldParentPtr(MessageBoxWidget, "widget", parent);
-        self.cancel();
+        self.setResult(.cancel);
     }
 }
 
 fn onYesButtonClick(button: *gui.Button) void {
     if (button.widget.parent) |parent| {
         var self = @fieldParentPtr(MessageBoxWidget, "widget", parent);
-        self.accept();
+        self.setResult(.yes);
     }
 }
 
 fn onNoButtonClick(button: *gui.Button) void {
     if (button.widget.parent) |parent| {
         var self = @fieldParentPtr(MessageBoxWidget, "widget", parent);
-        self.cancel();
+        self.setResult(.no);
     }
 }
 
-fn accept(self: *MessageBoxWidget) void {
-    if (self.widget.getWindow()) |window| {
-        window.close();
-    }
-}
-
-fn cancel(self: *MessageBoxWidget) void {
+fn setResult(self: *MessageBoxWidget, result: Result) void {
+    self.result = result;
     if (self.widget.getWindow()) |window| {
         window.close();
     }

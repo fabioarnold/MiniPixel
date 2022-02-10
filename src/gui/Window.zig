@@ -28,7 +28,11 @@ automatic_cursor_tracking_widget: ?*gui.Widget = null,
 cursorFn: ?fn () void = null,
 mouse_pos: Point(f32) = Point(f32).make(0, 0),
 
-onCloseRequestFn: ?fn (*gui.Window) bool = null, // true: yes, close window. false: no, don't close window.
+close_request_context: usize = 0,
+onCloseRequestFn: ?fn (usize) bool = null, // true: yes, close window. false: no, don't close window.
+
+closed_context: usize = 0,
+onClosedFn: ?fn (usize) void = null,
 
 const Self = @This();
 
@@ -48,9 +52,8 @@ pub fn init(allocator: std.mem.Allocator, application: *gui.Application) !*Self 
 pub fn deinit(self: *Self) void {
     if (self.parent) |parent| {
         // remove reference from parent
-        if (std.mem.indexOfScalar(*gui.Window, parent.children.items, self)) |i| {
-            _ = parent.children.swapRemove(i);
-        }
+        parent.removeChild(self);
+        self.parent = null;
     }
     for (self.children.items) |child| {
         child.parent = null;
@@ -121,6 +124,12 @@ pub fn isBlockedByModal(self: *Self) bool {
         if (child.isBlockedByModal()) return true;
     }
     return false;
+}
+
+pub fn removeChild(self: *Self, child: *gui.Window) void {
+    if (std.mem.indexOfScalar(*gui.Window, self.children.items, child)) |i| {
+        _ = self.children.swapRemove(i);
+    }
 }
 
 pub fn collectFocusableWidgets(self: Self, focusable_widgets: *std.ArrayList(*gui.Widget), source: event.FocusSource) !void {

@@ -11,6 +11,7 @@ const nvg = @import("nanovg");
 const gui = @import("gui");
 const Rect = @import("gui/geometry.zig").Rect;
 const EditorWidget = @import("EditorWidget.zig");
+const MessageBoxWidget = @import("MessageBoxWidget.zig");
 const info = @import("info.zig");
 
 extern fn gladLoadGL() callconv(.C) c_int; // init OpenGL function pointers on Windows and Linux
@@ -707,10 +708,8 @@ pub fn sdlSetClipboardText(allocator: std.mem.Allocator, text: []const u8) !void
     sdlProcessClipboardUpdate(); // broadcasts a gui.ClipboardUpdate event to all windows
 }
 
-// returns false if application should quit
-fn sdlHandleEvent(sdl_event: c.SDL_Event) bool {
+fn sdlHandleEvent(sdl_event: c.SDL_Event) void {
     switch (sdl_event.type) {
-        c.SDL_QUIT => return false,
         c.SDL_WINDOWEVENT => sdlProcessWindowEvent(sdl_event.window),
         c.SDL_MOUSEMOTION => sdlProcessMouseMotion(sdl_event.motion),
         c.SDL_MOUSEBUTTONDOWN, c.SDL_MOUSEBUTTONUP => sdlProcessMouseButton(sdl_event.button),
@@ -724,7 +723,6 @@ fn sdlHandleEvent(sdl_event: c.SDL_Event) bool {
         c.SDL_MULTIGESTURE => sdlProcessMultiGesture(sdl_event.mgesture),
         else => {},
     }
-    return true; // don't quit
 }
 
 const MainloopType = enum {
@@ -819,14 +817,8 @@ pub fn main() !void {
     editor_widget = try EditorWidget.init(allocator, rect);
     defer editor_widget.deinit();
     main_window.setMainWidget(&editor_widget.widget);
-    main_window.onCloseRequestFn = struct {
-        fn closeRequest(window: *gui.Window) bool {
-            if (window_config_file_path) |file_path| {
-                writeWindowConfig(window, file_path) catch {}; // don't care
-            }
-            return true;
-        }
-    }.closeRequest;
+    main_window.close_request_context = @ptrToInt(main_window);
+    main_window.onCloseRequestFn = onMainWindowCloseRequest;
     if (window_config_file_path) |file_path| {
         loadAndApplyWindowConfig(allocator, main_window, file_path) catch {}; // don't care
         editor_widget.canvas.centerDocument(); // Window size might have changed recenter document
@@ -839,16 +831,17 @@ pub fn main() !void {
     }
     std.process.argsFree(allocator, args);
 
-    mainloop: while (true) {
+    // quit app when there are no more windows open
+    while (app.windows.items.len > 0) {
         var sdl_event: c.SDL_Event = undefined;
         switch (mainloop_type) {
             .waitEvent => if (c.SDL_WaitEvent(&sdl_event) == 0) {
                 c.SDL_Log("SDL_WaitEvent failed: %s", c.SDL_GetError());
             } else {
-                if (!sdlHandleEvent(sdl_event)) break :mainloop;
+                sdlHandleEvent(sdl_event);
             },
             .regularInterval => while (c.SDL_PollEvent(&sdl_event) != 0) {
-                if (!sdlHandleEvent(sdl_event)) break :mainloop;
+                sdlHandleEvent(sdl_event);
             },
         }
 
@@ -856,6 +849,28 @@ pub fn main() !void {
         for (sdl_windows.items) |*sdl_window| {
             if (sdl_window.dirty) sdl_window.draw();
         }
+    }
+}
+
+fn onMainWindowCloseRequest(context: usize) bool {
+    if (editor_widget.has_unsaved_changes) {
+        editor_widget.showUnsavedChangesDialog(onUnsavedChangesDialogResult, context);
+        return false;
+    }
+    const window = @intToPtr(*gui.Window, context);
+    if (window_config_file_path) |file_path| {
+        writeWindowConfig(window, file_path) catch {}; // don't care
+    }
+    return true;
+}
+
+fn onUnsavedChangesDialogResult(result_context: usize, result: MessageBoxWidget.Result) void {
+    if (result == .no) {
+        editor_widget.has_unsaved_changes = false; // HACK: close will succeed when there are no unsaved changes
+        const main_window = @intToPtr(*gui.Window, result_context);
+        main_window.close();
+    } else if (result == .yes) {
+        editor_widget.trySaveDocument(true); // TODO: if success, continue closing app
     }
 }
 

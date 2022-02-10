@@ -67,6 +67,9 @@ image_text: [20]u8 = .{0} ** 20,
 memory_text: [100]u8 = .{0} ** 100,
 
 message_box_widget: *MessageBoxWidget,
+message_box_result_context: usize = 0,
+onMessageBoxResultFn: ?fn (usize, MessageBoxWidget.Result) void = null,
+
 new_document_widget: *NewDocumentWidget,
 about_dialog_widget: *AboutDialogWidget,
 canvas: *CanvasWidget,
@@ -684,7 +687,18 @@ fn updateLayout(self: *Self) void {
 pub fn showErrorMessageBox(self: *Self, title: [:0]const u8, message: []const u8) void {
     self.message_box_widget.setSize(240, 100);
     self.message_box_widget.configure(.@"error", .ok, message);
+    self.onMessageBoxResultFn = null;
     self.showMessageBox(title);
+}
+
+pub fn showUnsavedChangesDialog(self: *Self, onResultFn: ?fn (usize, MessageBoxWidget.Result) void, result_context: usize) void {
+    self.message_box_widget.setSize(300, 100);
+    self.message_box_widget.configure(.question, .yes_no_cancel, "This file has been changed.\nWould you like to save those changes?");
+    self.message_box_widget.yes_button.text = "Save";
+    self.message_box_widget.no_button.text = "Discard";
+    self.onMessageBoxResultFn = onResultFn;
+    self.message_box_result_context = result_context;
+    self.showMessageBox("Unsaved changes");
 }
 
 fn showMessageBox(self: *Self, title: [:0]const u8) void {
@@ -698,7 +712,16 @@ fn showMessageBox(self: *Self, title: [:0]const u8) void {
         if (window_or_error) |window| {
             window.is_modal = true;
             window.setMainWidget(&self.message_box_widget.widget);
+            window.closed_context = @ptrToInt(self);
+            window.onClosedFn = onMessageBoxClosed;
         } else |_| {}
+    }
+}
+
+fn onMessageBoxClosed(context: usize) void {
+    const editor = @intToPtr(*EditorWidget, context);
+    if (editor.onMessageBoxResultFn) |onMessageBoxResult| {
+        onMessageBoxResult(editor.message_box_result_context, editor.message_box_widget.result);
     }
 }
 
@@ -795,7 +818,7 @@ fn saveDocument(self: *Self, force_save_as: bool) !void {
     }
 }
 
-fn trySaveDocument(self: *Self, force_save_as: bool) void {
+pub fn trySaveDocument(self: *Self, force_save_as: bool) void {
     self.saveDocument(force_save_as) catch {
         self.showErrorMessageBox("Save document", "Could not save document.");
     };
