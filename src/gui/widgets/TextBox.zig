@@ -422,8 +422,7 @@ pub fn draw(widget: *gui.Widget) void {
     nvg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
 
     nvg.fontFace("guifont");
-    //nvg.fontSize(pixelsToPoints(9));
-    nvg.fontSize(13);
+    nvg.fontSize(12);
     var text_align = nvg.TextAlign{.vertical = .middle};
     const padding = 5;
     var x = rect.x;

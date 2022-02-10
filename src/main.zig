@@ -810,18 +810,10 @@ pub fn main() !void {
 
     gui.theme_colors = gui.defaultColorTheme();
 
-    if (builtin.os.tag == .windows) {
-        const gui_id = nvg.createFont("guifont", "C:\\Windows\\Fonts\\segoeui.ttf");
-        const emoji_id = nvg.createFont("emoji", "C:\\Windows\\Fonts\\seguiemj.ttf");
-        _ = nvg.addFallbackFontId(gui_id, emoji_id);
-        _ = nvg.createFont("guifontbold", "C:\\Windows\\Fonts\\segoeuib.ttf");
-    } else if (builtin.os.tag == .macos) {
-        _ = nvg.createFont("guifont", "/System/Library/Fonts/SFNS.ttf");
-        _ = nvg.createFont("guifontbold", "/System/Library/Fonts/SFCompact.ttf");
-    } else if (builtin.os.tag == .linux) {
-        _ = nvg.createFont("guifont", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
-        _ = nvg.createFont("guifontbold", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf");
-    }
+    const roboto_regular = @embedFile("../data/fonts/Roboto-Regular.ttf");
+    const roboto_bold = @embedFile("../data/fonts/Roboto-Bold.ttf");
+    _ = nvg.createFontMem("guifont", roboto_regular);
+    _ = nvg.createFontMem("guifontbold", roboto_bold);
 
     const rect = Rect(f32).make(0, 0, main_window.width, main_window.height);
     editor_widget = try EditorWidget.init(allocator, rect);

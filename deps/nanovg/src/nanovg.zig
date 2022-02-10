@@ -81,6 +81,10 @@ pub const ImageFlags = packed struct {
     nearest: bool = false, // Image interpolation is Nearest instead Linear
 };
 
+pub const Font = struct {
+    handle: i32,
+};
+
 var ctx: ?*c.NVGcontext = undefined;
 
 pub fn init() void {
@@ -371,7 +375,6 @@ pub fn createImage(filename: [:0]const u8, flags: ImageFlags) Image {
 pub fn createImageMem(data: []const u8, flags: ImageFlags) Image {
     return Image{ .handle = c.nvgCreateImageMem(ctx, @bitCast(u6, flags), data.ptr, @intCast(c_int, data.len)) };
 }
-//int nvgCreateImageMem(NVGcontext* ctx, int imageFlags, unsigned char* data, int ndata);
 
 // Creates image from specified image data.
 // Returns handle to the image.
@@ -589,18 +592,20 @@ pub fn stroke() void {
 
 // Creates font by loading it from the disk from specified file name.
 // Returns handle to the font.
-pub fn createFont(name: [:0]const u8, filename: [:0]const u8) i32 {
-    return c.nvgCreateFont(ctx, name, filename);
+pub fn createFont(name: [:0]const u8, filename: [:0]const u8) Font {
+    return Font{ .handle = c.nvgCreateFont(ctx, name, filename) };
 }
 
 // font_index specifies which font face to load from a .ttf/.ttc file.
-pub fn createFontAtIndex(name: [:0]const u8, filename: [:0]const u8, font_index: i32) i32 {
-    return c.nvgCreateFontAtIndex(ctx, name, filename, font_index);
+pub fn createFontAtIndex(name: [:0]const u8, filename: [:0]const u8, font_index: i32) Font {
+    return Font{ .handle = c.nvgCreateFontAtIndex(ctx, name, filename, font_index) };
 }
 
-// // Creates font by loading it from the specified memory chunk.
-// // Returns handle to the font.
-// int nvgCreateFontMem(NVGcontext* ctx, const char* name, unsigned char* data, int ndata, int freeData);
+// Creates font by loading it from the specified memory chunk.
+// Returns handle to the font.
+pub fn createFontMem(name: [:0]const u8, data: []const u8) Font {
+    return Font{ .handle = c.nvgCreateFontMem(ctx, name, data.ptr, @intCast(c_int, data.len), 0) };
+}
 
 // // fontIndex specifies which font face to load from a .ttf/.ttc file.
 // int nvgCreateFontMemAtIndex(NVGcontext* ctx, const char* name, unsigned char* data, int ndata, int freeData, const int fontIndex);
@@ -659,10 +664,12 @@ pub fn text(x: f32, y: f32, string: []const u8) f32 {
     return c.nvgText(ctx, x, y, std.meta.assumeSentinel(string, 0), string.ptr + string.len);
 }
 
-// // Draws multi-line text string at specified location wrapped at the specified width. If end is specified only the sub-string up to the end is drawn.
-// // White space is stripped at the beginning of the rows, the text is split at word boundaries or when new-line characters are encountered.
-// // Words longer than the max width are slit at nearest character (i.e. no hyphenation).
-// void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const char* string, const char* end);
+// Draws multi-line text string at specified location wrapped at the specified width. If end is specified only the sub-string up to the end is drawn.
+// White space is stripped at the beginning of the rows, the text is split at word boundaries or when new-line characters are encountered.
+// Words longer than the max width are slit at nearest character (i.e. no hyphenation).
+pub fn textBox(x: f32, y: f32, break_row_width: f32, string: []const u8) void {
+    return c.nvgTextBox(ctx, x, y, break_row_width, std.meta.assumeSentinel(string, 0), string.ptr + string.len);
+}
 
 // Measures the specified text string. Parameter bounds should be a pointer to float[4],
 // if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]

@@ -41,8 +41,7 @@ pub fn draw(widget: *gui.Widget) void {
     }
 
     nvg.fontFace("guifont");
-    //nvg.fontSize(pixelsToPoints(9));
-    nvg.fontSize(13);
+    nvg.fontSize(12);
     var text_align = nvg.TextAlign{.vertical = .middle};
     var x = rect.x;
     switch (self.text_alignment) {
@@ -61,5 +60,9 @@ pub fn draw(widget: *gui.Widget) void {
     }
     nvg.textAlign(text_align);
     nvg.fillColor(nvg.rgb(0, 0, 0));
-    _ = nvg.text(x, rect.y + 0.5 * rect.h, self.text);
+    if (rect.w == 0) {
+        _ = nvg.text(x, rect.y + 0.5 * rect.h, self.text);
+    } else {
+        _ = nvg.textBox(x, rect.y + 0.5 * rect.h, rect.w, self.text);
+    }
 }

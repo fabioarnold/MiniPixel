@@ -17,7 +17,7 @@ pub const ButtonStyle = enum(u8) {
 widget: gui.Widget,
 allocator: Allocator,
 text: [:0]const u8,
-font_size: f32 = 9,
+font_size: f32 = 12,
 iconFn: ?fn () void = null,
 icon_x: f32 = 2,
 icon_y: f32 = 2,
@@ -163,7 +163,7 @@ pub fn draw(widget: *gui.Widget) void {
     // nvg.stroke();
 
     nvg.fontFace("guifont");
-    nvg.fontSize(gui.pixelsToPoints(self.font_size));
+    nvg.fontSize(self.font_size);
     nvg.textAlign(.{ .horizontal = .center, .vertical = .middle});
     nvg.fillColor(nvg.rgb(0, 0, 0));
     _ = nvg.text(rect.x + 0.5 * rect.w, rect.y + 0.5 * rect.h, self.text);

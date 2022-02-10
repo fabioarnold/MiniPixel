@@ -2302,12 +2302,12 @@ int nvgCreateFontAtIndex(NVGcontext* ctx, const char* name, const char* filename
 	return fonsAddFont(ctx->fs, name, filename, fontIndex);
 }
 
-int nvgCreateFontMem(NVGcontext* ctx, const char* name, unsigned char* data, int ndata, int freeData)
+int nvgCreateFontMem(NVGcontext* ctx, const char* name, const unsigned char* data, int ndata, int freeData)
 {
 	return fonsAddFontMem(ctx->fs, name, data, ndata, freeData, 0);
 }
 
-int nvgCreateFontMemAtIndex(NVGcontext* ctx, const char* name, unsigned char* data, int ndata, int freeData, const int fontIndex)
+int nvgCreateFontMemAtIndex(NVGcontext* ctx, const char* name, const unsigned char* data, int ndata, int freeData, const int fontIndex)
 {
 	return fonsAddFontMem(ctx->fs, name, data, ndata, freeData, fontIndex);
 }
