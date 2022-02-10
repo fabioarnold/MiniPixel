@@ -637,11 +637,15 @@ pub fn fontBlur(blur: f32) void {
     c.nvgFontBlur(ctx, blur);
 }
 
-// // Sets the letter spacing of current text style.
-// void nvgTextLetterSpacing(NVGcontext* ctx, float spacing);
+// Sets the letter spacing of current text style.
+pub fn textLetterSpacing(spacing: f32) void {
+    c.nvgTextLetterSpacing(ctx, spacing);
+}
 
-// // Sets the proportional line height of current text style. The line height is specified as multiple of font size.
-// void nvgTextLineHeight(NVGcontext* ctx, float lineHeight);
+// Sets the proportional line height of current text style. The line height is specified as multiple of font size.
+pub fn textLineHeight(line_height: f32) void {
+    c.nvgTextLineHeight(ctx, line_height);
+}
 
 // Sets the text align of current text style, see NVGalign for options.
 pub fn textAlign(text_align: TextAlign) void {
@@ -668,7 +672,7 @@ pub fn text(x: f32, y: f32, string: []const u8) f32 {
 // White space is stripped at the beginning of the rows, the text is split at word boundaries or when new-line characters are encountered.
 // Words longer than the max width are slit at nearest character (i.e. no hyphenation).
 pub fn textBox(x: f32, y: f32, break_row_width: f32, string: []const u8) void {
-    return c.nvgTextBox(ctx, x, y, break_row_width, std.meta.assumeSentinel(string, 0), string.ptr + string.len);
+    c.nvgTextBox(ctx, x, y, break_row_width, std.meta.assumeSentinel(string, 0), string.ptr + string.len);
 }
 
 // Measures the specified text string. Parameter bounds should be a pointer to float[4],
@@ -683,10 +687,12 @@ pub fn textWidth(string: []const u8) f32 {
     return c.nvgTextBounds(ctx, 0, 0, std.meta.assumeSentinel(string, 0), string.ptr + string.len, null);
 }
 
-// // Measures the specified multi-text string. Parameter bounds should be a pointer to float[4],
-// // if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]
-// // Measured values are returned in local coordinate space.
-// void nvgTextBoxBounds(NVGcontext* ctx, float x, float y, float breakRowWidth, const char* string, const char* end, float* bounds);
+// Measures the specified multi-text string. Parameter bounds should be a pointer to float[4],
+// if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]
+// Measured values are returned in local coordinate space.
+pub fn textBoxBounds(x: f32, y: f32, break_row_width: f32, string: []const u8, bounds: *[4]f32) void {
+    c.nvgTextBoxBounds(ctx, x, y, break_row_width, std.meta.assumeSentinel(string, 0), string.ptr + string.len, bounds);
+}
 
 // Calculates the glyph x positions of the specified text. If end is specified only the sub-string will be used.
 // Measured values are returned in local coordinate space.

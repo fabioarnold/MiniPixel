@@ -13,7 +13,7 @@ const Rect = geometry.Rect;
 const Clipboard = @import("Clipboard.zig");
 const Document = @import("Document.zig");
 
-const ErrorMessageWidget = @import("ErrorMessageWidget.zig");
+const MessageBoxWidget = @import("MessageBoxWidget.zig");
 const NewDocumentWidget = @import("NewDocumentWidget.zig");
 const AboutDialogWidget = @import("AboutDialogWidget.zig");
 const CanvasWidget = @import("CanvasWidget.zig");
@@ -66,7 +66,7 @@ tool_text: [100]u8 = .{0} ** 100,
 image_text: [20]u8 = .{0} ** 20,
 memory_text: [100]u8 = .{0} ** 100,
 
-error_message_widget: *ErrorMessageWidget,
+message_box_widget: *MessageBoxWidget,
 new_document_widget: *NewDocumentWidget,
 about_dialog_widget: *AboutDialogWidget,
 canvas: *CanvasWidget,
@@ -107,7 +107,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .rotate_cw_tool_button = try gui.Button.init(allocator, rect, ""),
         .grid_button = try gui.Button.init(allocator, rect, ""),
         .zoom_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 37, 20), "Zoom:"),
-        .zoom_spinner = try gui.Spinner(f32).init(allocator, Rect(f32).make(0, 0, 53, 20)),
+        .zoom_spinner = try gui.Spinner(f32).init(allocator, Rect(f32).make(0, 0, 55, 20)),
         .about_button = try gui.Button.init(allocator, rect, ""),
 
         .status_bar = try gui.Toolbar.init(allocator, rect),
@@ -116,7 +116,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .image_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 80, 20), ""),
         .memory_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 80, 20), ""),
 
-        .error_message_widget = try ErrorMessageWidget.init(allocator, ""),
+        .message_box_widget = try MessageBoxWidget.init(allocator, ""),
         .new_document_widget = try NewDocumentWidget.init(allocator, self),
         .about_dialog_widget = try AboutDialogWidget.init(allocator),
         .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document),
@@ -566,7 +566,7 @@ pub fn deinit(self: *Self) void {
     self.image_status_label.deinit();
     self.memory_status_label.deinit();
 
-    self.error_message_widget.deinit();
+    self.message_box_widget.deinit();
     self.new_document_widget.deinit();
     self.about_dialog_widget.deinit();
     self.canvas.deinit();
@@ -682,17 +682,22 @@ fn updateLayout(self: *Self) void {
 }
 
 pub fn showErrorMessageBox(self: *Self, title: [:0]const u8, message: []const u8) void {
+    self.message_box_widget.setSize(240, 100);
+    self.message_box_widget.configure(.@"error", .ok, message);
+    self.showMessageBox(title);
+}
+
+fn showMessageBox(self: *Self, title: [:0]const u8) void {
     if (self.widget.getWindow()) |parent_window| {
         var window_or_error = parent_window.createChildWindow(
             title,
-            self.error_message_widget.widget.relative_rect.w,
-            self.error_message_widget.widget.relative_rect.h,
+            self.message_box_widget.widget.relative_rect.w,
+            self.message_box_widget.widget.relative_rect.h,
             gui.Window.CreateOptions{ .resizable = false },
         );
         if (window_or_error) |window| {
             window.is_modal = true;
-            window.setMainWidget(&self.error_message_widget.widget);
-            self.error_message_widget.message_label.text = message;
+            window.setMainWidget(&self.message_box_widget.widget);
         } else |_| {}
     }
 }

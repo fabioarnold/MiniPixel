@@ -42,8 +42,9 @@ pub fn draw(widget: *gui.Widget) void {
 
     nvg.fontFace("guifont");
     nvg.fontSize(12);
-    var text_align = nvg.TextAlign{.vertical = .middle};
+    var text_align = nvg.TextAlign{ .vertical = .middle };
     var x = rect.x;
+    var y = rect.y + 0.5 * rect.h;
     switch (self.text_alignment) {
         .left => {
             text_align.horizontal = .left;
@@ -58,11 +59,19 @@ pub fn draw(widget: *gui.Widget) void {
             x += rect.w - self.padding;
         },
     }
-    nvg.textAlign(text_align);
     nvg.fillColor(nvg.rgb(0, 0, 0));
-    if (rect.w == 0) {
+    const has_newline = std.mem.indexOfScalar(u8, self.text, '\n') != null;
+    if (rect.w == 0 or !has_newline) {
+        nvg.textAlign(text_align);
         _ = nvg.text(x, rect.y + 0.5 * rect.h, self.text);
     } else {
-        _ = nvg.textBox(x, rect.y + 0.5 * rect.h, rect.w, self.text);
+        // NanoVG only vertically aligns the first line. So we have to do our own vertical centering.
+        text_align.vertical = .top;
+        nvg.textAlign(text_align);
+        nvg.textLineHeight(14.0 / 12.0);
+        var bounds: [4]f32 = undefined;
+        nvg.textBoxBounds(x, y, rect.w, self.text, &bounds);
+        y -= 0.5 * (bounds[3] - bounds[1]);
+        nvg.textBox(x, y, rect.w, self.text);
     }
 }

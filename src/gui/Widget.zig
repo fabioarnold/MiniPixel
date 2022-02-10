@@ -17,6 +17,7 @@ parent: ?*Widget = null,
 children: ArrayList(*Widget),
 relative_rect: Rect(f32), // Relative to parent
 focus_policy: event.FocusPolicy = event.FocusPolicy{},
+visible: bool = true,
 
 drawFn: fn (*Widget) void = drawChildren,
 
@@ -124,6 +125,8 @@ pub fn drawChildren(self: *Self) void {
 }
 
 pub fn draw(self: *Self) void {
+    if (!self.visible) return;
+
     self.drawFn(self);
 
     if (debug_focus) {
@@ -145,7 +148,7 @@ pub const HitTestResult = struct {
 pub fn hitTest(self: *Self, position: Point(f32)) HitTestResult {
     const relative_position = position.subtracted(self.relative_rect.getPosition());
     for (self.children.items) |child| {
-        if (child.relative_rect.contains(relative_position)) {
+        if (child.visible and child.relative_rect.contains(relative_position)) {
             return child.hitTest(relative_position);
         }
     }
