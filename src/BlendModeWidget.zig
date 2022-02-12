@@ -13,7 +13,7 @@ const image_replace_data = @embedFile("../data/blendmodereplace.png");
 widget: gui.Widget,
 allocator: Allocator,
 
-active: BlendMode = .alpha,
+active: BlendMode = .replace,
 
 image_alpha: nvg.Image,
 image_replace: nvg.Image,

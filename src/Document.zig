@@ -68,7 +68,7 @@ copy_location: ?Pointi = null, // where the source was copied from
 history: *HistoryBuffer,
 foreground_color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
-blend_mode: BlendMode = .alpha,
+blend_mode: BlendMode = .replace,
 
 canvas: *CanvasWidget = undefined,
 
