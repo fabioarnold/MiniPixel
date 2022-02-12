@@ -12,3 +12,8 @@
 * Active selection is now visible in the preview widget
 * Compress undo/redo-steps for much lower memory usage
 * Add distinct blend modes replace and alpha blend
+
+## Changes since v0.2.0
+
+* Ask user if they want to save any changes when quitting the app
+* Use blend mode 'replace' as default
