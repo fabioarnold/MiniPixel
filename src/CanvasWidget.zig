@@ -910,6 +910,7 @@ pub fn centerAndZoomDocument(self: *Self) void {
     const visible_portion = 0.8;
     self.scale = visible_portion * std.math.min(fx, fy);
     self.scale = std.math.clamp(self.scale, min_scale, max_scale);
+    self.notifyScaleChanged();
 
     self.centerDocument();
 }
