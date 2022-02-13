@@ -87,7 +87,7 @@ fn getCursorPositionFromMousePosition(self: Self, mouse_position_x: f32) usize {
 }
 
 fn onMouseMove(widget: *gui.Widget, event: *gui.MouseEvent) void {
-    if (!widget.enabled) return;
+    if (!widget.isEnabled()) return;
     var self = @fieldParentPtr(Self, "widget", widget);
 
     const mouse_position = Point(f32).make(event.x, event.y);
@@ -106,7 +106,7 @@ fn onMouseMove(widget: *gui.Widget, event: *gui.MouseEvent) void {
 }
 
 fn onMouseDown(widget: *gui.Widget, event: *gui.MouseEvent) void {
-    if (!widget.enabled) return;
+    if (!widget.isEnabled()) return;
     var self = @fieldParentPtr(Self, "widget", widget);
 
     const mouse_position = Point(f32).make(event.x, event.y);
@@ -125,7 +125,7 @@ fn onMouseDown(widget: *gui.Widget, event: *gui.MouseEvent) void {
 }
 
 fn onMouseUp(widget: *gui.Widget, event: *const gui.MouseEvent) void {
-    if (!widget.enabled) return;
+    if (!widget.isEnabled()) return;
     _ = event;
     var self = @fieldParentPtr(Self, "widget", widget);
 
@@ -406,6 +406,7 @@ pub fn draw(widget: *gui.Widget) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
+    const enabled = widget.isEnabled();
     //drawPanelInset(rect.x - 1, rect.y - 1, rect.w + 2, rect.h + 2, 1);
 
     const is_focused = widget.isFocused();
@@ -413,7 +414,7 @@ pub fn draw(widget: *gui.Widget) void {
     // background
     nvg.beginPath();
     nvg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
-    nvg.fillColor(if (!widget.enabled) gui.theme_colors.background else self.background_color);
+    nvg.fillColor(if (!enabled) gui.theme_colors.background else self.background_color);
     nvg.fill();
 
     // border

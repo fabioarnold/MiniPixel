@@ -65,15 +65,15 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn click(self: *Self) void {
-    if (!self.widget.enabled) return;
+fn click(self: *Self) void {
+    if (!self.widget.isEnabled()) return;
     if (self.onClickFn) |clickFn| {
         clickFn(self);
     }
 }
 
 pub fn onMouseDown(widget: *gui.Widget, mouse_event: *const event.MouseEvent) void {
-    if (!widget.enabled) return;
+    if (!widget.isEnabled()) return;
     const self = @fieldParentPtr(Self, "widget", widget);
     const mouse_position = Point(f32).make(mouse_event.x, mouse_event.y);
     self.hovered = widget.getRect().contains(mouse_position);
@@ -89,7 +89,7 @@ pub fn onMouseDown(widget: *gui.Widget, mouse_event: *const event.MouseEvent) vo
 }
 
 fn onMouseUp(widget: *gui.Widget, mouse_event: *const event.MouseEvent) void {
-    if (!widget.enabled) return;
+    if (!widget.isEnabled()) return;
     const self = @fieldParentPtr(Self, "widget", widget);
     const mouse_position = Point(f32).make(mouse_event.x, mouse_event.y);
     self.hovered = widget.getRect().contains(mouse_position);
@@ -125,9 +125,10 @@ pub fn draw(widget: *gui.Widget) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
+    const enabled = widget.isEnabled();
     switch (self.style) {
         .default => {
-            gui.drawPanel(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 1, widget.enabled and self.hovered, (widget.enabled and self.pressed) or self.checked);
+            gui.drawPanel(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 1, enabled and self.hovered, (enabled and self.pressed) or self.checked);
 
             const is_focused = widget.isFocused();
 
@@ -144,9 +145,9 @@ pub fn draw(widget: *gui.Widget) void {
             nvg.strokeWidth(1);
         },
         .toolbar => {
-            if ((widget.enabled and self.hovered) or self.checked) {
+            if ((enabled and self.hovered) or self.checked) {
                 const depth: f32 = 1;
-                gui.drawPanel(rect.x, rect.y, rect.w, rect.h, depth, false, (widget.enabled and self.pressed) or self.checked);
+                gui.drawPanel(rect.x, rect.y, rect.w, rect.h, depth, false, (enabled and self.pressed) or self.checked);
             }
         },
     }

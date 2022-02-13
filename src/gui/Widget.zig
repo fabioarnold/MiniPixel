@@ -66,6 +66,14 @@ pub fn getApplication(self: *Self) ?*gui.Application {
     return window.application;
 }
 
+pub fn isEnabled(self: Self) bool {
+    if (!self.enabled) return false;
+    if (self.parent) |parent| {
+        return parent.isEnabled();
+    }
+    return true;
+}
+
 pub fn isFocused(self: *Self) bool {
     if (self.getWindow()) |window| {
         return window.is_active and window.focused_widget == self;
@@ -280,7 +288,7 @@ pub fn handleEvent(self: *Self, e: *event.Event) void {
 }
 
 pub fn acceptsFocus(self: Self, source: event.FocusSource) bool {
-    return self.enabled and self.focus_policy.accepts(source);
+    return self.isEnabled() and self.focus_policy.accepts(source);
 }
 
 fn focusNextWidget(self: *Self, source: event.FocusSource) void {

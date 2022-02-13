@@ -178,12 +178,6 @@ pub fn Spinner(comptime T: type) type {
             self.down_button.icon_y = std.math.floor((self.down_button.widget.relative_rect.h - 6) / 2);
         }
 
-        pub fn setEnabled(self: *Self, enabled: bool) void {
-            self.up_button.widget.enabled = enabled;
-            self.down_button.widget.enabled = enabled;
-            self.text_box.widget.enabled = enabled;
-        }
-
         pub fn setFocus(self: *Self, focus: bool, source: gui.FocusSource) void {
             self.text_box.widget.setFocus(focus, source);
         }

@@ -513,7 +513,7 @@ fn initMenubar(self: *Self) !void {
     self.custom_grid_x_spinner.max_value = 512;
     self.custom_grid_x_spinner.step_mode = .exponential;
     self.custom_grid_x_spinner.setValue(@intCast(i32, self.canvas.custom_grid_spacing_x));
-    self.custom_grid_x_spinner.setEnabled(false);
+    self.custom_grid_x_spinner.widget.enabled = false;
     self.custom_grid_x_spinner.onChangedFn = struct {
         fn changed(spinner: *gui.Spinner(i32)) void {
             if (spinner.widget.parent) |menu_bar_widget| {
@@ -528,7 +528,7 @@ fn initMenubar(self: *Self) !void {
     self.custom_grid_y_spinner.max_value = 512;
     self.custom_grid_y_spinner.step_mode = .exponential;
     self.custom_grid_y_spinner.setValue(@intCast(i32,self.canvas.custom_grid_spacing_y));
-    self.custom_grid_y_spinner.setEnabled(false);
+    self.custom_grid_y_spinner.widget.enabled = false;
     self.custom_grid_y_spinner.onChangedFn = struct {
         fn changed(spinner: *gui.Spinner(i32)) void {
             if (spinner.widget.parent) |menu_bar_widget| {
@@ -982,8 +982,8 @@ fn toggleCustomGrid(self: *Self) void {
     self.custom_grid_button.checked = self.canvas.custom_grid_enabled;
     self.snap_button.widget.enabled = self.canvas.custom_grid_enabled;
     self.snap_button.iconFn = if (self.canvas.custom_grid_enabled) icons.iconSnapEnabled else icons.iconSnapDisabled;
-    self.custom_grid_x_spinner.setEnabled(self.canvas.custom_grid_enabled);
-    self.custom_grid_y_spinner.setEnabled(self.canvas.custom_grid_enabled);
+    self.custom_grid_x_spinner.widget.enabled = self.canvas.custom_grid_enabled;
+    self.custom_grid_y_spinner.widget.enabled = self.canvas.custom_grid_enabled;
 }
 
 fn toggleGridSnapping(self: *Self) void {
