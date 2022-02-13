@@ -74,9 +74,19 @@ pub fn initFromMemory(allocator: Allocator, memory: []const u8) !Image {
     return self;
 }
 
-pub fn deinit(self: *Image) void {
+pub fn deinit(self: Image) void {
     self.allocator.free(self.pixels);
     if (self.colormap) |colormap| self.allocator.free(colormap);
+}
+
+pub fn clone(self: Image, allocator: std.mem.Allocator) !Image {
+    if (self.colormap != null) @panic("Not implementated");
+    return Image{
+        .allocator = allocator,
+        .width = self.width,
+        .height = self.height,
+        .pixels = try allocator.dupe(u8, self.pixels),
+    };
 }
 
 pub fn writeToFile(self: Image, file_path: []const u8) !void {

@@ -17,3 +17,4 @@
 
 * Ask user if they want to save any changes when quitting the app
 * Use blend mode 'replace' as default
+* App internal clipboard for platforms other than Windows

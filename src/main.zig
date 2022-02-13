@@ -10,6 +10,7 @@ const c = @import("c.zig");
 const nvg = @import("nanovg");
 const gui = @import("gui");
 const Rect = @import("gui/geometry.zig").Rect;
+const Clipboard = @import("Clipboard.zig");
 const EditorWidget = @import("EditorWidget.zig");
 const MessageBoxWidget = @import("MessageBoxWidget.zig");
 const info = @import("info.zig");
@@ -740,6 +741,8 @@ pub fn main() !void {
         if (leaked) @panic("Memory leak :(");
     }
     const allocator = gpa.allocator();
+
+    defer Clipboard.deinit();
 
     if (builtin.os.tag == .windows) {
         _ = SetProcessDPIAware();
