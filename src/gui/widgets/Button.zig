@@ -22,7 +22,6 @@ iconFn: ?fn () void = null,
 icon_x: f32 = 2,
 icon_y: f32 = 2,
 style: ButtonStyle = .default,
-enabled: bool = true,
 
 hovered: bool = false,
 pressed: bool = false,
@@ -67,15 +66,15 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn click(self: *Self) void {
-    if (!self.enabled) return;
+    if (!self.widget.enabled) return;
     if (self.onClickFn) |clickFn| {
         clickFn(self);
     }
 }
 
 pub fn onMouseDown(widget: *gui.Widget, mouse_event: *const event.MouseEvent) void {
+    if (!widget.enabled) return;
     const self = @fieldParentPtr(Self, "widget", widget);
-    if (!self.enabled) return;
     const mouse_position = Point(f32).make(mouse_event.x, mouse_event.y);
     self.hovered = widget.getRect().contains(mouse_position);
     if (mouse_event.button == .left) {
@@ -90,8 +89,8 @@ pub fn onMouseDown(widget: *gui.Widget, mouse_event: *const event.MouseEvent) vo
 }
 
 fn onMouseUp(widget: *gui.Widget, mouse_event: *const event.MouseEvent) void {
+    if (!widget.enabled) return;
     const self = @fieldParentPtr(Self, "widget", widget);
-    if (!self.enabled) return;
     const mouse_position = Point(f32).make(mouse_event.x, mouse_event.y);
     self.hovered = widget.getRect().contains(mouse_position);
     if (mouse_event.button == .left) {
@@ -128,7 +127,7 @@ pub fn draw(widget: *gui.Widget) void {
     const rect = widget.relative_rect;
     switch (self.style) {
         .default => {
-            gui.drawPanel(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 1, self.enabled and self.hovered, (self.enabled and self.pressed) or self.checked);
+            gui.drawPanel(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 1, widget.enabled and self.hovered, (widget.enabled and self.pressed) or self.checked);
 
             const is_focused = widget.isFocused();
 
@@ -145,9 +144,9 @@ pub fn draw(widget: *gui.Widget) void {
             nvg.strokeWidth(1);
         },
         .toolbar => {
-            if ((self.enabled and self.hovered) or self.checked) {
+            if ((widget.enabled and self.hovered) or self.checked) {
                 const depth: f32 = 1;
-                gui.drawPanel(rect.x, rect.y, rect.w, rect.h, depth, false, (self.enabled and self.pressed) or self.checked);
+                gui.drawPanel(rect.x, rect.y, rect.w, rect.h, depth, false, (widget.enabled and self.pressed) or self.checked);
             }
         },
     }

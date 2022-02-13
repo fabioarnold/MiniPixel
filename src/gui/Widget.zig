@@ -17,6 +17,7 @@ parent: ?*Widget = null,
 children: ArrayList(*Widget),
 relative_rect: Rect(f32), // Relative to parent
 focus_policy: event.FocusPolicy = event.FocusPolicy{},
+enabled: bool = true,
 visible: bool = true,
 
 drawFn: fn (*Widget) void = drawChildren,
@@ -279,7 +280,7 @@ pub fn handleEvent(self: *Self, e: *event.Event) void {
 }
 
 pub fn acceptsFocus(self: Self, source: event.FocusSource) bool {
-    return self.focus_policy.accepts(source);
+    return self.enabled and self.focus_policy.accepts(source);
 }
 
 fn focusNextWidget(self: *Self, source: event.FocusSource) void {

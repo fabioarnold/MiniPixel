@@ -539,7 +539,7 @@ pub fn iconRotateCcw() void {
     nvg.fill();
 }
 
-pub fn iconGrid() void {
+pub fn iconPixelGrid() void {
     nvg.beginPath();
     nvg.moveTo(0, 0.5);
     nvg.lineTo(16, 0.5);
@@ -558,6 +558,44 @@ pub fn iconGrid() void {
     nvg.moveTo(15.5, 0);
     nvg.lineTo(15.5, 16);
     nvg.strokeColor(nvg.rgb(66, 66, 66));
+    nvg.stroke();
+}
+
+pub fn iconCustomGrid() void {
+    nvg.beginPath();
+    nvg.moveTo(1, 2.5);
+    nvg.lineTo(4, 2.5);
+    nvg.moveTo(5, 2.5);
+    nvg.lineTo(7, 2.5);
+    nvg.moveTo(8, 2.5);
+    nvg.lineTo(10, 2.5);
+    nvg.moveTo(11, 2.5);
+    nvg.lineTo(14, 2.5);
+    nvg.moveTo(1, 12.5);
+    nvg.lineTo(4, 12.5);
+    nvg.moveTo(5, 12.5);
+    nvg.lineTo(7, 12.5);
+    nvg.moveTo(8, 12.5);
+    nvg.lineTo(10, 12.5);
+    nvg.moveTo(11, 12.5);
+    nvg.lineTo(14, 12.5);
+    nvg.moveTo(2.5, 1);
+    nvg.lineTo(2.5, 4);
+    nvg.moveTo(2.5, 5);
+    nvg.lineTo(2.5, 7);
+    nvg.moveTo(2.5, 8);
+    nvg.lineTo(2.5, 10);
+    nvg.moveTo(2.5, 11);
+    nvg.lineTo(2.5, 14);
+    nvg.moveTo(12.5, 1);
+    nvg.lineTo(12.5, 4);
+    nvg.moveTo(12.5, 5);
+    nvg.lineTo(12.5, 7);
+    nvg.moveTo(12.5, 8);
+    nvg.lineTo(12.5, 10);
+    nvg.moveTo(12.5, 11);
+    nvg.lineTo(12.5, 14);
+    nvg.strokeColor(nvg.rgb(40, 140, 200));
     nvg.stroke();
 }
 

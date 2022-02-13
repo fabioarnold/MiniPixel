@@ -758,9 +758,13 @@ vertical_scrollbar: *gui.Scrollbar,
 // view transform
 translation: Pointf = Pointf.make(0, 0),
 scale: f32 = 16,
-grid_enabled: bool = false,
+pixel_grid_enabled: bool = false,
+custom_grid_enabled: bool = false,
+custom_grid_spacing_x: u32 = 8,
+custom_grid_spacing_y: u32 = 8,
 document_background_image: nvg.Image,
 grid_image: nvg.Image,
+blue_grid_image: nvg.Image,
 
 hovered: bool = false,
 scroll_offset: ?Pointf = null, // in document space
@@ -789,6 +793,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         .grid_image = nvg.createImageRgba(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
             0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
             0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0xFF,
+        }),
+        .blue_grid_image = nvg.createImageRgba(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
+            0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF,
+            0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF,
         }),
     };
     self.widget.focus_policy.keyboard = true;
@@ -836,6 +844,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
 pub fn deinit(self: *Self) void {
     nvg.deleteImage(self.document_background_image);
     nvg.deleteImage(self.grid_image);
+    nvg.deleteImage(self.blue_grid_image);
     self.horizontal_scrollbar.deinit();
     self.vertical_scrollbar.deinit();
     self.widget.deinit();
@@ -1138,7 +1147,7 @@ fn draw(widget: *gui.Widget) void {
             if (self.document.selection) |selection| {
                 self.drawSelection(selection, client_rect.translated(self.translation.scaled(-1)));
             } else {
-                self.drawGrid();
+                self.drawGrids();
             }
         }
 
@@ -1177,8 +1186,8 @@ fn drawDocumentBackground(self: Self, rect: Rectf) void {
     nvg.fill();
 }
 
-fn drawGrid(self: Self) void {
-    if (self.grid_enabled and self.scale > 3) {
+fn drawGrids(self: Self) void {
+    if (self.pixel_grid_enabled and self.scale > 3) {
         nvg.beginPath();
         var x: u32 = 0;
         while (x <= self.document.bitmap.width) : (x += 1) {
@@ -1191,6 +1200,26 @@ fn drawGrid(self: Self) void {
             nvg.rect(0, fy, @intToFloat(f32, self.document.bitmap.width) * self.scale, 1);
         }
         nvg.fillPaint(nvg.imagePattern(0, 0, 2, 2, 0, self.grid_image, 0.5));
+        nvg.fill();
+    }
+
+    if (self.custom_grid_enabled) {
+        nvg.beginPath();
+        if (self.scale * @intToFloat(f32, self.custom_grid_spacing_x) > 3) {
+            var x: u32 = 0;
+            while (x <= self.document.bitmap.width) : (x += self.custom_grid_spacing_x) {
+                const fx = @trunc(@intToFloat(f32, x) * self.scale);
+                nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.bitmap.height) * self.scale);
+            }
+        }
+        if (self.scale * @intToFloat(f32, self.custom_grid_spacing_y) > 3) {
+            var y: u32 = 0;
+            while (y <= self.document.bitmap.height) : (y += self.custom_grid_spacing_y) {
+                const fy = @trunc(@intToFloat(f32, y) * self.scale);
+                nvg.rect(0, fy, @intToFloat(f32, self.document.bitmap.width) * self.scale, 1);
+            }
+        }
+        nvg.fillPaint(nvg.imagePattern(0, 0, 2, 2, 0, self.blue_grid_image, 0.5));
         nvg.fill();
     }
 }
@@ -1225,7 +1254,7 @@ fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) voi
         nvg.fill();
     }
 
-    self.drawGrid();
+    self.drawGrids();
 
     // draw selection border on top of grid
     nvg.beginPath();

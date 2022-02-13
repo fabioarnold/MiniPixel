@@ -50,7 +50,10 @@ mirror_h_tool_button: *gui.Button,
 mirror_v_tool_button: *gui.Button,
 rotate_ccw_tool_button: *gui.Button,
 rotate_cw_tool_button: *gui.Button,
-grid_button: *gui.Button,
+pixel_grid_button: *gui.Button,
+custom_grid_button: *gui.Button,
+custom_grid_x_spinner: *gui.Spinner(i32),
+custom_grid_y_spinner: *gui.Spinner(i32),
 zoom_label: *gui.Label,
 zoom_spinner: *gui.Spinner(f32),
 about_button: *gui.Button,
@@ -108,7 +111,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .mirror_v_tool_button = try gui.Button.init(allocator, rect, ""),
         .rotate_ccw_tool_button = try gui.Button.init(allocator, rect, ""),
         .rotate_cw_tool_button = try gui.Button.init(allocator, rect, ""),
-        .grid_button = try gui.Button.init(allocator, rect, ""),
+        .pixel_grid_button = try gui.Button.init(allocator, rect, ""),
+        .custom_grid_button = try gui.Button.init(allocator, rect, ""),
+        .custom_grid_x_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(0, 0, 45, 20)),
+        .custom_grid_y_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(0, 0, 45, 20)),
         .zoom_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 37, 20), "Zoom:"),
         .zoom_spinner = try gui.Spinner(f32).init(allocator, Rect(f32).make(0, 0, 55, 20)),
         .about_button = try gui.Button.init(allocator, rect, ""),
@@ -302,7 +308,7 @@ fn initMenubar(self: *Self) !void {
     }.enter;
     self.saveas_button.onLeaveFn = menuButtonOnLeave;
     self.undo_button.iconFn = icons.iconUndoDisabled;
-    self.undo_button.enabled = false;
+    self.undo_button.widget.enabled = false;
     self.undo_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
             getEditorFromMenuButton(button).tryUndoDocument();
@@ -315,7 +321,7 @@ fn initMenubar(self: *Self) !void {
     }.enter;
     self.undo_button.onLeaveFn = menuButtonOnLeave;
     self.redo_button.iconFn = icons.iconRedoDisabled;
-    self.redo_button.enabled = false;
+    self.redo_button.widget.enabled = false;
     self.redo_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
             getEditorFromMenuButton(button).tryRedoDocument();
@@ -461,19 +467,62 @@ fn initMenubar(self: *Self) !void {
         }
     }.enter;
     self.rotate_cw_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.grid_button.iconFn = icons.iconGrid;
-    self.grid_button.checked = self.canvas.grid_enabled;
-    self.grid_button.onClickFn = struct {
+    self.pixel_grid_button.iconFn = icons.iconPixelGrid;
+    self.pixel_grid_button.checked = self.canvas.pixel_grid_enabled;
+    self.pixel_grid_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).toggleGrid();
+            getEditorFromMenuButton(button).togglePixelGrid();
         }
     }.click;
-    self.grid_button.onEnterFn = struct {
+    self.pixel_grid_button.onEnterFn = struct {
         fn enter(button: *gui.Button) void {
             getEditorFromMenuButton(button).setHelpText("Toggle Pixel Grid (#)");
         }
     }.enter;
-    self.grid_button.onLeaveFn = menuButtonOnLeave;
+    self.pixel_grid_button.onLeaveFn = menuButtonOnLeave;
+    self.custom_grid_button.iconFn = icons.iconCustomGrid;
+    self.custom_grid_button.checked = self.canvas.pixel_grid_enabled;
+    self.custom_grid_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).toggleCustomGrid();
+        }
+    }.click;
+    self.custom_grid_button.onEnterFn = struct {
+        fn enter(button: *gui.Button) void {
+            getEditorFromMenuButton(button).setHelpText("Toggle Custom Grid");
+        }
+    }.enter;
+    self.custom_grid_button.onLeaveFn = menuButtonOnLeave;
+    self.custom_grid_x_spinner.min_value = 2;
+    self.custom_grid_x_spinner.max_value = 512;
+    self.custom_grid_x_spinner.step_mode = .exponential;
+    self.custom_grid_x_spinner.setValue(@intCast(i32, self.canvas.custom_grid_spacing_x));
+    self.custom_grid_x_spinner.setEnabled(false);
+    self.custom_grid_x_spinner.onChangedFn = struct {
+        fn changed(spinner: *gui.Spinner(i32)) void {
+            if (spinner.widget.parent) |menu_bar_widget| {
+                if (menu_bar_widget.parent) |parent| {
+                    var editor = @fieldParentPtr(EditorWidget, "widget", parent);
+                    editor.canvas.custom_grid_spacing_x = @intCast(u32, spinner.value);
+                }
+            }
+        }
+    }.changed;
+    self.custom_grid_y_spinner.min_value = 2;
+    self.custom_grid_y_spinner.max_value = 512;
+    self.custom_grid_y_spinner.step_mode = .exponential;
+    self.custom_grid_y_spinner.setValue(@intCast(i32,self.canvas.custom_grid_spacing_y));
+    self.custom_grid_y_spinner.setEnabled(false);
+    self.custom_grid_y_spinner.onChangedFn = struct {
+        fn changed(spinner: *gui.Spinner(i32)) void {
+            if (spinner.widget.parent) |menu_bar_widget| {
+                if (menu_bar_widget.parent) |parent| {
+                    var editor = @fieldParentPtr(EditorWidget, "widget", parent);
+                    editor.canvas.custom_grid_spacing_y = @intCast(u32, spinner.value);
+                }
+            }
+        }
+    }.changed;
     self.zoom_spinner.setValue(self.canvas.scale);
     self.zoom_spinner.min_value = CanvasWidget.min_scale;
     self.zoom_spinner.max_value = CanvasWidget.max_scale;
@@ -526,7 +575,10 @@ fn initMenubar(self: *Self) !void {
     try self.menu_bar.addButton(self.rotate_ccw_tool_button);
     try self.menu_bar.addButton(self.rotate_cw_tool_button);
     try self.menu_bar.addSeparator();
-    try self.menu_bar.addButton(self.grid_button);
+    try self.menu_bar.addButton(self.pixel_grid_button);
+    try self.menu_bar.addButton(self.custom_grid_button);
+    try self.menu_bar.addWidget(&self.custom_grid_x_spinner.widget);
+    try self.menu_bar.addWidget(&self.custom_grid_y_spinner.widget);
     try self.menu_bar.addSeparator();
     try self.menu_bar.addWidget(&self.zoom_label.widget);
     try self.menu_bar.addWidget(&self.zoom_spinner.widget);
@@ -558,7 +610,10 @@ pub fn deinit(self: *Self) void {
     self.mirror_v_tool_button.deinit();
     self.rotate_ccw_tool_button.deinit();
     self.rotate_cw_tool_button.deinit();
-    self.grid_button.deinit();
+    self.pixel_grid_button.deinit();
+    self.custom_grid_button.deinit();
+    self.custom_grid_x_spinner.deinit();
+    self.custom_grid_y_spinner.deinit();
     self.zoom_label.deinit();
     self.zoom_spinner.deinit();
     self.about_button.deinit();
@@ -615,7 +670,7 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
             .N => self.setTool(.draw), // peNcil
             .B => self.setTool(.fill), // Bucket
             .X => self.color_foreground_background.swap(),
-            .Hash => self.toggleGrid(),
+            .Hash => self.togglePixelGrid(),
             else => key_event.event.ignore(),
         }
     } else {
@@ -624,13 +679,13 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
 }
 
 pub fn onUndoChanged(self: *Self, document: *Document) void {
-    self.undo_button.enabled = document.canUndo();
-    self.undo_button.iconFn = if (self.undo_button.enabled)
+    self.undo_button.widget.enabled = document.canUndo();
+    self.undo_button.iconFn = if (self.undo_button.widget.enabled)
         icons.iconUndoEnabled
     else
         icons.iconUndoDisabled;
-    self.redo_button.enabled = document.canRedo();
-    self.redo_button.iconFn = if (self.redo_button.enabled)
+    self.redo_button.widget.enabled = document.canRedo();
+    self.redo_button.iconFn = if (self.redo_button.widget.enabled)
         icons.iconRedoEnabled
     else
         icons.iconRedoDisabled;
@@ -646,10 +701,10 @@ fn onClipboardUpdate(widget: *gui.Widget) void {
 
 fn checkClipboard(self: *Self) void {
     if (Clipboard.hasImage()) {
-        self.paste_button.enabled = true;
+        self.paste_button.widget.enabled = true;
         self.paste_button.iconFn = icons.iconPasteEnabled;
     } else {
-        self.paste_button.enabled = false;
+        self.paste_button.widget.enabled = false;
         self.paste_button.iconFn = icons.iconPasteDisabled;
     }
 }
@@ -899,9 +954,16 @@ fn setTool(self: *Self, tool: CanvasWidget.ToolType) void {
     self.setHelpText(self.getToolHelpText());
 }
 
-fn toggleGrid(self: *Self) void {
-    self.canvas.grid_enabled = !self.canvas.grid_enabled;
-    self.grid_button.checked = self.canvas.grid_enabled;
+fn togglePixelGrid(self: *Self) void {
+    self.canvas.pixel_grid_enabled = !self.canvas.pixel_grid_enabled;
+    self.pixel_grid_button.checked = self.canvas.pixel_grid_enabled;
+}
+
+fn toggleCustomGrid(self: *Self) void {
+    self.canvas.custom_grid_enabled = !self.canvas.custom_grid_enabled;
+    self.custom_grid_button.checked = self.canvas.custom_grid_enabled;
+    self.custom_grid_x_spinner.setEnabled(self.canvas.custom_grid_enabled);
+    self.custom_grid_y_spinner.setEnabled(self.canvas.custom_grid_enabled);
 }
 
 fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {
