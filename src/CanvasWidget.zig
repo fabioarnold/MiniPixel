@@ -80,11 +80,17 @@ const CropTool = struct {
     fn onMouseMove(self: *CropTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
         self.mouse_point = Pointf.make(event.x, event.y);
         const point = canvas.toDocumentSpace(event.x, event.y);
-        self.edit_point = Pointi.make(ftoi(@floor(point.x)), ftoi(@floor(point.y)));
+        var fx = @round(point.x);
+        var fy = @round(point.y);
+        canvas.snap(&fx, &fy);
+        self.edit_point = Pointi.make(ftoi(fx), ftoi(fy));
         if (self.crop_rect) |*rect| {
             if (self.drag_offset) |drag_offset| { // drag
-                const x = ftoi(@round(point.x - drag_offset.x));
-                const y = ftoi(@round(point.y - drag_offset.y));
+                fx = @round(point.x - drag_offset.x);
+                fy = @round(point.y - drag_offset.y);
+                canvas.snap(&fx, &fy);
+                const x = ftoi(fx);
+                const y = ftoi(fy);
                 if (self.drag_zone) |drag_zone| {
                     if (drag_zone == 0 or drag_zone == 3 or drag_zone == 5) {
                         rect.w += rect.x - x;
@@ -370,11 +376,17 @@ const SelectTool = struct {
         if (canvas.document.selection) |*selection| {
             self.edit_point = Pointi.make(ftoi(@floor(point.x)), ftoi(@floor(point.y)));
             if (self.drag_offset) |drag_offset| {
-                selection.rect.x = ftoi(@round(point.x - drag_offset.x));
-                selection.rect.y = ftoi(@round(point.y - drag_offset.y));
+                var fx = @round(point.x - drag_offset.x);
+                var fy = @round(point.y - drag_offset.y);
+                canvas.snap(&fx, &fy);
+                selection.rect.x = ftoi(fx);
+                selection.rect.y = ftoi(fy);
             }
         } else {
-            self.edit_point = Pointi.make(ftoi(@round(point.x)), ftoi(@round(point.y)));
+            var fx = @round(point.x);
+            var fy = @round(point.y);
+            canvas.snap(&fx, &fy);
+            self.edit_point = Pointi.make(ftoi(fx), ftoi(fy));
         }
     }
 
@@ -762,6 +774,7 @@ pixel_grid_enabled: bool = false,
 custom_grid_enabled: bool = false,
 custom_grid_spacing_x: u32 = 8,
 custom_grid_spacing_y: u32 = 8,
+grid_snapping_enabled: bool = false,
 document_background_image: nvg.Image,
 grid_image: nvg.Image,
 blue_grid_image: nvg.Image,
@@ -1083,6 +1096,15 @@ pub fn zoomToDocumentCenter(self: *Self, factor: f32) void {
     const center_x = self.translation.x + self.scale * 0.5 * @intToFloat(f32, self.document.bitmap.width);
     const center_y = self.translation.y + self.scale * 0.5 * @intToFloat(f32, self.document.bitmap.height);
     self.zoom(factor, center_x, center_y);
+}
+
+fn snap(self: Self, x: *f32, y: *f32) void {
+    if (self.custom_grid_enabled and self.grid_snapping_enabled) {
+        const fx = @intToFloat(f32, self.custom_grid_spacing_x);
+        const fy = @intToFloat(f32, self.custom_grid_spacing_y);
+        x.* = std.math.round(x.* / fx) * fx;
+        y.* = std.math.round(y.* / fy) * fy;
+    }
 }
 
 fn toDocumentSpace(self: Self, x: f32, y: f32) Pointf {

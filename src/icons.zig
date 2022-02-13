@@ -599,7 +599,15 @@ pub fn iconCustomGrid() void {
     nvg.stroke();
 }
 
-pub fn iconSnap() void {
+pub fn iconSnapEnabled() void {
+    iconSnap(true);
+}
+
+pub fn iconSnapDisabled() void {
+    iconSnap(false);
+}
+
+pub fn iconSnap(enabled: bool) void {
     nvg.beginPath();
     nvg.moveTo(1.5, 0.5);
     nvg.lineTo(1.5, 12.5);
@@ -616,9 +624,9 @@ pub fn iconSnap() void {
     nvg.lineTo(5.5, 10.5);
     nvg.lineTo(5.5, 0.5);
     nvg.closePath();
-    nvg.fillColor(nvg.rgb(250, 8, 0));
+    nvg.fillColor(if (enabled) nvg.rgb(250, 8, 0) else nvg.rgb(170, 170, 170));
     nvg.fill();
-    nvg.strokeColor(nvg.rgb(66, 66, 66));
+    nvg.strokeColor(if (enabled) nvg.rgb(66, 66, 66) else nvg.rgb(170, 170, 170));
     nvg.stroke();
     nvg.beginPath();
     nvg.moveTo(2, 1);

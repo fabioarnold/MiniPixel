@@ -52,6 +52,7 @@ rotate_ccw_tool_button: *gui.Button,
 rotate_cw_tool_button: *gui.Button,
 pixel_grid_button: *gui.Button,
 custom_grid_button: *gui.Button,
+snap_button: *gui.Button,
 custom_grid_x_spinner: *gui.Spinner(i32),
 custom_grid_y_spinner: *gui.Spinner(i32),
 zoom_label: *gui.Label,
@@ -113,6 +114,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .rotate_cw_tool_button = try gui.Button.init(allocator, rect, ""),
         .pixel_grid_button = try gui.Button.init(allocator, rect, ""),
         .custom_grid_button = try gui.Button.init(allocator, rect, ""),
+        .snap_button = try gui.Button.init(allocator, rect, ""),
         .custom_grid_x_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(0, 0, 45, 20)),
         .custom_grid_y_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(0, 0, 45, 20)),
         .zoom_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 37, 20), "Zoom:"),
@@ -493,6 +495,20 @@ fn initMenubar(self: *Self) !void {
         }
     }.enter;
     self.custom_grid_button.onLeaveFn = menuButtonOnLeave;
+    self.snap_button.iconFn = icons.iconSnapDisabled;
+    self.snap_button.widget.enabled = false;
+    self.snap_button.checked = self.canvas.grid_snapping_enabled;
+    self.snap_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).toggleGridSnapping();
+        }
+    }.click;
+    self.snap_button.onEnterFn = struct {
+        fn enter(button: *gui.Button) void {
+            getEditorFromMenuButton(button).setHelpText("Toggle Grid Snapping");
+        }
+    }.enter;
+    self.snap_button.onLeaveFn = menuButtonOnLeave;
     self.custom_grid_x_spinner.min_value = 2;
     self.custom_grid_x_spinner.max_value = 512;
     self.custom_grid_x_spinner.step_mode = .exponential;
@@ -577,6 +593,7 @@ fn initMenubar(self: *Self) !void {
     try self.menu_bar.addSeparator();
     try self.menu_bar.addButton(self.pixel_grid_button);
     try self.menu_bar.addButton(self.custom_grid_button);
+    try self.menu_bar.addButton(self.snap_button);
     try self.menu_bar.addWidget(&self.custom_grid_x_spinner.widget);
     try self.menu_bar.addWidget(&self.custom_grid_y_spinner.widget);
     try self.menu_bar.addSeparator();
@@ -612,6 +629,7 @@ pub fn deinit(self: *Self) void {
     self.rotate_cw_tool_button.deinit();
     self.pixel_grid_button.deinit();
     self.custom_grid_button.deinit();
+    self.snap_button.deinit();
     self.custom_grid_x_spinner.deinit();
     self.custom_grid_y_spinner.deinit();
     self.zoom_label.deinit();
@@ -962,8 +980,15 @@ fn togglePixelGrid(self: *Self) void {
 fn toggleCustomGrid(self: *Self) void {
     self.canvas.custom_grid_enabled = !self.canvas.custom_grid_enabled;
     self.custom_grid_button.checked = self.canvas.custom_grid_enabled;
+    self.snap_button.widget.enabled = self.canvas.custom_grid_enabled;
+    self.snap_button.iconFn = if (self.canvas.custom_grid_enabled) icons.iconSnapEnabled else icons.iconSnapDisabled;
     self.custom_grid_x_spinner.setEnabled(self.canvas.custom_grid_enabled);
     self.custom_grid_y_spinner.setEnabled(self.canvas.custom_grid_enabled);
+}
+
+fn toggleGridSnapping(self: *Self) void {
+    self.canvas.grid_snapping_enabled = !self.canvas.grid_snapping_enabled;
+    self.snap_button.checked = self.canvas.grid_snapping_enabled;
 }
 
 fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {
