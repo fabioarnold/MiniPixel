@@ -1003,11 +1003,31 @@ fn onMouseUp(widget: *gui.Widget, event: *const gui.MouseEvent) void {
 
 fn onMouseWheel(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     const zoom_factor = 1.25;
+    const scroll_increment = 100;
+
+    const up = event.wheel_y < 0;
+    const down = event.wheel_y > 0;
+
     var self = @fieldParentPtr(Self, "widget", widget);
-    if (event.wheel_y > 0) {
-        self.zoom(zoom_factor, event.x, event.y);
-    } else if (event.wheel_y < 0) {
-        self.zoom(1.0 / zoom_factor, event.x, event.y);
+
+    if (event.isModifierPressed(.ctrl)) {
+        if (up) {
+            self.zoom(1.0 / zoom_factor, event.x, event.y);
+        } else if (down) {
+            self.zoom(zoom_factor, event.x, event.y);
+        }
+    } else if (event.isModifierPressed(.shift)) {
+        if (up) {
+            self.setTranslation(self.translation.x - scroll_increment, self.translation.y);
+        } else if (down) {
+            self.setTranslation(self.translation.x + scroll_increment, self.translation.y);
+        }
+    } else {
+        if (up) {
+            self.setTranslation(self.translation.x, self.translation.y - scroll_increment);
+        } else if (down) {
+            self.setTranslation(self.translation.x, self.translation.y + scroll_increment);
+        }
     }
 }
 

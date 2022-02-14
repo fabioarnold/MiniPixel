@@ -19,3 +19,4 @@
 * Use blend mode 'replace' as default
 * App internal clipboard for platforms other than Windows
 * Add custom grid with snapping
+* Implement horizontal and vertical scrolling using the mouse wheel
