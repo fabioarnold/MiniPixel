@@ -77,6 +77,8 @@ onMessageBoxResultFn: ?fn (usize, MessageBoxWidget.Result) void = null,
 new_document_widget: *NewDocumentWidget,
 about_dialog_widget: *AboutDialogWidget,
 canvas: *CanvasWidget,
+palette_bar: *gui.Toolbar,
+palette_open_button: *gui.Button,
 color_palette: *ColorPaletteWidget,
 color_picker: *ColorPickerWidget,
 color_foreground_background: *ColorForegroundBackgroundWidget,
@@ -131,6 +133,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .new_document_widget = try NewDocumentWidget.init(allocator, self),
         .about_dialog_widget = try AboutDialogWidget.init(allocator),
         .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document),
+        .palette_bar = try gui.Toolbar.init(allocator, Rect(f32).make(0, 0, 163, 24)),
+        .palette_open_button = try gui.Button.init(allocator, rect, ""),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
         .color_foreground_background = try ColorForegroundBackgroundWidget.init(allocator, Rect(f32).make(0, 0, 66, 66)),
@@ -165,6 +169,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     // add main widgets
     try self.widget.addChild(&self.menu_bar.widget);
     try self.widget.addChild(&self.canvas.widget);
+    try self.widget.addChild(&self.palette_bar.widget);
+    try self.palette_bar.addButton(self.palette_open_button);
     try self.widget.addChild(&self.color_palette.widget);
     try self.widget.addChild(&self.color_picker.widget);
     try self.widget.addChild(&self.color_foreground_background.widget);
@@ -172,6 +178,13 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     try self.widget.addChild(&self.preview.widget);
     try self.widget.addChild(&self.panel_right.widget);
     try self.widget.addChild(&self.status_bar.widget);
+
+    self.palette_open_button.iconFn = icons.iconOpen;
+    self.palette_open_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).tryOpenPalette();
+        }
+    }.click;
 
     try self.color_palette.loadPalContents(@embedFile("../data/palettes/arne16.pal"));
     self.color_palette.onSelectionChangedFn = struct {
@@ -647,6 +660,8 @@ pub fn deinit(self: *Self) void {
     self.new_document_widget.deinit();
     self.about_dialog_widget.deinit();
     self.canvas.deinit();
+    self.palette_bar.deinit();
+    self.palette_open_button.deinit();
     self.color_palette.deinit();
     self.color_picker.deinit();
     self.color_foreground_background.deinit();
@@ -736,6 +751,7 @@ fn updateLayout(self: *Self) void {
     const canvas_h = rect.h - menu_bar_h - menu_bar_h;
 
     self.canvas.widget.relative_rect.x = 0;
+    self.palette_bar.widget.relative_rect.x = canvas_w;
     self.color_palette.widget.relative_rect.x = canvas_w;
     self.color_picker.widget.relative_rect.x = canvas_w;
     self.color_foreground_background.widget.relative_rect.x = canvas_w;
@@ -743,13 +759,21 @@ fn updateLayout(self: *Self) void {
     self.preview.widget.relative_rect.x = canvas_w;
     self.panel_right.widget.relative_rect.x = canvas_w;
 
-    self.canvas.widget.relative_rect.y = menu_bar_h;
-    self.color_palette.widget.relative_rect.y = menu_bar_h;
-    self.color_picker.widget.relative_rect.y = self.color_palette.widget.relative_rect.y + self.color_palette.widget.relative_rect.h;
-    self.color_foreground_background.widget.relative_rect.y = self.color_picker.widget.relative_rect.y + self.color_picker.widget.relative_rect.h;
-    self.blend_mode.widget.relative_rect.y = self.color_picker.widget.relative_rect.y + self.color_picker.widget.relative_rect.h;
-    self.preview.widget.relative_rect.y = self.blend_mode.widget.relative_rect.y + self.blend_mode.widget.relative_rect.h;
-    self.panel_right.widget.relative_rect.y = self.preview.widget.relative_rect.y + self.preview.widget.relative_rect.h;
+    var y: f32 = menu_bar_h;
+    self.canvas.widget.relative_rect.y = y;
+    self.palette_bar.widget.relative_rect.y = y;
+    self.palette_bar.widget.relative_rect.h = menu_bar_h;
+    y += self.palette_bar.widget.relative_rect.h;
+    self.color_palette.widget.relative_rect.y = y;
+    y += self.color_palette.widget.relative_rect.h;
+    self.color_picker.widget.relative_rect.y = y;
+    y += self.color_picker.widget.relative_rect.h;
+    self.color_foreground_background.widget.relative_rect.y = y;
+    self.blend_mode.widget.relative_rect.y = y;
+    y += self.color_foreground_background.widget.relative_rect.h;
+    self.preview.widget.relative_rect.y = y;
+    y += self.preview.widget.relative_rect.h;
+    self.panel_right.widget.relative_rect.y = y;
     self.status_bar.widget.relative_rect.y = rect.h - menu_bar_h;
 
     self.menu_bar.widget.setSize(rect.w, menu_bar_h);
@@ -990,6 +1014,19 @@ fn toggleCustomGrid(self: *Self) void {
 fn toggleGridSnapping(self: *Self) void {
     self.canvas.grid_snapping_enabled = !self.canvas.grid_snapping_enabled;
     self.snap_button.checked = self.canvas.grid_snapping_enabled;
+}
+
+fn openPalette(self: *Self) !void {
+    if (try nfd.openFileDialog("pal", null)) |nfd_file_path| {
+        defer nfd.freePath(nfd_file_path);
+        try self.color_palette.loadPal(self.allocator, nfd_file_path);
+    }
+}
+
+fn tryOpenPalette(self: *Self) void {
+    self.openPalette() catch {
+        self.showErrorMessageBox("Open palette", "Could not open palette.");
+    };
 }
 
 fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {

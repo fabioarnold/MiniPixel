@@ -59,7 +59,7 @@ pub fn loadPal(self: *Self, allocator: Allocator, filename: []const u8) !void {
     const contents = try file.readToEndAlloc(allocator, 1 << 20);
     defer allocator.free(contents);
 
-    self.loadPalContents(contents);
+    try self.loadPalContents(contents);
 }
 
 pub fn loadPalContents(self: *Self, contents: []const u8) !void {
