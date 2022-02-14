@@ -6,6 +6,8 @@ const nvg = @import("nanovg");
 const gui = @import("../gui.zig");
 const Rect = @import("../geometry.zig").Rect;
 
+const pad: f32 = 2;
+
 const Self = @This();
 
 widget: gui.Widget,
@@ -23,6 +25,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .separators = ArrayList(*gui.Widget).init(allocator),
     };
 
+    self.widget.onResizeFn = onResize;
     self.widget.drawFn = draw;
 
     return self;
@@ -35,6 +38,34 @@ pub fn deinit(self: *Self) void {
     self.separators.deinit();
     self.widget.deinit();
     self.allocator.destroy(self);
+}
+
+fn onResize(widget: *gui.Widget, _: *gui.ResizeEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    self.updateLayout();
+}
+
+fn updateLayout(self: Self) void {
+    var rem = self.widget.relative_rect.w - pad;
+    var grow_count: u32 = 0;
+    for (self.widget.children.items) |child| {
+        if (child.layout.grow) {
+            grow_count += 1;
+        } else {
+            rem -= child.relative_rect.w + pad;
+        }
+    }
+    if (rem < 0) rem = 0;
+    var x = pad;
+    for (self.widget.children.items) |child| {
+        child.relative_rect.x = x;
+        if (child.layout.grow) {
+            child.relative_rect.w = @round(rem / @intToFloat(f32, grow_count) - pad);
+            rem -= child.relative_rect.w + pad;
+            grow_count -= 1;
+        }
+        x += child.relative_rect.w + pad;
+    }
 }
 
 pub fn addButton(self: *Self, button: *gui.Button) !void {
@@ -54,14 +85,9 @@ pub fn addSeparator(self: *Self) !void {
 }
 
 pub fn addWidget(self: *Self, widget: *gui.Widget) !void {
-    const pad: f32 = 2;
-    var x: f32 = 0;
-    for (self.widget.children.items) |child| {
-        x += pad + child.relative_rect.w;
-    }
-    widget.relative_rect.x = x + pad;
     widget.relative_rect.y = pad;
     try self.widget.addChild(widget);
+    self.updateLayout();
 }
 
 fn drawSeparator(widget: *gui.Widget) void {

@@ -8,6 +8,10 @@ const event = @import("event.zig");
 const Point = @import("geometry.zig").Point;
 const Rect = @import("geometry.zig").Rect;
 
+const Layout = struct {
+    grow: bool = false,
+};
+
 const debug_focus = false;
 
 const Widget = @This();
@@ -16,6 +20,7 @@ window: ?*gui.Window = null,
 parent: ?*Widget = null,
 children: ArrayList(*Widget),
 relative_rect: Rect(f32), // Relative to parent
+layout: Layout = Layout{},
 focus_policy: event.FocusPolicy = event.FocusPolicy{},
 enabled: bool = true,
 visible: bool = true,

@@ -146,6 +146,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
     self.help_status_label.padding = 3;
     self.help_status_label.draw_border = true;
+    self.help_status_label.widget.layout.grow = true;
     self.tool_status_label.padding = 3;
     self.tool_status_label.draw_border = true;
     self.image_status_label.padding = 3;

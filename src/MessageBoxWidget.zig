@@ -44,7 +44,7 @@ pub fn init(allocator: Allocator, message: []const u8) !*MessageBoxWidget {
         .widget = gui.Widget.init(allocator, Rect(f32).make(0, 0, width, height)),
         .allocator = allocator,
         .drawIconFn = drawNoIcon,
-        .message_label = try gui.Label.init(allocator, Rect(f32).make(10 + 32 + 10, 20, width - 30 - 32, 20), message),
+        .message_label = try gui.Label.init(allocator, Rect(f32).make(10 + 32 + 10, 10, width - 30 - 32, 40), message),
         .ok_button = try gui.Button.init(allocator, Rect(f32).make(width - 80 - 10, height - 25 - 10, 80, 25), "OK"),
         .cancel_button = try gui.Button.init(allocator, Rect(f32).make(width - 80 - 10, height - 25 - 10, 80, 25), "Cancel"),
         .yes_button = try gui.Button.init(allocator, Rect(f32).make(width - 80 - 10, height - 25 - 10, 80, 25), "Yes"),
@@ -79,7 +79,7 @@ pub fn deinit(self: *MessageBoxWidget) void {
 }
 
 pub fn setSize(self: *MessageBoxWidget, width: f32, height: f32) void {
-    self.message_label.widget.setSize(width - 30 - 32, 20);
+    self.message_label.widget.setSize(width - 30 - 32, 40);
     self.widget.setSize(width, height);
 }
 

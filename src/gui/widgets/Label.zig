@@ -40,6 +40,9 @@ pub fn draw(widget: *gui.Widget) void {
         gui.drawPanelInset(rect.x, rect.y, rect.w, rect.h, 1);
     }
 
+    nvg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+    defer nvg.resetScissor();
+
     nvg.fontFace("guifont");
     nvg.fontSize(12);
     var text_align = nvg.TextAlign{ .vertical = .middle };
