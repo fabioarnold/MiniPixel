@@ -67,7 +67,7 @@ memory_status_label: *gui.Label,
 
 // help_text: [200]u8 = .{0} ** 200,
 tool_text: [100]u8 = .{0} ** 100,
-image_text: [20]u8 = .{0} ** 20,
+image_text: [40]u8 = .{0} ** 40,
 memory_text: [100]u8 = .{0} ** 100,
 
 message_box_widget: *MessageBoxWidget,
@@ -123,8 +123,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
         .status_bar = try gui.Toolbar.init(allocator, rect),
         .help_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 450, 20), ""),
-        .tool_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 120, 20), ""),
-        .image_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 80, 20), ""),
+        .tool_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 205, 20), ""),
+        .image_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 100, 20), ""),
         .memory_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 80, 20), ""),
 
         .message_box_widget = try MessageBoxWidget.init(allocator, ""),
@@ -1038,7 +1038,7 @@ fn getToolHelpText(self: Self) []const u8 {
 pub fn updateImageStatus(self: *Self) void {
     self.image_status_label.text = std.fmt.bufPrintZ(
         self.image_text[0..],
-        "{d}x{d}",
+        "Size {d}x{d}",
         .{ self.document.bitmap.width, self.document.bitmap.height },
     ) catch unreachable;
 }

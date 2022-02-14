@@ -673,14 +673,14 @@ const DrawTool = struct {
             if (canvas.document.pickColor(self.edit_point.x, self.edit_point.y)) |color| {
                 return std.fmt.bufPrintZ(
                     buf[0..],
-                    "{X:0>2} {X:0>2} {X:0>2} {X:0>2} ({d}, {d})",
+                    "({d}, {d}) R:{d:0>3} G:{d:0>3} B:{d:0>3} A:{d:0>3}",
                     .{
+                        self.edit_point.x,
+                        self.edit_point.y,
                         color[0],
                         color[1],
                         color[2],
                         color[3],
-                        self.edit_point.x,
-                        self.edit_point.y,
                     },
                 ) catch unreachable;
             }
@@ -733,14 +733,14 @@ const FillTool = struct {
             if (canvas.document.pickColor(self.edit_point.x, self.edit_point.y)) |color| {
                 return std.fmt.bufPrintZ(
                     buf[0..],
-                    "{X:0>2} {X:0>2} {X:0>2} {X:0>2} ({d}, {d})",
+                    "({d}, {d}) R:{d:0>3} G:{d:0>3} B:{d:0>3} A:{d:0>3}",
                     .{
+                        self.edit_point.x,
+                        self.edit_point.y,
                         color[0],
                         color[1],
                         color[2],
                         color[3],
-                        self.edit_point.x,
-                        self.edit_point.y,
                     },
                 ) catch unreachable;
             }
