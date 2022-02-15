@@ -59,16 +59,20 @@ pub fn loadPal(self: *Self, allocator: Allocator, filename: []const u8) !void {
     const contents = try file.readToEndAlloc(allocator, 1 << 20);
     defer allocator.free(contents);
 
-    self.loadPalContents(contents);
+    try self.loadPalContents(contents);
 }
 
+const pal_header = "JASC-PAL";
+const pal_version = "0100";
+const line_ending = "\r\n";
+
 pub fn loadPalContents(self: *Self, contents: []const u8) !void {
-    var lines = std.mem.tokenize(u8, contents, "\r\n");
+    var lines = std.mem.tokenize(u8, contents, line_ending);
     const header = lines.next() orelse return error.UnexpectedEnd;
-    if (!std.mem.eql(u8, header, "JASC-PAL")) return error.InvalidHeader;
+    if (!std.mem.eql(u8, header, pal_header)) return error.InvalidHeader;
 
     const version = lines.next() orelse return error.UnexpectedEnd;
-    if (!std.mem.eql(u8, version, "0100")) return error.InvalidVersion;
+    if (!std.mem.eql(u8, version, pal_version)) return error.InvalidVersion;
 
     const count_string = lines.next() orelse return error.UnexpectedEnd;
     const count = try std.fmt.parseUnsigned(u32, count_string, 10);
@@ -91,6 +95,33 @@ pub fn loadPalContents(self: *Self, contents: []const u8) !void {
     while (i < self.colors.len) : (i += 1) {
         self.colors[i] = [_]u8{0} ** 3;
     }
+}
+
+pub fn writePal(self: Self, filename: []const u8) !void {
+    var file = try std.fs.cwd().createFile(filename, .{});
+    defer file.close();
+
+    const palette = self.trimBlackColorsRight();
+
+    var writer = file.writer();
+    _ = try writer.write(pal_header ++ line_ending);
+    _ = try writer.write(pal_version ++ line_ending);
+    _ = try writer.print("{}" ++ line_ending, .{palette.len});
+
+    var i: usize = 0;
+    while (i < palette.len) : (i += 1) {
+        const color = palette[i];
+        _ = try writer.print("{} {} {}" ++ line_ending, .{ color[0], color[1], color[2] });
+    }
+}
+
+fn trimBlackColorsRight(self: Self) []const [3]u8 {
+    var len = self.colors.len;
+    while (len > 0) : (len -= 1) {
+        const color = self.colors[len - 1];
+        if (color[0] != 0 or color[1] != 0 or color[2] != 0) break;
+    }
+    return self.colors[0..len];
 }
 
 fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {

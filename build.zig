@@ -20,6 +20,13 @@ fn printError(str: []const u8) void {
     _ = stderr_writer.write(str) catch {};
 }
 
+fn installPalFiles(b: *Builder) void {
+    const pals = [_][]const u8{ "arne16.pal", "arne32.pal", "db32.pal", "default.pal", "famicube.pal", "pico-8.pal" };
+    inline for (pals) |pal| {
+        b.installBinFile("data/palettes/" ++ pal, "palettes/" ++ pal);
+    }
+}
+
 pub fn build(b: *Builder) !void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
@@ -78,6 +85,8 @@ pub fn build(b: *Builder) !void {
     exe.linkLibC();
     if (b.is_release) exe.strip = true;
     exe.install();
+
+    installPalFiles(b);
 
     const test_cmd = b.addTest("src/tests.zig");
     test_cmd.setBuildMode(mode);

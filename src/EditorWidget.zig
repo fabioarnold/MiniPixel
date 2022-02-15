@@ -77,6 +77,9 @@ onMessageBoxResultFn: ?fn (usize, MessageBoxWidget.Result) void = null,
 new_document_widget: *NewDocumentWidget,
 about_dialog_widget: *AboutDialogWidget,
 canvas: *CanvasWidget,
+palette_bar: *gui.Toolbar,
+palette_open_button: *gui.Button,
+palette_save_button: *gui.Button,
 color_palette: *ColorPaletteWidget,
 color_picker: *ColorPickerWidget,
 color_foreground_background: *ColorForegroundBackgroundWidget,
@@ -131,6 +134,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .new_document_widget = try NewDocumentWidget.init(allocator, self),
         .about_dialog_widget = try AboutDialogWidget.init(allocator),
         .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document),
+        .palette_bar = try gui.Toolbar.init(allocator, Rect(f32).make(0, 0, 163, 24)),
+        .palette_open_button = try gui.Button.init(allocator, rect, ""),
+        .palette_save_button = try gui.Button.init(allocator, rect, ""),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
         .color_foreground_background = try ColorForegroundBackgroundWidget.init(allocator, Rect(f32).make(0, 0, 66, 66)),
@@ -165,6 +171,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     // add main widgets
     try self.widget.addChild(&self.menu_bar.widget);
     try self.widget.addChild(&self.canvas.widget);
+    try self.widget.addChild(&self.palette_bar.widget);
+    try self.palette_bar.addButton(self.palette_open_button);
+    try self.palette_bar.addButton(self.palette_save_button);
     try self.widget.addChild(&self.color_palette.widget);
     try self.widget.addChild(&self.color_picker.widget);
     try self.widget.addChild(&self.color_foreground_background.widget);
@@ -172,6 +181,31 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     try self.widget.addChild(&self.preview.widget);
     try self.widget.addChild(&self.panel_right.widget);
     try self.widget.addChild(&self.status_bar.widget);
+
+    self.palette_open_button.iconFn = icons.iconOpen;
+    self.palette_open_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).tryOpenPalette();
+        }
+    }.click;
+    self.palette_open_button.onEnterFn = struct {
+        fn enter(button: *gui.Button) void {
+            getEditorFromMenuButton(button).setHelpText("Open Palette");
+        }
+    }.enter;
+    self.palette_open_button.onLeaveFn = menuButtonOnLeave;
+    self.palette_save_button.iconFn = icons.iconSave;
+    self.palette_save_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).trySavePalette();
+        }
+    }.click;
+    self.palette_save_button.onEnterFn = struct {
+        fn enter(button: *gui.Button) void {
+            getEditorFromMenuButton(button).setHelpText("Save Palette");
+        }
+    }.enter;
+    self.palette_save_button.onLeaveFn = menuButtonOnLeave;
 
     try self.color_palette.loadPalContents(@embedFile("../data/palettes/arne16.pal"));
     self.color_palette.onSelectionChangedFn = struct {
@@ -528,7 +562,7 @@ fn initMenubar(self: *Self) !void {
     self.custom_grid_y_spinner.min_value = 2;
     self.custom_grid_y_spinner.max_value = 512;
     self.custom_grid_y_spinner.step_mode = .exponential;
-    self.custom_grid_y_spinner.setValue(@intCast(i32,self.canvas.custom_grid_spacing_y));
+    self.custom_grid_y_spinner.setValue(@intCast(i32, self.canvas.custom_grid_spacing_y));
     self.custom_grid_y_spinner.widget.enabled = false;
     self.custom_grid_y_spinner.onChangedFn = struct {
         fn changed(spinner: *gui.Spinner(i32)) void {
@@ -647,6 +681,9 @@ pub fn deinit(self: *Self) void {
     self.new_document_widget.deinit();
     self.about_dialog_widget.deinit();
     self.canvas.deinit();
+    self.palette_bar.deinit();
+    self.palette_open_button.deinit();
+    self.palette_save_button.deinit();
     self.color_palette.deinit();
     self.color_picker.deinit();
     self.color_foreground_background.deinit();
@@ -736,6 +773,7 @@ fn updateLayout(self: *Self) void {
     const canvas_h = rect.h - menu_bar_h - menu_bar_h;
 
     self.canvas.widget.relative_rect.x = 0;
+    self.palette_bar.widget.relative_rect.x = canvas_w;
     self.color_palette.widget.relative_rect.x = canvas_w;
     self.color_picker.widget.relative_rect.x = canvas_w;
     self.color_foreground_background.widget.relative_rect.x = canvas_w;
@@ -743,13 +781,21 @@ fn updateLayout(self: *Self) void {
     self.preview.widget.relative_rect.x = canvas_w;
     self.panel_right.widget.relative_rect.x = canvas_w;
 
-    self.canvas.widget.relative_rect.y = menu_bar_h;
-    self.color_palette.widget.relative_rect.y = menu_bar_h;
-    self.color_picker.widget.relative_rect.y = self.color_palette.widget.relative_rect.y + self.color_palette.widget.relative_rect.h;
-    self.color_foreground_background.widget.relative_rect.y = self.color_picker.widget.relative_rect.y + self.color_picker.widget.relative_rect.h;
-    self.blend_mode.widget.relative_rect.y = self.color_picker.widget.relative_rect.y + self.color_picker.widget.relative_rect.h;
-    self.preview.widget.relative_rect.y = self.blend_mode.widget.relative_rect.y + self.blend_mode.widget.relative_rect.h;
-    self.panel_right.widget.relative_rect.y = self.preview.widget.relative_rect.y + self.preview.widget.relative_rect.h;
+    var y: f32 = menu_bar_h;
+    self.canvas.widget.relative_rect.y = y;
+    self.palette_bar.widget.relative_rect.y = y;
+    self.palette_bar.widget.relative_rect.h = menu_bar_h;
+    y += self.palette_bar.widget.relative_rect.h;
+    self.color_palette.widget.relative_rect.y = y;
+    y += self.color_palette.widget.relative_rect.h;
+    self.color_picker.widget.relative_rect.y = y;
+    y += self.color_picker.widget.relative_rect.h;
+    self.color_foreground_background.widget.relative_rect.y = y;
+    self.blend_mode.widget.relative_rect.y = y;
+    y += self.color_foreground_background.widget.relative_rect.h;
+    self.preview.widget.relative_rect.y = y;
+    y += self.preview.widget.relative_rect.h;
+    self.panel_right.widget.relative_rect.y = y;
     self.status_bar.widget.relative_rect.y = rect.h - menu_bar_h;
 
     self.menu_bar.widget.setSize(rect.w, menu_bar_h);
@@ -874,11 +920,7 @@ fn saveDocument(self: *Self, force_save_as: bool) !void {
         if (try nfd.saveFileDialog("png", null)) |nfd_file_path| {
             defer nfd.freePath(nfd_file_path);
 
-            // check extension
-            var png_file_path = (if (!isExtPng(nfd_file_path))
-                try std.mem.concat(self.allocator, u8, &.{ nfd_file_path, ".png" })
-            else
-                try self.allocator.dupe(u8, nfd_file_path));
+            var png_file_path = try copyWithExtension(self.allocator, nfd_file_path, ".png");
             defer self.allocator.free(png_file_path);
 
             try self.document.save(png_file_path);
@@ -992,6 +1034,36 @@ fn toggleGridSnapping(self: *Self) void {
     self.snap_button.checked = self.canvas.grid_snapping_enabled;
 }
 
+fn openPalette(self: *Self) !void {
+    if (try nfd.openFileDialog("pal", null)) |nfd_file_path| {
+        defer nfd.freePath(nfd_file_path);
+        try self.color_palette.loadPal(self.allocator, nfd_file_path);
+    }
+}
+
+fn tryOpenPalette(self: *Self) void {
+    self.openPalette() catch {
+        self.showErrorMessageBox("Open palette", "Could not open palette.");
+    };
+}
+
+fn savePalette(self: *Self) !void {
+    if (try nfd.saveFileDialog("pal", null)) |nfd_file_path| {
+        defer nfd.freePath(nfd_file_path);
+
+        const pal_file_path = try copyWithExtension(self.allocator, nfd_file_path, ".pal");
+        defer self.allocator.free(pal_file_path);
+
+        try self.color_palette.writePal(pal_file_path);
+    }
+}
+
+fn trySavePalette(self: *Self) void {
+    self.savePalette() catch {
+        self.showErrorMessageBox("Save palette", "Could not save palette.");
+    };
+}
+
 fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {
     if (self.document_file_path) |document_file_path| {
         self.allocator.free(document_file_path);
@@ -1057,9 +1129,15 @@ pub fn setMemoryUsageInfo(self: *Self, bytes: usize) void {
     ) catch unreachable;
 }
 
-fn isExtPng(file_path: []const u8) bool {
-    const ext = std.fs.path.extension(file_path);
-    return std.ascii.eqlIgnoreCase(".png", ext);
+fn hasExtension(filename: []const u8, extension: []const u8) bool {
+    return std.ascii.eqlIgnoreCase(std.fs.path.extension(filename), extension);
+}
+
+fn copyWithExtension(allocator: Allocator, filename: []const u8, extension: []const u8) ![]const u8 {
+    return (if (!hasExtension(filename, extension))
+        try std.mem.concat(allocator, u8, &.{ filename, extension })
+    else
+        try allocator.dupe(u8, filename));
 }
 
 fn getEditorFromMenuButton(menu_button: *gui.Button) *Self {
