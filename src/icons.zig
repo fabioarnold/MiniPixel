@@ -666,6 +666,36 @@ pub fn iconAbout() void {
     nvg.fill();
 }
 
+pub fn iconColorPalette() void {
+    nvg.beginPath();
+    nvg.moveTo(8, 1.5);
+    nvg.bezierTo(12, 1.5, 15.5, 4, 15.5, 8);
+    nvg.bezierTo(15.5, 12, 12, 14.5, 8, 14.5);
+    nvg.bezierTo(4, 14.5, 4, 11.5, 3, 10.5);
+    nvg.bezierTo(2, 9.5, 0.5, 10, 0.5, 8);
+    nvg.bezierTo(0.5, 4, 4, 1.5, 8, 1.5);
+    nvg.closePath();
+    nvg.pathWinding(.ccw);
+    nvg.circle(7, 11, 1.5);
+    nvg.pathWinding(.cw);
+    nvg.fillColor(nvg.rgb(245, 218, 97));
+    nvg.fill();
+    nvg.strokeColor(nvg.rgb(66, 66, 66));
+    nvg.stroke();
+    nvg.beginPath();
+    nvg.circle(4, 7, 2);
+    nvg.fillColor(nvg.rgb(250, 10, 0));
+    nvg.fill();
+    nvg.beginPath();
+    nvg.circle(8, 5, 2);
+    nvg.fillColor(nvg.rgb(30, 170, 15));
+    nvg.fill();
+    nvg.beginPath();
+    nvg.circle(12, 7, 2);
+    nvg.fillColor(nvg.rgb(40, 140, 200));
+    nvg.fill();
+}
+
 pub fn iconPlus() void {
     nvg.beginPath();
     nvg.moveTo(10.5, 8.5);
