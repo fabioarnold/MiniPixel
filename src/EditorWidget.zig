@@ -898,7 +898,7 @@ fn showAboutDialog(self: *Self) void {
 }
 
 pub fn createNewDocument(self: *Self, width: u32, height: u32) !void {
-    try self.document.createNew(width, height);
+    try self.document.createNew(width, height, .color); // TODO: indexed
     self.has_unsaved_changes = false;
     self.canvas.centerAndZoomDocument();
     self.updateImageStatus();
@@ -974,8 +974,8 @@ fn selectAll(self: *Self) void {
     if (self.document.selection) |_| {
         self.document.clearSelection() catch {}; // TODO
     }
-    const w = @intCast(i32, self.document.bitmap.width);
-    const h = @intCast(i32, self.document.bitmap.height);
+    const w = @intCast(i32, self.document.getWidth());
+    const h = @intCast(i32, self.document.getHeight());
     self.document.makeSelection(Rect(i32).make(0, 0, w, h)) catch {}; // TODO
 }
 
@@ -1131,8 +1131,8 @@ fn getToolHelpText(self: Self) []const u8 {
 pub fn updateImageStatus(self: *Self) void {
     self.image_status_label.text = std.fmt.bufPrintZ(
         self.image_text[0..],
-        "Size {d}x{d}",
-        .{ self.document.bitmap.width, self.document.bitmap.height },
+        "{d}x{d}@{d}",
+        .{ self.document.getWidth(), self.document.getHeight(), self.document.getColorDepth() },
     ) catch unreachable;
 }
 

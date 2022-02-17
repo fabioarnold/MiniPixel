@@ -88,7 +88,7 @@ pub fn getPixel(self: Self, x: i32, y: i32) ?Color {
 
 pub fn getPixelUnchecked(self: Self, x: u32, y: u32) Color {
     std.debug.assert(x < self.width);
-    const i = (y * self.width + x) * 4;
+    const i = (y * self.width + x) * @sizeOf(Color);
     return Color{
         self.pixels[i + 0],
         self.pixels[i + 1],
