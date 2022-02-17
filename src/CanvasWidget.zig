@@ -887,8 +887,8 @@ fn getClientRect(self: Self) Rectf {
 
 fn setTranslation(self: *Self, x: f32, y: f32) void {
     const client_rect = self.getClientRect();
-    const document_w = self.scale * @intToFloat(f32, self.document.bitmap.width);
-    const document_h = self.scale * @intToFloat(f32, self.document.bitmap.height);
+    const document_w = self.scale * @intToFloat(f32, self.document.getWidth());
+    const document_h = self.scale * @intToFloat(f32, self.document.getHeight());
     const min_x = 0.5 * client_rect.w - document_w;
     const min_y = 0.5 * client_rect.h - document_h;
     const max_x = 0.5 * client_rect.w;
@@ -906,8 +906,8 @@ pub fn translateByPixel(self: *Self, x: i32, y: i32) void {
 
 fn updateScrollbars(self: *Self) void {
     const client_rect = self.getClientRect();
-    const document_w = self.scale * @intToFloat(f32, self.document.bitmap.width);
-    const document_h = self.scale * @intToFloat(f32, self.document.bitmap.height);
+    const document_w = self.scale * @intToFloat(f32, self.document.getWidth());
+    const document_h = self.scale * @intToFloat(f32, self.document.getHeight());
     const translation = self.translation;
     self.horizontal_scrollbar.setMaxValue(document_w);
     self.horizontal_scrollbar.setValue(0.5 * client_rect.w - translation.x);
@@ -918,16 +918,16 @@ fn updateScrollbars(self: *Self) void {
 pub fn centerDocument(self: *Self) void {
     const rect = self.widget.relative_rect;
     self.setTranslation(
-        0.5 * (rect.w - self.scale * @intToFloat(f32, self.document.bitmap.width)),
-        0.5 * (rect.h - self.scale * @intToFloat(f32, self.document.bitmap.height)),
+        0.5 * (rect.w - self.scale * @intToFloat(f32, self.document.getWidth())),
+        0.5 * (rect.h - self.scale * @intToFloat(f32, self.document.getHeight())),
     );
 }
 
 pub fn centerAndZoomDocument(self: *Self) void {
     const rect = self.widget.relative_rect;
 
-    const fx = rect.w / @intToFloat(f32, self.document.bitmap.width);
-    const fy = rect.h / @intToFloat(f32, self.document.bitmap.width);
+    const fx = rect.w / @intToFloat(f32, self.document.getWidth());
+    const fy = rect.h / @intToFloat(f32, self.document.getWidth());
 
     const visible_portion = 0.8;
     self.scale = visible_portion * std.math.min(fx, fy);
@@ -1113,8 +1113,8 @@ fn zoom(self: *Self, factor: f32, center_x: f32, center_y: f32) void {
 }
 
 pub fn zoomToDocumentCenter(self: *Self, factor: f32) void {
-    const center_x = self.translation.x + self.scale * 0.5 * @intToFloat(f32, self.document.bitmap.width);
-    const center_y = self.translation.y + self.scale * 0.5 * @intToFloat(f32, self.document.bitmap.height);
+    const center_x = self.translation.x + self.scale * 0.5 * @intToFloat(f32, self.document.getWidth());
+    const center_y = self.translation.y + self.scale * 0.5 * @intToFloat(f32, self.document.getHeight());
     self.zoom(factor, center_x, center_y);
 }
 
@@ -1175,8 +1175,8 @@ fn draw(widget: *gui.Widget) void {
             self.drawDocumentBackground(Rectf.make(
                 0,
                 0,
-                self.scale * @intToFloat(f32, self.document.bitmap.width),
-                self.scale * @intToFloat(f32, self.document.bitmap.height),
+                self.scale * @intToFloat(f32, self.document.getWidth()),
+                self.scale * @intToFloat(f32, self.document.getHeight()),
             ));
             {
                 // draw document
@@ -1232,14 +1232,14 @@ fn drawGrids(self: Self) void {
     if (self.pixel_grid_enabled and self.scale > 3) {
         nvg.beginPath();
         var x: u32 = 0;
-        while (x <= self.document.bitmap.width) : (x += 1) {
+        while (x <= self.document.getWidth()) : (x += 1) {
             const fx = @trunc(@intToFloat(f32, x) * self.scale);
-            nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.bitmap.height) * self.scale);
+            nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.getHeight()) * self.scale);
         }
         var y: u32 = 0;
-        while (y <= self.document.bitmap.height) : (y += 1) {
+        while (y <= self.document.getHeight()) : (y += 1) {
             const fy = @trunc(@intToFloat(f32, y) * self.scale);
-            nvg.rect(0, fy, @intToFloat(f32, self.document.bitmap.width) * self.scale, 1);
+            nvg.rect(0, fy, @intToFloat(f32, self.document.getWidth()) * self.scale, 1);
         }
         nvg.fillPaint(nvg.imagePattern(0, 0, 2, 2, 0, self.grid_image, 0.5));
         nvg.fill();
@@ -1249,16 +1249,16 @@ fn drawGrids(self: Self) void {
         nvg.beginPath();
         if (self.scale * @intToFloat(f32, self.custom_grid_spacing_x) > 3) {
             var x: u32 = 0;
-            while (x <= self.document.bitmap.width) : (x += self.custom_grid_spacing_x) {
+            while (x <= self.document.getWidth()) : (x += self.custom_grid_spacing_x) {
                 const fx = @trunc(@intToFloat(f32, x) * self.scale);
-                nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.bitmap.height) * self.scale);
+                nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.getHeight()) * self.scale);
             }
         }
         if (self.scale * @intToFloat(f32, self.custom_grid_spacing_y) > 3) {
             var y: u32 = 0;
-            while (y <= self.document.bitmap.height) : (y += self.custom_grid_spacing_y) {
+            while (y <= self.document.getHeight()) : (y += self.custom_grid_spacing_y) {
                 const fy = @trunc(@intToFloat(f32, y) * self.scale);
-                nvg.rect(0, fy, @intToFloat(f32, self.document.bitmap.width) * self.scale, 1);
+                nvg.rect(0, fy, @intToFloat(f32, self.document.getWidth()) * self.scale, 1);
             }
         }
         nvg.fillPaint(nvg.imagePattern(0, 0, 2, 2, 0, self.blue_grid_image, 0.5));
@@ -1267,7 +1267,7 @@ fn drawGrids(self: Self) void {
 }
 
 fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) void {
-    const document_rect = Rectf.make(0, 0, @intToFloat(f32, self.document.bitmap.width), @intToFloat(f32, self.document.bitmap.height));
+    const document_rect = Rectf.make(0, 0, @intToFloat(f32, self.document.getWidth()), @intToFloat(f32, self.document.getHeight()));
     const selection_rect = Rectf.make(
         @intToFloat(f32, selection.rect.x),
         @intToFloat(f32, selection.rect.y),

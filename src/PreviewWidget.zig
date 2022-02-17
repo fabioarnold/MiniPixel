@@ -86,8 +86,8 @@ pub fn draw(widget: *gui.Widget) void {
     const client_rect = Rect(f32).make(0, 0, client_w, client_h);
     self.drawBackground(client_rect);
 
-    const d_x = client_w - @intToFloat(f32, self.document.bitmap.width);
-    const d_y = client_h - @intToFloat(f32, self.document.bitmap.height);
+    const d_x = client_w - @intToFloat(f32, self.document.getWidth());
+    const d_y = client_h - @intToFloat(f32, self.document.getHeight());
     self.translation.x = std.math.clamp(self.translation.x, std.math.min(0, d_x), std.math.max(0, d_x));
     self.translation.y = std.math.clamp(self.translation.y, std.math.min(0, d_y), std.math.max(0, d_y));
     nvg.translate(self.translation.x, self.translation.y);
@@ -106,7 +106,7 @@ fn drawBackground(self: Self, rect: Rect(f32)) void {
 }
 
 fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) void {
-    const document_rect = Rect(f32).make(0, 0, @intToFloat(f32, self.document.bitmap.width), @intToFloat(f32, self.document.bitmap.height));
+    const document_rect = Rect(f32).make(0, 0, @intToFloat(f32, self.document.getWidth()), @intToFloat(f32, self.document.getHeight()));
     const selection_rect = Rect(f32).make(
         @intToFloat(f32, selection.rect.x),
         @intToFloat(f32, selection.rect.y),

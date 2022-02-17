@@ -109,6 +109,23 @@ pub fn writeToMemory(self: Image, allocator: Allocator) ![]const u8 {
     return mem;
 }
 
+fn convertIndexedToRgba(allocator: Allocator, indexed_image: Image) !Image {
+    const image = try initEmptyRgba(allocator, indexed_image.width, indexed_image.height);
+    const colormap = indexed_image.colormap.?;
+    const pixel_count = indexed_image.width * indexed_image.height;
+    var i: usize = 0;
+    while (i < pixel_count) : (i += 1) {
+        const index = @intCast(usize, indexed_image.pixels[i]);
+        const pixel = colormap[4 * index .. 4 * index + 4];
+        image.pixels[4 * i + 0] = pixel[0];
+        image.pixels[4 * i + 1] = pixel[1];
+        image.pixels[4 * i + 2] = pixel[2];
+        image.pixels[4 * i + 3] = pixel[3];
+    }
+
+    return image;
+}
+
 // implementation in c/png_image.c
 extern fn readPngFileInfo(file_path: [*c]const u8, width: [*c]u32, height: [*c]u32, colormap_entries: [*c]u32) callconv(.C) c_int;
 extern fn readPngFile(file_path: [*c]const u8, pixels: [*c]const u8, colormap: [*c]const u8) callconv(.C) c_int;
