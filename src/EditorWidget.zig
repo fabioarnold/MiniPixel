@@ -80,6 +80,7 @@ canvas: *CanvasWidget,
 palette_bar: *gui.Toolbar,
 palette_open_button: *gui.Button,
 palette_save_button: *gui.Button,
+palette_toggle_button: *gui.Button,
 color_palette: *ColorPaletteWidget,
 color_picker: *ColorPickerWidget,
 color_foreground_background: *ColorForegroundBackgroundWidget,
@@ -137,6 +138,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .palette_bar = try gui.Toolbar.init(allocator, Rect(f32).make(0, 0, 163, 24)),
         .palette_open_button = try gui.Button.init(allocator, rect, ""),
         .palette_save_button = try gui.Button.init(allocator, rect, ""),
+        .palette_toggle_button = try gui.Button.init(allocator, rect, ""),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
         .color_foreground_background = try ColorForegroundBackgroundWidget.init(allocator, Rect(f32).make(0, 0, 66, 66)),
@@ -174,6 +176,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     try self.widget.addChild(&self.palette_bar.widget);
     try self.palette_bar.addButton(self.palette_open_button);
     try self.palette_bar.addButton(self.palette_save_button);
+    try self.palette_bar.addSeparator();
+    try self.palette_bar.addButton(self.palette_toggle_button);
     try self.widget.addChild(&self.color_palette.widget);
     try self.widget.addChild(&self.color_picker.widget);
     try self.widget.addChild(&self.color_foreground_background.widget);
@@ -206,6 +210,18 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         }
     }.enter;
     self.palette_save_button.onLeaveFn = menuButtonOnLeave;
+    self.palette_toggle_button.iconFn = icons.iconColorPalette;
+    self.palette_toggle_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            getEditorFromMenuButton(button).togglePalette();
+        }
+    }.click;
+    self.palette_toggle_button.onEnterFn = struct {
+        fn enter(button: *gui.Button) void {
+            getEditorFromMenuButton(button).setHelpText("Toggle between 8-bit paletted mode and true color");
+        }
+    }.enter;
+    self.palette_toggle_button.onLeaveFn = menuButtonOnLeave;
 
     try self.color_palette.loadPalContents(@embedFile("../data/palettes/arne16.pal"));
     self.color_palette.onSelectionChangedFn = struct {
@@ -684,6 +700,7 @@ pub fn deinit(self: *Self) void {
     self.palette_bar.deinit();
     self.palette_open_button.deinit();
     self.palette_save_button.deinit();
+    self.palette_toggle_button.deinit();
     self.color_palette.deinit();
     self.color_picker.deinit();
     self.color_foreground_background.deinit();
@@ -1062,6 +1079,10 @@ fn trySavePalette(self: *Self) void {
     self.savePalette() catch {
         self.showErrorMessageBox("Save palette", "Could not save palette.");
     };
+}
+
+fn togglePalette(self: *Self) void {
+    self.palette_toggle_button.checked = !self.palette_toggle_button.checked;
 }
 
 fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {
