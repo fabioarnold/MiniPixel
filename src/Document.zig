@@ -172,7 +172,6 @@ pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) 
         self.texture_palette = null;
     }
     self.freeSelection();
-    try self.history.reset(self);
 
     switch (bitmap_type) {
         .color => {
@@ -189,6 +188,8 @@ pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) 
     self.preview_bitmap = try self.bitmap.clone();
     self.x = 0;
     self.y = 0;
+
+    try self.history.reset(self);
 }
 
 pub fn load(self: *Self, file_path: []const u8) !void {
@@ -202,7 +203,6 @@ pub fn load(self: *Self, file_path: []const u8) !void {
         self.texture_palette = null;
     }
     self.freeSelection();
-    try self.history.reset(self);
 
     if (image.colormap) |colormap| {
         self.bitmap = .{ .indexed = IndexedBitmap{
@@ -227,6 +227,8 @@ pub fn load(self: *Self, file_path: []const u8) !void {
     self.preview_bitmap = try self.bitmap.clone();
     self.x = 0;
     self.y = 0;
+
+    try self.history.reset(self);
 }
 
 pub fn save(self: *Self, file_path: []const u8) !void {
@@ -806,7 +808,10 @@ pub fn draw(self: *Self) void {
             .color => |color_preview_bitmap| {
                 nvg.updateImage(self.texture, color_preview_bitmap.pixels);
             },
-            .indexed => {}, // TODO
+            .indexed => |indexed_preview_bitmap| {
+                nvg.updateImage(self.texture, indexed_preview_bitmap.indices);
+                nvg.updateImage(self.texture_palette.?, self.bitmap.indexed.colormap);
+            },
         }
         self.dirty = false;
     }
