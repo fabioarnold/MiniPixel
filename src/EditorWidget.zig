@@ -264,6 +264,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 if (editor.color_palette.selected) |selected| {
                     std.mem.copy(u8, editor.color_palette.colors[selected][0..], color_picker.color[0..3]);
+                    editor.updateDocumentPalette(selected);
                 }
                 editor.color_foreground_background.setActiveRgba(color_picker.color);
                 switch (editor.color_foreground_background.active) {
@@ -907,10 +908,26 @@ pub fn createNewDocument(self: *Self, width: u32, height: u32) !void {
 
 fn loadDocument(self: *Self, file_path: []const u8) !void {
     try self.document.load(file_path);
+    self.loadPaletteFromDocument();
     self.has_unsaved_changes = false;
     self.canvas.centerAndZoomDocument();
     self.updateImageStatus();
     try self.setDocumentFilePath(file_path);
+}
+
+fn loadPaletteFromDocument(self: *Self) void {
+    switch (self.document.bitmap) {
+        .color => self.palette_toggle_button.checked = false,
+        .indexed => |indexed_bitmap| {
+            var i: usize = 0;
+            while (i < 256) : (i += 1) {
+                self.color_palette.colors[i][0] = indexed_bitmap.colormap[4 * i + 0];
+                self.color_palette.colors[i][1] = indexed_bitmap.colormap[4 * i + 1];
+                self.color_palette.colors[i][2] = indexed_bitmap.colormap[4 * i + 2];
+            }
+            self.palette_toggle_button.checked = true;
+        },
+    }
 }
 
 pub fn tryLoadDocument(self: *Self, file_path: []const u8) void {
@@ -1083,6 +1100,18 @@ fn trySavePalette(self: *Self) void {
 
 fn togglePalette(self: *Self) void {
     self.palette_toggle_button.checked = !self.palette_toggle_button.checked;
+}
+
+fn updateDocumentPalette(self: *Self, i: usize) void {
+    switch (self.document.bitmap) {
+        .indexed => |indexed_bitmap| {
+            indexed_bitmap.colormap[4 * i + 0] = self.color_palette.colors[i][0];
+            indexed_bitmap.colormap[4 * i + 1] = self.color_palette.colors[i][1];
+            indexed_bitmap.colormap[4 * i + 2] = self.color_palette.colors[i][2];
+            self.document.dirty = true;
+        },
+        else => {},
+    }
 }
 
 fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {
