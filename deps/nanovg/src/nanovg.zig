@@ -87,8 +87,11 @@ pub const Font = struct {
 
 var ctx: ?*c.NVGcontext = undefined;
 
-pub fn init() void {
+pub fn init() !void {
     ctx = c.nvgCreateGL2(0);
+    if (ctx == null) {
+        return error.ContextCreationFailed;
+    }
 }
 
 pub fn quit() void {
@@ -382,6 +385,10 @@ pub fn createImageRgba(w: u32, h: u32, flags: ImageFlags, data: []const u8) Imag
     return Image{ .handle = c.nvgCreateImageRGBA(ctx, @intCast(c_int, w), @intCast(c_int, h), @bitCast(u6, flags), data.ptr) };
 }
 
+pub fn createImageAlpha(w: u32, h: u32, flags: ImageFlags, data: []const u8) Image {
+    return Image{ .handle = c.nvgCreateImageAlpha(ctx, @intCast(c_int, w), @intCast(c_int, h), @bitCast(u6, flags), data.ptr) };
+}
+
 // Updates image data specified by image handle.
 pub fn updateImage(image: Image, data: []const u8) void {
     c.nvgUpdateImage(ctx, image.handle, data.ptr);
@@ -433,6 +440,10 @@ pub fn boxGradient(x: f32, y: f32, w: f32, h: f32, r: f32, f: f32, icol: Color, 
 // The gradient is transformed by the current transform when it is passed to nvgFillPaint() or nvgStrokePaint().
 pub fn imagePattern(ox: f32, oy: f32, ex: f32, ey: f32, angle: f32, image: Image, alpha: f32) Paint {
     return c.nvgImagePattern(ctx, ox, oy, ex, ey, angle, image.handle, alpha);
+}
+
+pub fn indexedImagePattern(ox: f32, oy: f32, ex: f32, ey: f32, angle: f32, image: Image, colormap: Image, alpha: f32) Paint {
+    return c.nvgIndexedImagePattern(ctx, ox, oy, ex, ey, angle, image.handle, colormap.handle, alpha);
 }
 
 //

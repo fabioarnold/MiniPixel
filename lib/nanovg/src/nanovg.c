@@ -822,6 +822,11 @@ int nvgCreateImageRGBA(NVGcontext* ctx, int w, int h, int imageFlags, const unsi
 	return ctx->params.renderCreateTexture(ctx->params.userPtr, NVG_TEXTURE_RGBA, w, h, imageFlags, data);
 }
 
+int nvgCreateImageAlpha(NVGcontext* ctx, int w, int h, int imageFlags, const unsigned char* data)
+{
+	return ctx->params.renderCreateTexture(ctx->params.userPtr, NVG_TEXTURE_ALPHA, w, h, imageFlags, data);
+}
+
 void nvgUpdateImage(NVGcontext* ctx, int image, const unsigned char* data)
 {
 	int w, h;
@@ -952,6 +957,29 @@ NVGpaint nvgImagePattern(NVGcontext* ctx,
 	p.extent[1] = h;
 
 	p.image = image;
+
+	p.innerColor = p.outerColor = nvgRGBAf(1,1,1,alpha);
+
+	return p;
+}
+
+NVGpaint nvgIndexedImagePattern(NVGcontext* ctx,
+								float cx, float cy, float w, float h, float angle,
+								int image, int colormap, float alpha)
+{
+	NVGpaint p;
+	NVG_NOTUSED(ctx);
+	memset(&p, 0, sizeof(p));
+
+	nvgTransformRotate(p.xform, angle);
+	p.xform[4] = cx;
+	p.xform[5] = cy;
+
+	p.extent[0] = w;
+	p.extent[1] = h;
+
+	p.image = image;
+	p.colormap = colormap;
 
 	p.innerColor = p.outerColor = nvgRGBAf(1,1,1,alpha);
 
