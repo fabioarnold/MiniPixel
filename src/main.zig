@@ -806,7 +806,7 @@ pub fn main() !void {
     c.SDL_AddEventWatch(sdlEventWatch, null);
     _ = c.SDL_EventState(c.SDL_DROPFILE, c.SDL_ENABLE); // allow drop events
 
-    nvg.init();
+    try nvg.init();
     defer nvg.quit();
 
     gui.theme_colors = gui.defaultColorTheme();

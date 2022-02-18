@@ -143,7 +143,7 @@ pub fn init(allocator: Allocator) !*Self {
 
     self.bitmap = .{ .color = try ColorBitmap.init(allocator, 32, 32) };
     self.bitmap.color.fill(self.background_color);
-    self.preview_bitmap = .{ .color = try self.bitmap.color.clone() };
+    self.preview_bitmap = try self.bitmap.clone();
     self.texture = nvg.createImageRgba(self.bitmap.color.width, self.bitmap.color.height, .{ .nearest = true }, self.bitmap.color.pixels);
     try self.history.reset(self);
 
@@ -212,7 +212,8 @@ pub fn load(self: *Self, file_path: []const u8) !void {
             .indices = image.pixels,
             .colormap = colormap,
         } };
-        // TODO: texture
+        self.texture = nvg.createImageAlpha(image.width, image.height, .{ .nearest = true }, image.pixels);
+        self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, colormap);
     } else {
         self.bitmap = .{ .color = ColorBitmap{
             .allocator = self.allocator,
@@ -805,14 +806,18 @@ pub fn draw(self: *Self) void {
             .color => |color_preview_bitmap| {
                 nvg.updateImage(self.texture, color_preview_bitmap.pixels);
             },
-            .indexed => @panic("TODO"),
+            .indexed => {}, // TODO
         }
         self.dirty = false;
     }
-    const width = self.getWidth();
-    const height = self.getHeight();
+    const width = @intToFloat(f32, self.getWidth());
+    const height = @intToFloat(f32, self.getHeight());
     nvg.beginPath();
-    nvg.rect(0, 0, @intToFloat(f32, width), @intToFloat(f32, height));
-    nvg.fillPaint(nvg.imagePattern(0, 0, @intToFloat(f32, width), @intToFloat(f32, height), 0, self.texture, 1));
+    nvg.rect(0, 0, width, height);
+    const pattern = switch (self.bitmap) {
+        .color => nvg.imagePattern(0, 0, width, height, 0, self.texture, 1),
+        .indexed => nvg.indexedImagePattern(0, 0, width, height, 0, self.texture, self.texture_palette.?, 1),
+    };
+    nvg.fillPaint(pattern);
     nvg.fill();
 }

@@ -56,7 +56,10 @@ pub fn build(b: *Builder) !void {
     } else if (exe.target.isDarwin()) {
         exe.addCSourceFile("src/c/sdl_hacks.m", &.{});
     }
-    const c_flags = &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS" };
+    const c_flags: []const []const u8 = if (mode == .Debug)
+        &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS", "-O0", "-g" }
+    else
+        &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS" };
     exe.addCSourceFile("src/c/png_image.c", &.{"-std=c99"});
     exe.addCSourceFile("lib/gl2/src/glad.c", c_flags);
     exe.addCSourceFile("lib/nanovg/src/nanovg.c", c_flags);
