@@ -23,6 +23,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .allocator = allocator,
     };
 
+    self.widget.onMouseMoveFn = onMouseMove;
     self.widget.onMouseDownFn = onMouseDown;
 
     self.widget.drawFn = draw;
@@ -116,6 +117,17 @@ fn trimBlackColorsRight(self: Self) []const [3]u8 {
         if (color[0] != 0 or color[1] != 0 or color[2] != 0) break;
     }
     return self.colors[0..len];
+}
+
+fn onMouseMove(widget: *gui.Widget, event: *const gui.MouseEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    if (event.isButtonPressed(.left) and self.selected != null) {
+        const rect = widget.relative_rect;
+        const ix = std.math.clamp(@floatToInt(u8, 16 * event.x / rect.w), 0, 15);
+        const iy = std.math.clamp(@floatToInt(u8, 16 * event.y / rect.h), 0, 15);
+        const i = 16 * iy + ix;
+        self.setSelection(i);
+    }
 }
 
 fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
