@@ -871,7 +871,7 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
                 .replace => try color_bitmap.floodFill(x, y, self.foreground_color),
             }
         },
-        .indexed => @panic("TODO"),
+        .indexed => |*indexed_bitmap| try indexed_bitmap.floodFill(x, y, self.foreground_index),
     }
     self.last_preview = .full;
     self.clearPreview();
