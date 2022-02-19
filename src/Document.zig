@@ -547,51 +547,60 @@ pub fn crop(self: *Self, rect: Recti) !void {
 }
 
 pub fn clearSelection(self: *Self) !void {
-    _ = self;
-    @panic("TODO");
-    // if (self.selection) |selection| {
-    //     const rect = selection.rect;
-    //     const bitmap = selection.bitmap;
+    if (self.selection) |selection| {
+        const rect = selection.rect;
+        const bitmap = selection.bitmap;
 
-    //     const intersection = rect.intersection(.{
-    //         .x = 0,
-    //         .y = 0,
-    //         .w = @intCast(i32, self.bitmap.width),
-    //         .h = @intCast(i32, self.bitmap.height),
-    //     });
-    //     if (intersection.w > 0 and intersection.h > 0) {
-    //         const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
-    //         const oy = if (rect.y < 0) @intCast(u32, -rect.y) else 0;
-    //         const sx = @intCast(u32, intersection.x);
-    //         const sy = @intCast(u32, intersection.y);
-    //         const w = @intCast(u32, intersection.w);
-    //         const h = @intCast(u32, intersection.h);
-    //         // blit to source
-    //         var y: u32 = 0;
-    //         while (y < h) : (y += 1) {
-    //             const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
-    //             const di = 4 * ((sy + y) * self.bitmap.width + sx);
-    //             switch (self.blend_mode) {
-    //                 .alpha => {
-    //                     var x: u32 = 0;
-    //                     while (x < w) : (x += 1) {
-    //                         const src = bitmap.pixels[si + 4 * x .. si + 4 * x + 4];
-    //                         const dst = self.bitmap.pixels[di + 4 * x .. di + 4 * x + 4];
-    //                         const out = col.blend(src, dst);
-    //                         std.mem.copy(u8, dst, &out);
-    //                     }
-    //                 },
-    //                 .replace => std.mem.copy(u8, self.bitmap.pixels[di .. di + 4 * w], bitmap.pixels[si .. si + 4 * w]),
-    //             }
-    //         }
-    //         self.last_preview = .full; // TODO: just a rect?
-    //         self.clearPreview();
-    //     }
+        const intersection = rect.intersection(.{
+            .x = 0,
+            .y = 0,
+            .w = @intCast(i32, self.getWidth()),
+            .h = @intCast(i32, self.getHeight()),
+        });
+        if (intersection.w > 0 and intersection.h > 0) {
+            const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
+            const oy = if (rect.y < 0) @intCast(u32, -rect.y) else 0;
+            const sx = @intCast(u32, intersection.x);
+            const sy = @intCast(u32, intersection.y);
+            const w = @intCast(u32, intersection.w);
+            const h = @intCast(u32, intersection.h);
+            // blit to source
+            var y: u32 = 0;
+            switch (self.bitmap) {
+                .color => |color_bitmap| {
+                    while (y < h) : (y += 1) {
+                        const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
+                        const di = 4 * ((sy + y) * color_bitmap.width + sx);
+                        switch (self.blend_mode) {
+                            .alpha => {
+                                var x: u32 = 0;
+                                while (x < w) : (x += 1) {
+                                    const src = bitmap.color.pixels[si + 4 * x .. si + 4 * x + 4];
+                                    const dst = color_bitmap.pixels[di + 4 * x .. di + 4 * x + 4];
+                                    const out = col.blend(src, dst);
+                                    std.mem.copy(u8, dst, &out);
+                                }
+                            },
+                            .replace => std.mem.copy(u8, color_bitmap.pixels[di .. di + 4 * w], bitmap.color.pixels[si .. si + 4 * w]),
+                        }
+                    }
+                },
+                .indexed => |indexed_bitmap| {
+                    while (y < h) : (y += 1) {
+                        const si = (y + oy) * @intCast(u32, rect.w) + ox;
+                        const di = (sy + y) * indexed_bitmap.width + sx;
+                        std.mem.copy(u8, indexed_bitmap.indices[di .. di + w], bitmap.indexed.indices[si .. si + w]);
+                    }
+                },
+            }
+            self.last_preview = .full; // TODO: just a rect?
+            self.clearPreview();
+        }
 
-    //     self.freeSelection();
+        self.freeSelection();
 
-    //     try self.history.pushFrame(self);
-    // }
+        try self.history.pushFrame(self);
+    }
 }
 
 pub fn makeSelection(self: *Self, rect: Recti) !void {
