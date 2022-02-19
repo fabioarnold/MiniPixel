@@ -608,7 +608,7 @@ const DrawTool = struct {
             self.drawing = false;
         } else if (event.button == .right) {
             canvas.document.pick(self.edit_point.x, self.edit_point.y);
-            canvas.notifyColorChanged();
+            canvas.notifyColorPicked();
             self.picking = false;
         }
     }
@@ -715,7 +715,7 @@ const FillTool = struct {
             };
         } else if (event.button == .right) {
             canvas.document.pick(self.edit_point.x, self.edit_point.y);
-            canvas.notifyColorChanged();
+            canvas.notifyColorPicked();
             self.picking = false;
         }
     }
@@ -778,7 +778,7 @@ blue_grid_image: nvg.Image,
 hovered: bool = false,
 scroll_offset: ?Pointf = null, // in document space
 
-onColorChangedFn: ?fn (*Self, [4]u8) void = null,
+onColorPickedFn: ?fn (*Self) void = null,
 onScaleChangedFn: ?fn (*Self, f32) void = null,
 
 pub const min_scale = 1.0 / 32.0;
@@ -1146,9 +1146,9 @@ fn notifyScaleChanged(self: *Self) void {
     }
 }
 
-fn notifyColorChanged(self: *Self) void {
-    if (self.onColorChangedFn) |onColorChanged| {
-        onColorChanged(self, self.document.foreground_color);
+fn notifyColorPicked(self: *Self) void {
+    if (self.onColorPickedFn) |onColorPicked| {
+        onColorPicked(self);
     }
 }
 
