@@ -797,11 +797,12 @@ pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
         .color => |color_bitmap| return color_bitmap.getPixel(x, y),
         .indexed => |indexed_bitmap| {
             if (indexed_bitmap.getIndex(x, y)) |index| {
+                const i: usize = index;
                 return [4]u8 {
-                    indexed_bitmap.colormap[4 * index + 0],
-                    indexed_bitmap.colormap[4 * index + 1],
-                    indexed_bitmap.colormap[4 * index + 2],
-                    indexed_bitmap.colormap[4 * index + 3],
+                    indexed_bitmap.colormap[4 * i + 0],
+                    indexed_bitmap.colormap[4 * i + 1],
+                    indexed_bitmap.colormap[4 * i + 2],
+                    indexed_bitmap.colormap[4 * i + 3],
                 };
             }
         },
