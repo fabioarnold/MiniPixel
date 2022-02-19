@@ -5,6 +5,11 @@ pub const BlendMode = enum(u1) {
     replace,
 };
 
+pub const ColorLayer = enum(u1) {
+    foreground,
+    background,
+};
+
 pub fn eql(a: Color, b: Color) bool {
     return a[0] == b[0] and a[1] == b[1] and a[2] == b[2] and a[3] == b[3];
 }

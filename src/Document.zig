@@ -16,6 +16,7 @@ const ColorBitmap = @import("Bitmap.zig");
 const IndexedBitmap = @import("IndexedBitmap.zig");
 const col = @import("color.zig");
 const Color = col.Color;
+const ColorLayer = col.ColorLayer;
 const BlendMode = col.BlendMode;
 const Image = @import("Image.zig");
 const Clipboard = @import("Clipboard.zig");
@@ -145,12 +146,11 @@ pub fn init(allocator: Allocator) !*Self {
     self.* = Self{
         .allocator = allocator,
         .texture = undefined,
-        .bitmap = undefined,
+        .bitmap = try Bitmap.init(.color, allocator, 32, 32),
         .preview_bitmap = undefined,
         .history = try HistoryBuffer.init(allocator),
     };
 
-    self.bitmap = try Bitmap.init(.color, allocator, 32, 32);
     self.bitmap.color.fill(self.background_color);
     self.preview_bitmap = try self.bitmap.clone();
     self.texture = nvg.createImageRgba(self.bitmap.color.width, self.bitmap.color.height, .{ .nearest = true }, self.bitmap.color.pixels);
@@ -239,8 +239,8 @@ pub fn load(self: *Self, file_path: []const u8) !void {
         } };
     }
 
-    self.preview_bitmap = try self.bitmap.clone();
     self.preview_bitmap.deinit();
+    self.preview_bitmap = try self.bitmap.clone();
     self.recreateTextures();
     self.x = 0;
     self.y = 0;
@@ -292,29 +292,25 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
     const width = try reader.readIntNative(u32);
     const height = try reader.readIntNative(u32);
     const bitmap_type = @intToEnum(BitmapType, try reader.readIntNative(std.meta.Tag(BitmapType)));
-    if (self.getWidth() != width or self.getHeight() != height or self.getBitmapType() != bitmap_type) {
+    const recreate = self.getWidth() != width or self.getHeight() != height or self.getBitmapType() != bitmap_type;
+    if (recreate) {
         self.bitmap.deinit();
-        self.bitmap.init(bitmap_type, self.allocator, width, height);
-        switch (bitmap_type) {
-            .color => _ = try reader.readAll(self.bitmap.color.pixels),
-            .indexed => {
-                _ = try reader.readAll(self.bitmap.indexed.indices);
-                _ = try reader.readAll(self.bitmap.indexed.colormap);
-            },
-        }
+        self.bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
+    }
+    switch (self.bitmap) {
+        .color => |color_bitmap| _ = try reader.readAll(color_bitmap.pixels),
+        .indexed => |indexed_bitmap| {
+            _ = try reader.readAll(indexed_bitmap.indices);
+            _ = try reader.readAll(indexed_bitmap.colormap);
+        },
+    }
+    _ = decomp.close();
+
+    if (recreate) {
         self.preview_bitmap.deinit();
         self.preview_bitmap = try self.bitmap.clone();
         self.recreateTextures();
-    } else {
-        switch (self.bitmap) {
-            .color => |color_bitmap| _ = try reader.readAll(color_bitmap.pixels),
-            .indexed => |indexed_bitmap| {
-                _ = try reader.readAll(indexed_bitmap.indices);
-                _ = try reader.readAll(indexed_bitmap.colormap);
-            },
-        }
     }
-    _ = decomp.close();
 
     if (self.x != x or self.y != y) {
         const dx = x - self.x;
@@ -679,19 +675,23 @@ pub fn clearPreview(self: *Self) void {
     self.dirty = true;
 }
 
-pub fn fill(self: *Self, color: [4]u8) !void {
-    _ = self;
-    _ = color;
-    @panic("TODO");
-    // if (self.selection) |*selection| {
-    //     selection.bitmap.fill(color);
-    //     nvg.updateImage(selection.texture, selection.bitmap.pixels);
-    // } else {
-    //     self.bitmap.fill(color);
-    //     self.last_preview = .full;
-    //     self.clearPreview();
-    //     try self.history.pushFrame(self);
-    // }
+pub fn fill(self: *Self, color_layer: ColorLayer) !void {
+    const color = if (color_layer == .foreground) self.foreground_color else self.background_color;
+    const index = if (color_layer == .foreground) self.foreground_index else self.background_index;
+    if (self.selection) |*selection| {
+        _ = selection;
+        @panic("TODO");
+        // selection.bitmap.fill(color);
+        // nvg.updateImage(selection.texture, selection.bitmap.pixels);
+    } else {
+        switch (self.bitmap) {
+            .color => |color_bitmap| color_bitmap.fill(color),
+            .indexed => |indexed_bitmap| indexed_bitmap.fill(index),
+        }
+        self.last_preview = .full;
+        self.clearPreview();
+        try self.history.pushFrame(self);
+    }
 }
 
 pub fn mirrorHorizontally(self: *Self) !void {

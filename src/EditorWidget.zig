@@ -9,6 +9,7 @@ const icons = @import("icons.zig");
 const geometry = @import("gui/geometry.zig");
 const Point = geometry.Point;
 const Rect = geometry.Rect;
+const ColorLayer = @import("color.zig").ColorLayer;
 
 const Clipboard = @import("Clipboard.zig");
 const Document = @import("Document.zig");
@@ -1035,9 +1036,10 @@ fn pasteDocument(self: *Self) void {
     self.setTool(.select);
 }
 
-fn fillDocument(self: *Self, color_layer: ColorForegroundBackgroundWidget.ColorLayer) void {
-    const color = self.color_foreground_background.getRgba(color_layer);
-    self.document.fill(color) catch {}; // TODO: handle
+fn fillDocument(self: *Self, color_layer: ColorLayer) void {
+    self.document.fill(color_layer) catch {
+        self.showErrorMessageBox("Fill image", "Could not fill the image.");
+    };
 }
 
 fn mirrorHorizontallyDocument(self: *Self) void {
