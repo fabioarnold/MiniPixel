@@ -607,10 +607,8 @@ const DrawTool = struct {
             };
             self.drawing = false;
         } else if (event.button == .right) {
-            if (canvas.document.pickColor(self.edit_point.x, self.edit_point.y)) |color| {
-                canvas.document.setForegroundColorRgba(color);
-                canvas.notifyColorChanged();
-            }
+            canvas.document.pick(self.edit_point.x, self.edit_point.y);
+            canvas.notifyColorChanged();
             self.picking = false;
         }
     }
@@ -670,7 +668,7 @@ const DrawTool = struct {
 
     fn getStatusText(self: DrawTool, canvas: CanvasWidget, buf: []u8) [:0]const u8 {
         if (self.picking) {
-            if (canvas.document.pickColor(self.edit_point.x, self.edit_point.y)) |color| {
+            if (canvas.document.getColorAt(self.edit_point.x, self.edit_point.y)) |color| {
                 return std.fmt.bufPrintZ(
                     buf[0..],
                     "({d}, {d}) R:{d:0>3} G:{d:0>3} B:{d:0>3} A:{d:0>3}",
@@ -716,10 +714,8 @@ const FillTool = struct {
                 gui.showMessageBox(.err, "Stroke", "Out of memory"); // TODO: nicer error message
             };
         } else if (event.button == .right) {
-            if (canvas.document.pickColor(self.edit_point.x, self.edit_point.y)) |color| {
-                canvas.document.setForegroundColorRgba(color);
-                canvas.notifyColorChanged();
-            }
+            canvas.document.pick(self.edit_point.x, self.edit_point.y);
+            canvas.notifyColorChanged();
             self.picking = false;
         }
     }
@@ -730,7 +726,7 @@ const FillTool = struct {
 
     fn getStatusText(self: FillTool, canvas: CanvasWidget, buf: []u8) [:0]const u8 {
         if (self.picking) {
-            if (canvas.document.pickColor(self.edit_point.x, self.edit_point.y)) |color| {
+            if (canvas.document.getColorAt(self.edit_point.x, self.edit_point.y)) |color| {
                 return std.fmt.bufPrintZ(
                     buf[0..],
                     "({d}, {d}) R:{d:0>3} G:{d:0>3} B:{d:0>3} A:{d:0>3}",

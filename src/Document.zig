@@ -125,6 +125,8 @@ copy_location: ?Pointi = null, // where the source was copied from
 history: *HistoryBuffer,
 foreground_color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
+foreground_index: u8 = 0,
+background_index: u8 = 255,
 blend_mode: BlendMode = .replace,
 
 canvas: *CanvasWidget = undefined,
@@ -181,8 +183,10 @@ pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) 
         },
         .indexed => {
             self.bitmap = .{ .indexed = try IndexedBitmap.init(self.allocator, width, height) };
-            self.bitmap.indexed.fill(0); // TODO: background index?
-            // TODO: textures
+            self.bitmap.indexed.fill(self.background_index);
+            // TODO: copy the original colormap
+            self.texture = nvg.createImageAlpha(width, height, .{ .nearest = true }, self.bitmap.indexed.indices);
+            self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, self.bitmap.indexed.colormap);
         },
     }
     self.preview_bitmap = try self.bitmap.clone();
@@ -355,7 +359,7 @@ pub fn cut(self: *Self) !void {
     } else {
         switch (self.bitmap) {
             .color => |color_bitmap| color_bitmap.fill(self.background_color),
-            .indexed => |indexed_bitmap| indexed_bitmap.fill(0), // TODO: background index?
+            .indexed => |indexed_bitmap| indexed_bitmap.fill(self.background_index),
         }
         self.last_preview = .full;
         self.clearPreview();
@@ -568,14 +572,6 @@ pub fn freeSelection(self: *Self) void {
     }
 }
 
-pub fn setForegroundColorRgba(self: *Self, color: [4]u8) void {
-    self.foreground_color = color;
-}
-
-pub fn setBackgroundColorRgba(self: *Self, color: [4]u8) void {
-    self.background_color = color;
-}
-
 pub fn previewBrush(self: *Self, x: i32, y: i32) void {
     self.clearPreview();
     var success = false;
@@ -587,7 +583,7 @@ pub fn previewBrush(self: *Self, x: i32, y: i32) void {
             };
         },
         .indexed => |preview_indexed_bitmap| {
-            success = preview_indexed_bitmap.setIndex(x, y, 0); // TODO: foreground_index
+            success = preview_indexed_bitmap.setIndex(x, y, self.foreground_index);
         },
     }
     if (success) {
@@ -604,7 +600,9 @@ pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
                 .replace => preview_color_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color, true),
             }
         },
-        .indexed => @panic("TODO"),
+        .indexed => |preview_indexed_bitmap| {
+            preview_indexed_bitmap.drawLine(x0, y0, x1, y1, self.foreground_index, true);
+        },
     }
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
 }
@@ -749,7 +747,9 @@ pub fn beginStroke(self: *Self, x: i32, y: i32) void {
                 .replace => color_bitmap.setPixel(x, y, self.foreground_color),
             };
         },
-        .indexed => @panic("TODO"),
+        .indexed => |indexed_bitmap| {
+            success = indexed_bitmap.setIndex(x, y, self.foreground_index);
+        },
     }
     if (success) {
         self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
@@ -765,7 +765,9 @@ pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
                 .replace => color_bitmap.drawLine(x0, y0, x1, y1, self.foreground_color, true),
             }
         },
-        .indexed => @panic("TODO"),
+        .indexed => |indexed_bitmap| {
+            indexed_bitmap.drawLine(x0, y0, x1, y1, self.foreground_index, true);
+        },
     }
     self.last_preview = PrimitivePreview{ .line = .{ .x0 = x0, .y0 = y0, .x1 = x1, .y1 = y1 } };
     self.clearPreview();
@@ -775,11 +777,36 @@ pub fn endStroke(self: *Self) !void {
     try self.history.pushFrame(self);
 }
 
-pub fn pickColor(self: *Self, x: i32, y: i32) ?[4]u8 {
-    return switch (self.bitmap) {
-        .color => |color_bitmap| color_bitmap.getPixel(x, y),
-        .indexed => @panic("TODO"),
-    };
+pub fn pick(self: *Self, x: i32, y: i32) void {
+    switch (self.bitmap) {
+        .color => |color_bitmap| {
+            if (color_bitmap.getPixel(x, y)) |color| {
+                self.foreground_color = color;
+            }
+        },
+        .indexed => |indexed_bitmap| {
+            if (indexed_bitmap.getIndex(x, y)) |index| {
+                self.foreground_index = index;
+            }
+        },
+    }
+}
+
+pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
+    switch (self.bitmap) {
+        .color => |color_bitmap| return color_bitmap.getPixel(x, y),
+        .indexed => |indexed_bitmap| {
+            if (indexed_bitmap.getIndex(x, y)) |index| {
+                return [4]u8 {
+                    indexed_bitmap.colormap[4 * index + 0],
+                    indexed_bitmap.colormap[4 * index + 1],
+                    indexed_bitmap.colormap[4 * index + 2],
+                    indexed_bitmap.colormap[4 * index + 3],
+                };
+            }
+        },
+    }
+    return null;
 }
 
 pub fn floodFill(self: *Self, x: i32, y: i32) !void {

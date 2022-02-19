@@ -233,8 +233,14 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                     editor.color_picker.setRgb(color);
                     editor.color_foreground_background.setActiveRgba(editor.color_picker.color);
                     switch (editor.color_foreground_background.active) {
-                        .foreground => editor.document.setForegroundColorRgba(editor.color_picker.color),
-                        .background => editor.document.setBackgroundColorRgba(editor.color_picker.color),
+                        .foreground => {
+                            editor.document.foreground_color = editor.color_picker.color;
+                            editor.document.foreground_index = selected;
+                        },
+                        .background => {
+                            editor.document.background_color = editor.color_picker.color;
+                            editor.document.background_index = selected;
+                        },
                     }
                 }
             }
@@ -268,8 +274,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                 }
                 editor.color_foreground_background.setActiveRgba(color_picker.color);
                 switch (editor.color_foreground_background.active) {
-                    .foreground => editor.document.setForegroundColorRgba(editor.color_picker.color),
-                    .background => editor.document.setBackgroundColorRgba(editor.color_picker.color),
+                    .foreground => editor.document.foreground_color = editor.color_picker.color,
+                    .background => editor.document.background_color = editor.color_picker.color,
                 }
             }
         }
@@ -287,8 +293,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                     }
                 }
                 editor.color_picker.setRgba(color);
-                editor.document.setForegroundColorRgba(editor.color_foreground_background.getRgba(.foreground));
-                editor.document.setBackgroundColorRgba(editor.color_foreground_background.getRgba(.background));
+                editor.document.foreground_color = editor.color_foreground_background.getRgba(.foreground);
+                editor.document.background_color = editor.color_foreground_background.getRgba(.background);
             }
         }
     }.changed;
