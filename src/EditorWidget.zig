@@ -247,14 +247,17 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         }
     }.selectionChanged;
 
-    self.canvas.onColorChangedFn = struct {
-        fn colorChanged(canvas: *CanvasWidget, color: [4]u8) void {
+    self.canvas.onColorPickedFn = struct {
+        fn colorPicked(canvas: *CanvasWidget) void {
             if (canvas.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
-                editor.color_foreground_background.setRgba(.foreground, color);
+                switch (editor.document.bitmap) {
+                    .color => editor.color_foreground_background.setRgba(.foreground, editor.document.foreground_color),
+                    .indexed => editor.color_palette.setSelection(editor.document.foreground_index),
+                }
             }
         }
-    }.colorChanged;
+    }.colorPicked;
     self.canvas.onScaleChangedFn = struct {
         fn zoomChanged(canvas: *CanvasWidget, zoom: f32) void {
             if (canvas.widget.parent) |parent| {
