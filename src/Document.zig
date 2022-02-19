@@ -469,11 +469,11 @@ pub fn paste(self: *Self) !void {
 }
 
 pub fn crop(self: *Self, rect: Recti) !void {
-    if (rect.w < 1 or rect.h < 1) return error.InvalidCropRect;
+    if (rect.w <= 0 or rect.h <= 0) return error.InvalidCropRect;
+
     const width = @intCast(u32, rect.w);
     const height = @intCast(u32, rect.h);
-    const bitmap_type = self.getBitmapType();
-    const new_bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
+    const new_bitmap = try Bitmap.init(self.getBitmapType(), self.allocator, width, height);
     //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
     switch (new_bitmap) {
         .color => |color_bitmap| color_bitmap.fill(self.background_color),
@@ -581,47 +581,61 @@ pub fn clearSelection(self: *Self) !void {
 }
 
 pub fn makeSelection(self: *Self, rect: Recti) !void {
-    _ = self;
-    _ = rect;
-    @panic("TODO");
-    // std.debug.assert(rect.w > 0 and rect.h > 0);
+    std.debug.assert(rect.w > 0 and rect.h > 0);
 
-    // const intersection = rect.intersection(.{
-    //     .x = 0,
-    //     .y = 0,
-    //     .w = @intCast(i32, self.bitmap.width),
-    //     .h = @intCast(i32, self.bitmap.height),
-    // });
-    // if (intersection.w > 0 and intersection.h > 0) {
-    //     const w = @intCast(u32, intersection.w);
-    //     const h = @intCast(u32, intersection.h);
-    //     const bitmap = try Bitmap.init(self.allocator, w, h);
+    const intersection = rect.intersection(.{
+        .x = 0,
+        .y = 0,
+        .w = @intCast(i32, self.getWidth()),
+        .h = @intCast(i32, self.getHeight()),
+    });
+    if (intersection.w <= 0 or intersection.h <= 0) return;
 
-    //     // move pixels
-    //     var y: u32 = 0;
-    //     while (y < h) : (y += 1) {
-    //         const di = 4 * (y * w);
-    //         const sx = @intCast(u32, intersection.x);
-    //         const sy = @intCast(u32, intersection.y);
-    //         const si = 4 * ((sy + y) * self.bitmap.width + sx);
-    //         std.mem.copy(u8, bitmap.pixels[di .. di + 4 * w], self.bitmap.pixels[si .. si + 4 * w]);
-    //         const dst_line = self.bitmap.pixels[si .. si + 4 * w];
-    //         var i: usize = 0;
-    //         while (i < dst_line.len) : (i += 1) {
-    //             dst_line[i] = self.background_color[i % 4];
-    //         }
-    //     }
-    //     self.last_preview = .full; // TODO: just a rect?
-    //     self.clearPreview();
+    const sx = @intCast(u32, intersection.x);
+    const sy = @intCast(u32, intersection.y);
+    const w = @intCast(u32, intersection.w);
+    const h = @intCast(u32, intersection.h);
+    const bitmap = try Bitmap.init(self.getBitmapType(), self.allocator, w, h);
 
-    //     var selection = Selection{
-    //         .rect = intersection,
-    //         .bitmap = bitmap,
-    //         .texture = nvg.createImageRgba(w, h, .{ .nearest = true }, bitmap.pixels),
-    //     };
-    //     self.freeSelection(); // clean up previous selection
-    //     self.selection = selection;
-    // }
+    var selection = Selection{
+        .rect = intersection,
+        .bitmap = bitmap,
+        .texture = undefined,
+    };
+
+    // move pixels
+    var y: u32 = 0;
+    switch (self.bitmap) {
+        .color => |color_bitmap| {
+            while (y < h) : (y += 1) {
+                const di = 4 * (y * w);
+                const si = 4 * ((sy + y) * color_bitmap.width + sx);
+                std.mem.copy(u8, bitmap.color.pixels[di .. di + 4 * w], color_bitmap.pixels[si .. si + 4 * w]);
+                const dst_line = color_bitmap.pixels[si .. si + 4 * w];
+                var i: usize = 0;
+                while (i < dst_line.len) : (i += 1) {
+                    dst_line[i] = self.background_color[i % 4];
+                }
+            }
+            selection.texture = nvg.createImageRgba(w, h, .{ .nearest = true }, bitmap.color.pixels);
+        },
+        .indexed => |indexed_bitmap| {
+            while (y < h) : (y += 1) {
+                const di = y * w;
+                const si = (sy + y) * indexed_bitmap.width + sx;
+                std.mem.copy(u8, bitmap.indexed.indices[di .. di + w], indexed_bitmap.indices[si .. si + w]);
+                const dst_line = indexed_bitmap.indices[si .. si + w];
+                std.mem.set(u8, dst_line, self.background_index);
+            }
+            selection.texture = nvg.createImageAlpha(w, h, .{ .nearest = true }, bitmap.indexed.indices);
+        },
+    }
+
+    self.freeSelection(); // clean up previous selection
+    self.selection = selection;
+
+    self.last_preview = .full; // TODO: just a rect?
+    self.clearPreview();
 }
 
 pub fn deleteSelection(self: *Self) !void {
@@ -889,4 +903,23 @@ pub fn draw(self: *Self) void {
     };
     nvg.fillPaint(pattern);
     nvg.fill();
+}
+
+pub fn drawSelection(self: Self) void {
+    if (self.selection) |selection| {
+        const rect = Rect(f32).make(
+            @intToFloat(f32, selection.rect.x),
+            @intToFloat(f32, selection.rect.y),
+            @intToFloat(f32, selection.rect.w),
+            @intToFloat(f32, selection.rect.h),
+        );
+        nvg.beginPath();
+        nvg.rect(rect.x, rect.y, rect.w, rect.h);
+        const pattern = switch (self.bitmap) {
+            .color => nvg.imagePattern(rect.x, rect.y, rect.w, rect.h, 0, selection.texture, 1),
+            .indexed => nvg.indexedImagePattern(rect.x, rect.y, rect.w, rect.h, 0, selection.texture, self.texture_palette.?, 1),
+        };
+        nvg.fillPaint(pattern);
+        nvg.fill();
+    }
 }
