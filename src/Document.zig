@@ -98,6 +98,20 @@ pub const Selection = struct {
     rect: Recti,
     bitmap: Bitmap,
     texture: nvg.Image,
+
+    fn createTexture(self: *Selection) void {
+        self.texture = switch (self.bitmap) {
+            .color => |color_bitmap| nvg.createImageRgba(color_bitmap.width, color_bitmap.height, .{ .nearest = true }, color_bitmap.pixels),
+            .indexed => |indexed_bitmap| nvg.createImageAlpha(indexed_bitmap.width, indexed_bitmap.height, .{ .nearest = true }, indexed_bitmap.indices),
+        };
+    }
+
+    fn updateTexture(self: Selection) void {
+        switch (self.bitmap) {
+            .color => |color_bitmap| nvg.updateImage(self.texture, color_bitmap.pixels),
+            .indexed => |indexed_bitmap| nvg.updateImage(self.texture, indexed_bitmap.indices),
+        }
+    }
 };
 
 const PrimitiveTag = enum {
@@ -617,7 +631,6 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
                     dst_line[i] = self.background_color[i % 4];
                 }
             }
-            selection.texture = nvg.createImageRgba(w, h, .{ .nearest = true }, bitmap.color.pixels);
         },
         .indexed => |indexed_bitmap| {
             while (y < h) : (y += 1) {
@@ -627,9 +640,9 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
                 const dst_line = indexed_bitmap.indices[si .. si + w];
                 std.mem.set(u8, dst_line, self.background_index);
             }
-            selection.texture = nvg.createImageAlpha(w, h, .{ .nearest = true }, bitmap.indexed.indices);
         },
     }
+    selection.createTexture();
 
     self.freeSelection(); // clean up previous selection
     self.selection = selection;
@@ -714,11 +727,12 @@ pub fn clearPreview(self: *Self) void {
 pub fn fill(self: *Self, color_layer: ColorLayer) !void {
     const color = if (color_layer == .foreground) self.foreground_color else self.background_color;
     const index = if (color_layer == .foreground) self.foreground_index else self.background_index;
-    if (self.selection) |*selection| {
-        _ = selection;
-        @panic("TODO");
-        // selection.bitmap.fill(color);
-        // nvg.updateImage(selection.texture, selection.bitmap.pixels);
+    if (self.selection) |selection| {
+        switch (selection.bitmap) {
+            .color => |color_bitmap| color_bitmap.fill(color),
+            .indexed => |indexed_bitmap| indexed_bitmap.fill(index),
+        }
+        selection.updateTexture();
     } else {
         switch (self.bitmap) {
             .color => |color_bitmap| color_bitmap.fill(color),
@@ -733,8 +747,7 @@ pub fn fill(self: *Self, color_layer: ColorLayer) !void {
 pub fn mirrorHorizontally(self: *Self) !void {
     if (self.selection) |*selection| {
         selection.bitmap.mirrorHorizontally();
-        @panic("TODO");
-        // nvg.updateImage(selection.texture, selection.bitmap.pixels);
+        selection.updateTexture();
     } else {
         self.bitmap.mirrorHorizontally();
         self.last_preview = .full;
@@ -746,8 +759,7 @@ pub fn mirrorHorizontally(self: *Self) !void {
 pub fn mirrorVertically(self: *Self) !void {
     if (self.selection) |*selection| {
         try selection.bitmap.mirrorVertically();
-        @panic("TODO");
-        // nvg.updateImage(selection.texture, selection.bitmap.pixels);
+        selection.updateTexture();
     } else {
         try self.bitmap.mirrorVertically();
         self.last_preview = .full;
@@ -758,21 +770,17 @@ pub fn mirrorVertically(self: *Self) !void {
 
 pub fn rotate(self: *Self, clockwise: bool) !void {
     if (self.selection) |*selection| {
-        _ = selection;
-        @panic("TODO");
-        //     try selection.bitmap.rotateCw();
-        //     selection.rect.w = @intCast(i32, selection.bitmap.width);
-        //     selection.rect.h = @intCast(i32, selection.bitmap.height);
-        //     const d = @divTrunc(selection.rect.w - selection.rect.h, 2);
-        //     selection.rect.x -= d;
-        //     selection.rect.y += d;
-        //     nvg.deleteImage(selection.texture);
-        //     selection.texture = nvg.createImageRgba(
-        //         selection.bitmap.width,
-        //         selection.bitmap.height,
-        //         .{ .nearest = true },
-        //         selection.bitmap.pixels,
-        //     );
+        try selection.bitmap.rotate(clockwise);
+        std.mem.swap(i32, &selection.rect.w, &selection.rect.h);
+        const d = @divTrunc(selection.rect.w - selection.rect.h, 2);
+        if (d != 0) {
+            selection.rect.x -= d;
+            selection.rect.y += d;
+            nvg.deleteImage(selection.texture);
+            selection.createTexture();
+        } else {
+            selection.updateTexture();
+        }
     } else {
         try self.bitmap.rotate(clockwise);
         const d = @divTrunc(@intCast(i32, self.getHeight()) - @intCast(i32, self.getWidth()), 2);
