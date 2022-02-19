@@ -250,17 +250,12 @@ pub fn createSnapshot(self: Document) ![]u8 {
 
     try writer.writeIntNative(i32, self.x);
     try writer.writeIntNative(i32, self.y);
+    try writer.writeIntNative(u32, self.getWidth());
+    try writer.writeIntNative(u32, self.getHeight());
+    try writer.writeIntNative(std.meta.Tag(BitmapType), @enumToInt(self.getBitmapType()));
     switch (self.bitmap) {
-        .color => |color_bitmap| {
-            try writer.writeIntNative(u8, @enumToInt(BitmapType.color));
-            try writer.writeIntNative(u32, color_bitmap.width);
-            try writer.writeIntNative(u32, color_bitmap.height);
-            _ = try writer.write(color_bitmap.pixels);
-        },
+        .color => |color_bitmap| _ = try writer.write(color_bitmap.pixels),
         .indexed => |indexed_bitmap| {
-            try writer.writeIntNative(u8, @enumToInt(BitmapType.indexed));
-            try writer.writeIntNative(u32, indexed_bitmap.width);
-            try writer.writeIntNative(u32, indexed_bitmap.height);
             _ = try writer.write(indexed_bitmap.indices);
             _ = try writer.write(indexed_bitmap.colormap);
         },
@@ -272,46 +267,72 @@ pub fn createSnapshot(self: Document) ![]u8 {
 }
 
 pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
-    _ = self;
-    _ = snapshot;
-    @panic("TODO");
-    // var input = std.io.fixedBufferStream(snapshot);
-    // var decomp = try std.compress.deflate.decompressor(self.allocator, input.reader(), null);
-    // defer decomp.deinit();
+    var input = std.io.fixedBufferStream(snapshot);
+    var decomp = try std.compress.deflate.decompressor(self.allocator, input.reader(), null);
+    defer decomp.deinit();
 
-    // var reader = decomp.reader();
-    // const x = try reader.readIntNative(i32);
-    // const y = try reader.readIntNative(i32);
-    // const width = try reader.readIntNative(u32);
-    // const height = try reader.readIntNative(u32);
-    // if (self.bitmap.width != width or self.bitmap.height != height) {
-    //     self.bitmap.width = width;
-    //     self.bitmap.height = height;
-    //     self.bitmap.pixels = try self.allocator.realloc(self.bitmap.pixels, 4 * width * height);
-    //     self.preview_bitmap.width = width;
-    //     self.preview_bitmap.height = height;
-    //     self.preview_bitmap.pixels = try self.allocator.realloc(self.preview_bitmap.pixels, 4 * width * height);
-    //     _ = try reader.readAll(self.bitmap.pixels);
+    var reader = decomp.reader();
+    const x = try reader.readIntNative(i32);
+    const y = try reader.readIntNative(i32);
+    const width = try reader.readIntNative(u32);
+    const height = try reader.readIntNative(u32);
+    const bitmap_type = @intToEnum(BitmapType, try reader.readIntNative(std.meta.Tag(BitmapType)));
+    if (self.getWidth() != width or self.getHeight() != height or self.getBitmapType() != bitmap_type) {
+        self.bitmap.deinit();
+        self.preview_bitmap.deinit();
+        nvg.deleteImage(self.texture);
+        if (self.texture_palette) |texture_palette| {
+            nvg.deleteImage(texture_palette);
+            self.texture_palette = null;
+        }
+        switch (bitmap_type) {
+            .color => {
+                self.bitmap = .{ .color = ColorBitmap{
+                    .allocator = self.allocator,
+                    .width = width,
+                    .height = height,
+                    .pixels = try self.allocator.alloc(u8, 4 * width * height),
+                } };
+                _ = try reader.readAll(self.bitmap.color.pixels);
+                self.texture = nvg.createImageRgba(width, height, .{ .nearest = true }, self.bitmap.color.pixels);
+            },
+            .indexed => {
+                self.bitmap = .{ .indexed = IndexedBitmap{
+                    .allocator = self.allocator,
+                    .width = width,
+                    .height = height,
+                    .indices = try self.allocator.alloc(u8, width * height),
+                    .colormap = try self.allocator.alloc(u8, 4 * 256),
+                } };
+                _ = try reader.readAll(self.bitmap.indexed.indices);
+                _ = try reader.readAll(self.bitmap.indexed.colormap);
+                self.texture = nvg.createImageAlpha(width, height, .{ .nearest = true }, self.bitmap.indexed.indices);
+                self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, self.bitmap.indexed.colormap);
+            },
+        }
+        self.preview_bitmap = try self.bitmap.clone();
+    } else {
+        switch (self.bitmap) {
+            .color => |color_bitmap| _ = try reader.readAll(color_bitmap.pixels),
+            .indexed => |indexed_bitmap| {
+                _ = try reader.readAll(indexed_bitmap.indices);
+                _ = try reader.readAll(indexed_bitmap.colormap);
+            },
+        }
+    }
+    _ = decomp.close();
 
-    //     // recreate texture
-    //     nvg.deleteImage(self.texture);
-    //     self.texture = nvg.createImageRgba(width, height, .{ .nearest = true }, self.bitmap.pixels);
-    // } else {
-    //     _ = try reader.readAll(self.bitmap.pixels);
-    // }
-    // _ = decomp.close();
+    if (self.x != x or self.y != y) {
+        const dx = x - self.x;
+        const dy = y - self.y;
+        self.x = x;
+        self.y = y;
+        self.canvas.translateByPixel(dx, dy);
+    }
+    self.last_preview = .full;
+    self.clearPreview();
 
-    // if (self.x != x or self.y != y) {
-    //     const dx = x - self.x;
-    //     const dy = y - self.y;
-    //     self.x = x;
-    //     self.y = y;
-    //     self.canvas.translateByPixel(dx, dy);
-    // }
-    // self.last_preview = .full;
-    // self.clearPreview();
-
-    // self.freeSelection();
+    self.freeSelection();
 }
 
 pub fn getWidth(self: Self) u32 {
@@ -326,6 +347,10 @@ pub fn getHeight(self: Self) u32 {
         .color => |color_bitmap| color_bitmap.height,
         .indexed => |indexed_bitmap| indexed_bitmap.height,
     };
+}
+
+pub fn getBitmapType(self: Self) BitmapType {
+    return std.meta.activeTag(self.bitmap);
 }
 
 pub fn getColorDepth(self: Self) u32 {
@@ -798,7 +823,7 @@ pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
         .indexed => |indexed_bitmap| {
             if (indexed_bitmap.getIndex(x, y)) |index| {
                 const i: usize = index;
-                return [4]u8 {
+                return [4]u8{
                     indexed_bitmap.colormap[4 * i + 0],
                     indexed_bitmap.colormap[4 * i + 1],
                     indexed_bitmap.colormap[4 * i + 2],
