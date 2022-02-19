@@ -40,6 +40,21 @@ const Bitmap = union(BitmapType) {
         };
     }
 
+    fn initFromImage(allocator: Allocator, image: Image) Bitmap {
+        return if (image.colormap) |colormap| .{ .indexed = IndexedBitmap{
+            .allocator = allocator,
+            .width = image.width,
+            .height = image.height,
+            .indices = image.pixels,
+            .colormap = colormap,
+        } } else .{ .color = ColorBitmap{
+            .allocator = allocator,
+            .width = image.width,
+            .height = image.height,
+            .pixels = image.pixels,
+        } };
+    }
+
     fn deinit(self: Bitmap) void {
         switch (self) {
             .color => |color_bitmap| color_bitmap.deinit(),
@@ -240,25 +255,10 @@ fn recreateTextures(self: *Self) void {
 }
 
 pub fn load(self: *Self, file_path: []const u8) !void {
-    var image = try Image.initFromFile(self.allocator, file_path);
+    const image = try Image.initFromFile(self.allocator, file_path);
 
     self.bitmap.deinit();
-    if (image.colormap) |colormap| {
-        self.bitmap = .{ .indexed = IndexedBitmap{
-            .allocator = self.allocator,
-            .width = image.width,
-            .height = image.height,
-            .indices = image.pixels,
-            .colormap = colormap,
-        } };
-    } else {
-        self.bitmap = .{ .color = ColorBitmap{
-            .allocator = self.allocator,
-            .width = image.width,
-            .height = image.height,
-            .pixels = image.pixels,
-        } };
-    }
+    self.bitmap = Bitmap.initFromImage(self.allocator, image);
 
     self.preview_bitmap.deinit();
     self.preview_bitmap = try self.bitmap.clone();
@@ -447,39 +447,30 @@ pub fn copy(self: *Self) !void {
 }
 
 pub fn paste(self: *Self) !void {
-    _ = self;
-    @panic("TODO");
-    // const image = try Clipboard.getImage(self.allocator);
-    // errdefer self.allocator.free(image.pixels);
+    const image = try Clipboard.getImage(self.allocator);
+    errdefer self.allocator.free(image.pixels);
 
-    // if (self.selection) |_| {
-    //     try self.clearSelection();
-    // }
+    if (self.selection) |_| {
+        try self.clearSelection();
+    }
 
-    // const x = @intCast(i32, self.bitmap.width / 2) - @intCast(i32, image.width / 2);
-    // const y = @intCast(i32, self.bitmap.height / 2) - @intCast(i32, image.height / 2);
-    // var selection_rect = Recti.make(x, y, @intCast(i32, image.width), @intCast(i32, image.height));
+    var selection_rect = Recti.make(0, 0, @intCast(i32, image.width), @intCast(i32, image.height));
+    if (self.copy_location) |copy_location| {
+        selection_rect.x = copy_location.x;
+        selection_rect.y = copy_location.y;
+    } else {
+        selection_rect.x = @intCast(i32, self.getWidth() / 2) - @intCast(i32, image.width / 2);
+        selection_rect.y = @intCast(i32, self.getHeight() / 2) - @intCast(i32, image.height / 2);
+    }
 
-    // if (self.copy_location) |copy_location| {
-    //     selection_rect.x = copy_location.x;
-    //     selection_rect.y = copy_location.y;
-    // }
-
-    // self.selection = Selection{
-    //     .rect = selection_rect,
-    //     .bitmap = Bitmap{
-    //         .allocator = self.allocator,
-    //         .width = image.width,
-    //         .height = image.height,
-    //         .pixels = image.pixels,
-    //     },
-    //     .texture = nvg.createImageRgba(
-    //         image.width,
-    //         image.height,
-    //         .{ .nearest = true },
-    //         image.pixels,
-    //     ),
-    // };
+    // TODO: convert type and colors
+    var selection = Selection{
+        .rect = selection_rect,
+        .bitmap = Bitmap.initFromImage(self.allocator, image),
+        .texture = undefined,
+    };
+    selection.createTexture();
+    self.selection = selection;
 }
 
 pub fn crop(self: *Self, rect: Recti) !void {
