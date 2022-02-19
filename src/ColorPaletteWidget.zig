@@ -35,14 +35,8 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-fn eql(index0: ?u8, index1: ?u8) bool {
-    if (index0 == null and index1 == null) return true;
-    if (index0 == null or index1 == null) return false;
-    return index0.? == index1.?;
-}
-
 pub fn setSelection(self: *Self, selected: ?u8) void {
-    if (!eql(self.selected, selected)) {
+    if (!std.meta.eql(self.selected, selected)) {
         self.selected = selected;
         if (self.onSelectionChangedFn) |onSelectionChanged| onSelectionChanged(self);
     }
