@@ -5,13 +5,9 @@ const gui = @import("gui");
 const nvg = @import("nanovg");
 const Rect = @import("gui/geometry.zig").Rect;
 const Point = @import("gui/geometry.zig").Point;
+const ColorLayer = @import("color.zig").ColorLayer;
 
 const ColorForegroundBackgroundWidget = @This();
-
-pub const ColorLayer = enum(u1) {
-    foreground,
-    background,
-};
 
 widget: gui.Widget,
 allocator: Allocator,
