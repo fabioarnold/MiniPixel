@@ -32,6 +32,13 @@ const Bitmap = union(BitmapType) {
     color: ColorBitmap,
     indexed: IndexedBitmap,
 
+    fn init(bitmap_type: BitmapType, allocator: Allocator, width: u32, height: u32) !Bitmap {
+        return switch (bitmap_type) {
+            .color => .{ .color = try ColorBitmap.init(allocator, width, height) },
+            .indexed => .{ .indexed = try IndexedBitmap.init(allocator, width, height) },
+        };
+    }
+
     fn deinit(self: Bitmap) void {
         switch (self) {
             .color => |color_bitmap| color_bitmap.deinit(),
@@ -143,7 +150,7 @@ pub fn init(allocator: Allocator) !*Self {
         .history = try HistoryBuffer.init(allocator),
     };
 
-    self.bitmap = .{ .color = try ColorBitmap.init(allocator, 32, 32) };
+    self.bitmap = try Bitmap.init(.color, allocator, 32, 32);
     self.bitmap.color.fill(self.background_color);
     self.preview_bitmap = try self.bitmap.clone();
     self.texture = nvg.createImageRgba(self.bitmap.color.width, self.bitmap.color.height, .{ .nearest = true }, self.bitmap.color.pixels);
@@ -168,46 +175,53 @@ pub fn deinit(self: *Self) void {
 pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) !void {
     self.bitmap.deinit();
     self.preview_bitmap.deinit();
-    nvg.deleteImage(self.texture);
-    if (self.texture_palette) |texture_palette| {
-        nvg.deleteImage(texture_palette);
-        self.texture_palette = null;
-    }
     self.freeSelection();
 
+    self.bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
     switch (bitmap_type) {
-        .color => {
-            self.bitmap = .{ .color = try ColorBitmap.init(self.allocator, width, height) };
-            self.bitmap.color.fill(self.background_color);
-            self.texture = nvg.createImageRgba(width, height, .{ .nearest = true }, self.bitmap.color.pixels);
-        },
+        .color => self.bitmap.color.fill(self.background_color),
         .indexed => {
-            self.bitmap = .{ .indexed = try IndexedBitmap.init(self.allocator, width, height) };
             self.bitmap.indexed.fill(self.background_index);
             // TODO: copy the original colormap
-            self.texture = nvg.createImageAlpha(width, height, .{ .nearest = true }, self.bitmap.indexed.indices);
-            self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, self.bitmap.indexed.colormap);
         },
     }
     self.preview_bitmap = try self.bitmap.clone();
+    self.recreateTextures();
     self.x = 0;
     self.y = 0;
 
     try self.history.reset(self);
 }
 
-pub fn load(self: *Self, file_path: []const u8) !void {
-    var image = try Image.initFromFile(self.allocator, file_path);
-
-    self.bitmap.deinit();
-    self.preview_bitmap.deinit();
+fn recreateTextures(self: *Self) void {
     nvg.deleteImage(self.texture);
     if (self.texture_palette) |texture_palette| {
         nvg.deleteImage(texture_palette);
         self.texture_palette = null;
     }
-    self.freeSelection();
+    switch (self.bitmap) {
+        .color => |color_bitmap| self.texture = nvg.createImageRgba(
+            color_bitmap.width,
+            color_bitmap.height,
+            .{ .nearest = true },
+            color_bitmap.pixels,
+        ),
+        .indexed => |indexed_bitmap| {
+            self.texture = nvg.createImageAlpha(
+                indexed_bitmap.width,
+                indexed_bitmap.height,
+                .{ .nearest = true },
+                indexed_bitmap.indices,
+            );
+            self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, indexed_bitmap.colormap);
+        },
+    }
+}
 
+pub fn load(self: *Self, file_path: []const u8) !void {
+    var image = try Image.initFromFile(self.allocator, file_path);
+
+    self.bitmap.deinit();
     if (image.colormap) |colormap| {
         self.bitmap = .{ .indexed = IndexedBitmap{
             .allocator = self.allocator,
@@ -216,8 +230,6 @@ pub fn load(self: *Self, file_path: []const u8) !void {
             .indices = image.pixels,
             .colormap = colormap,
         } };
-        self.texture = nvg.createImageAlpha(image.width, image.height, .{ .nearest = true }, image.pixels);
-        self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, colormap);
     } else {
         self.bitmap = .{ .color = ColorBitmap{
             .allocator = self.allocator,
@@ -225,12 +237,15 @@ pub fn load(self: *Self, file_path: []const u8) !void {
             .height = image.height,
             .pixels = image.pixels,
         } };
-        self.texture = nvg.createImageRgba(image.width, image.height, .{ .nearest = true }, image.pixels);
     }
 
     self.preview_bitmap = try self.bitmap.clone();
+    self.preview_bitmap.deinit();
+    self.recreateTextures();
     self.x = 0;
     self.y = 0;
+
+    self.freeSelection();
 
     try self.history.reset(self);
 }
@@ -279,38 +294,17 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
     const bitmap_type = @intToEnum(BitmapType, try reader.readIntNative(std.meta.Tag(BitmapType)));
     if (self.getWidth() != width or self.getHeight() != height or self.getBitmapType() != bitmap_type) {
         self.bitmap.deinit();
-        self.preview_bitmap.deinit();
-        nvg.deleteImage(self.texture);
-        if (self.texture_palette) |texture_palette| {
-            nvg.deleteImage(texture_palette);
-            self.texture_palette = null;
-        }
+        self.bitmap.init(bitmap_type, self.allocator, width, height);
         switch (bitmap_type) {
-            .color => {
-                self.bitmap = .{ .color = ColorBitmap{
-                    .allocator = self.allocator,
-                    .width = width,
-                    .height = height,
-                    .pixels = try self.allocator.alloc(u8, 4 * width * height),
-                } };
-                _ = try reader.readAll(self.bitmap.color.pixels);
-                self.texture = nvg.createImageRgba(width, height, .{ .nearest = true }, self.bitmap.color.pixels);
-            },
+            .color => _ = try reader.readAll(self.bitmap.color.pixels),
             .indexed => {
-                self.bitmap = .{ .indexed = IndexedBitmap{
-                    .allocator = self.allocator,
-                    .width = width,
-                    .height = height,
-                    .indices = try self.allocator.alloc(u8, width * height),
-                    .colormap = try self.allocator.alloc(u8, 4 * 256),
-                } };
                 _ = try reader.readAll(self.bitmap.indexed.indices);
                 _ = try reader.readAll(self.bitmap.indexed.colormap);
-                self.texture = nvg.createImageAlpha(width, height, .{ .nearest = true }, self.bitmap.indexed.indices);
-                self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, self.bitmap.indexed.colormap);
             },
         }
+        self.preview_bitmap.deinit();
         self.preview_bitmap = try self.bitmap.clone();
+        self.recreateTextures();
     } else {
         switch (self.bitmap) {
             .color => |color_bitmap| _ = try reader.readAll(color_bitmap.pixels),
@@ -333,6 +327,35 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
     self.clearPreview();
 
     self.freeSelection();
+}
+
+pub fn convertToTruecolor(self: *Self) !void {
+    switch (self.bitmap) {
+        .color => {},
+        .indexed => |indexed_bitmap| {
+            const color_bitmap = try ColorBitmap.init(self.allocator, indexed_bitmap.width, indexed_bitmap.height);
+            const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
+            var i: usize = 0;
+            while (i < pixel_count) : (i += 1) {
+                const index = @intCast(usize, indexed_bitmap.indices[i]);
+                const pixel = indexed_bitmap.colormap[4 * index .. 4 * index + 4];
+                color_bitmap.pixels[4 * i + 0] = pixel[0];
+                color_bitmap.pixels[4 * i + 1] = pixel[1];
+                color_bitmap.pixels[4 * i + 2] = pixel[2];
+                color_bitmap.pixels[4 * i + 3] = pixel[3];
+            }
+            self.bitmap.deinit();
+            self.bitmap = .{ .color = color_bitmap };
+            self.preview_bitmap.deinit();
+            self.preview_bitmap = try self.bitmap.clone();
+            self.recreateTextures();
+        },
+    }
+}
+
+pub fn convertToIndexed(self: Self) void {
+    _ = self;
+    @panic("TODO");
 }
 
 pub fn getWidth(self: Self) u32 {

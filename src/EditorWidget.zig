@@ -1115,7 +1115,18 @@ fn trySavePalette(self: *Self) void {
 }
 
 fn togglePalette(self: *Self) void {
-    self.palette_toggle_button.checked = !self.palette_toggle_button.checked;
+    if (self.palette_toggle_button.checked) {
+        self.document.convertToTruecolor() catch {
+            // TODO: show error message
+            return;
+        };
+        self.palette_toggle_button.checked = false;
+        self.color_palette.selection_locked = false;
+    } else {
+        self.document.convertToIndexed();
+        self.palette_toggle_button.checked = true;
+        self.color_palette.selection_locked = true;
+    }
 }
 
 fn updateDocumentPalette(self: *Self, i: usize) void {
