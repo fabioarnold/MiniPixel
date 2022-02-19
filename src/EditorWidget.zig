@@ -926,7 +926,10 @@ fn loadDocument(self: *Self, file_path: []const u8) !void {
 
 fn loadPaletteFromDocument(self: *Self) void {
     switch (self.document.bitmap) {
-        .color => self.palette_toggle_button.checked = false,
+        .color => {
+            self.palette_toggle_button.checked = false;
+            self.color_palette.selection_locked = false;
+        },
         .indexed => |indexed_bitmap| {
             var i: usize = 0;
             while (i < 256) : (i += 1) {
@@ -935,6 +938,10 @@ fn loadPaletteFromDocument(self: *Self) void {
                 self.color_palette.colors[i][2] = indexed_bitmap.colormap[4 * i + 2];
             }
             self.palette_toggle_button.checked = true;
+            self.color_palette.selection_locked = true;
+            if (self.color_palette.selected == null) {
+                self.color_palette.setSelection(self.document.foreground_index);
+            }
         },
     }
 }

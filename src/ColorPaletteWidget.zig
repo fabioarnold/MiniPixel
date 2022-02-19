@@ -11,6 +11,7 @@ widget: gui.Widget,
 allocator: Allocator,
 colors: [256][3]u8 = [_][3]u8{[_]u8{ 0, 0, 0 }} ** 256,
 selected: ?u8 = null,
+selection_locked: bool = false,
 
 onSelectionChangedFn: ?fn (*Self) void = null,
 
@@ -37,6 +38,7 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn setSelection(self: *Self, selected: ?u8) void {
+    if (self.selection_locked and selected == null) return;
     if (!std.meta.eql(self.selected, selected)) {
         self.selected = selected;
         if (self.onSelectionChangedFn) |onSelectionChanged| onSelectionChanged(self);
