@@ -469,52 +469,67 @@ pub fn paste(self: *Self) !void {
 }
 
 pub fn crop(self: *Self, rect: Recti) !void {
-    _ = self;
-    _ = rect;
-    @panic("TODO");
-    // if (rect.w < 1 or rect.h < 1) return error.InvalidCropRect;
-    // const width = @intCast(u32, rect.w);
-    // const height = @intCast(u32, rect.h);
-    // const new_bitmap = try Bitmap.init(self.allocator, width, height);
-    // //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
-    // new_bitmap.fill(self.background_color);
+    if (rect.w < 1 or rect.h < 1) return error.InvalidCropRect;
+    const width = @intCast(u32, rect.w);
+    const height = @intCast(u32, rect.h);
+    const bitmap_type = self.getBitmapType();
+    const new_bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
+    //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
+    switch (new_bitmap) {
+        .color => |color_bitmap| color_bitmap.fill(self.background_color),
+        .indexed => |indexed_bitmap| {
+            indexed_bitmap.fill(self.background_index);
+            std.mem.copy(u8, indexed_bitmap.colormap, self.bitmap.indexed.colormap);
+        },
+    }
 
-    // const intersection = rect.intersection(.{
-    //     .x = 0,
-    //     .y = 0,
-    //     .w = @intCast(i32, self.bitmap.width),
-    //     .h = @intCast(i32, self.bitmap.height),
-    // });
-    // if (intersection.w > 0 and intersection.h > 0) {
-    //     const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
-    //     const oy = if (rect.y < 0) @intCast(u32, -rect.y) else 0;
-    //     const sx = @intCast(u32, intersection.x);
-    //     const sy = @intCast(u32, intersection.y);
-    //     const w = @intCast(u32, intersection.w);
-    //     const h = @intCast(u32, intersection.h);
-    //     // blit to source
-    //     var y: u32 = 0;
-    //     while (y < h) : (y += 1) {
-    //         const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
-    //         const di = 4 * ((sy + y) * self.bitmap.width + sx);
-    //         // copy entire line
-    //         std.mem.copy(u8, new_bitmap.pixels[si .. si + 4 * w], self.bitmap.pixels[di .. di + 4 * w]);
-    //     }
-    // }
+    const intersection = rect.intersection(.{
+        .x = 0,
+        .y = 0,
+        .w = @intCast(i32, self.getWidth()),
+        .h = @intCast(i32, self.getHeight()),
+    });
+    if (intersection.w > 0 and intersection.h > 0) {
+        const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
+        const oy = if (rect.y < 0) @intCast(u32, -rect.y) else 0;
+        const sx = @intCast(u32, intersection.x);
+        const sy = @intCast(u32, intersection.y);
+        const w = @intCast(u32, intersection.w);
+        const h = @intCast(u32, intersection.h);
+        // blit to source
+        var y: u32 = 0;
+        switch (self.bitmap) {
+            .color => |color_bitmap| {
+                while (y < h) : (y += 1) {
+                    const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
+                    const di = 4 * ((sy + y) * color_bitmap.width + sx);
+                    // copy entire line
+                    std.mem.copy(u8, new_bitmap.color.pixels[si .. si + 4 * w], color_bitmap.pixels[di .. di + 4 * w]);
+                }
+            },
+            .indexed => |indexed_bitmap| {
+                while (y < h) : (y += 1) {
+                    const si = (y + oy) * @intCast(u32, rect.w) + ox;
+                    const di = (sy + y) * indexed_bitmap.width + sx;
+                    // copy entire line
+                    std.mem.copy(u8, new_bitmap.indexed.indices[si .. si + w], indexed_bitmap.indices[di .. di + w]);
+                }
+            },
+        }
+    }
 
-    // self.bitmap.deinit();
-    // self.bitmap = new_bitmap;
-    // self.preview_bitmap.deinit();
-    // self.preview_bitmap = try self.bitmap.clone();
+    self.bitmap.deinit();
+    self.bitmap = new_bitmap;
+    self.preview_bitmap.deinit();
+    self.preview_bitmap = try self.bitmap.clone();
 
-    // nvg.deleteImage(self.texture);
-    // self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
+    self.recreateTextures();
 
-    // self.x += rect.x;
-    // self.y += rect.y;
-    // self.canvas.translateByPixel(rect.x, rect.y);
+    self.x += rect.x;
+    self.y += rect.y;
+    self.canvas.translateByPixel(rect.x, rect.y);
 
-    // try self.history.pushFrame(self);
+    try self.history.pushFrame(self);
 }
 
 pub fn clearSelection(self: *Self) !void {
