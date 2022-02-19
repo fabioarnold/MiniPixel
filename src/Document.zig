@@ -85,6 +85,13 @@ const Bitmap = union(BitmapType) {
             .indexed => |indexed_bitmap| indexed_bitmap.mirrorVertically(),
         };
     }
+
+    fn rotate(self: *Bitmap, clockwise: bool) !void {
+        try switch (self.*) {
+            .color => |*color_bitmap| color_bitmap.rotate(clockwise),
+            .indexed => |*indexed_bitmap| indexed_bitmap.rotate(clockwise),
+        };
+    }
 };
 
 pub const Selection = struct {
@@ -720,70 +727,36 @@ pub fn mirrorVertically(self: *Self) !void {
     }
 }
 
-pub fn rotateCw(self: *Self) !void {
-    _ = self;
-    @panic("TODO");
-    // if (self.selection) |*selection| {
-    //     try selection.bitmap.rotateCw();
-    //     selection.rect.w = @intCast(i32, selection.bitmap.width);
-    //     selection.rect.h = @intCast(i32, selection.bitmap.height);
-    //     const d = @divTrunc(selection.rect.w - selection.rect.h, 2);
-    //     selection.rect.x -= d;
-    //     selection.rect.y += d;
-    //     nvg.deleteImage(selection.texture);
-    //     selection.texture = nvg.createImageRgba(
-    //         selection.bitmap.width,
-    //         selection.bitmap.height,
-    //         .{ .nearest = true },
-    //         selection.bitmap.pixels,
-    //     );
-    // } else {
-    //     try self.bitmap.rotateCw();
-    //     if (self.bitmap.width != self.bitmap.height) {
-    //         const d = @divTrunc(@intCast(i32, self.bitmap.height) - @intCast(i32, self.bitmap.width), 2);
-    //         self.x -= d;
-    //         self.y += d;
-    //         self.canvas.translateByPixel(d, -d);
-    //         nvg.deleteImage(self.texture);
-    //         self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
-    //     }
-    //     self.last_preview = .full;
-    //     self.clearPreview();
-    //     try self.history.pushFrame(self);
-    // }
-}
-
-pub fn rotateCcw(self: *Self) !void {
-    _ = self;
-    @panic("TODO");
-    // if (self.selection) |*selection| {
-    //     try selection.bitmap.rotateCcw();
-    //     selection.rect.w = @intCast(i32, selection.bitmap.width);
-    //     selection.rect.h = @intCast(i32, selection.bitmap.height);
-    //     const d = @divTrunc(selection.rect.w - selection.rect.h, 2);
-    //     selection.rect.x -= d;
-    //     selection.rect.y += d;
-    //     nvg.deleteImage(selection.texture);
-    //     selection.texture = nvg.createImageRgba(
-    //         selection.bitmap.width,
-    //         selection.bitmap.height,
-    //         .{ .nearest = true },
-    //         selection.bitmap.pixels,
-    //     );
-    // } else {
-    //     try self.bitmap.rotateCcw();
-    //     if (self.bitmap.width != self.bitmap.height) {
-    //         const d = @divTrunc(@intCast(i32, self.bitmap.height) - @intCast(i32, self.bitmap.width), 2);
-    //         self.x -= d;
-    //         self.y += d;
-    //         self.canvas.translateByPixel(d, -d);
-    //         nvg.deleteImage(self.texture);
-    //         self.texture = nvg.createImageRgba(self.bitmap.width, self.bitmap.height, .{ .nearest = true }, self.bitmap.pixels);
-    //     }
-    //     self.last_preview = .full;
-    //     self.clearPreview();
-    //     try self.history.pushFrame(self);
-    // }
+pub fn rotate(self: *Self, clockwise: bool) !void {
+    if (self.selection) |*selection| {
+        _ = selection;
+        @panic("TODO");
+        //     try selection.bitmap.rotateCw();
+        //     selection.rect.w = @intCast(i32, selection.bitmap.width);
+        //     selection.rect.h = @intCast(i32, selection.bitmap.height);
+        //     const d = @divTrunc(selection.rect.w - selection.rect.h, 2);
+        //     selection.rect.x -= d;
+        //     selection.rect.y += d;
+        //     nvg.deleteImage(selection.texture);
+        //     selection.texture = nvg.createImageRgba(
+        //         selection.bitmap.width,
+        //         selection.bitmap.height,
+        //         .{ .nearest = true },
+        //         selection.bitmap.pixels,
+        //     );
+    } else {
+        try self.bitmap.rotate(clockwise);
+        const d = @divTrunc(@intCast(i32, self.getHeight()) - @intCast(i32, self.getWidth()), 2);
+        if (d != 0) {
+            self.x -= d;
+            self.y += d;
+            self.canvas.translateByPixel(d, -d);
+            self.recreateTextures();
+        }
+        self.last_preview = .full;
+        self.clearPreview();
+        try self.history.pushFrame(self);
+    }
 }
 
 pub fn beginStroke(self: *Self, x: i32, y: i32) void {

@@ -510,7 +510,7 @@ fn initMenubar(self: *Self) !void {
     self.rotate_ccw_tool_button.iconFn = icons.iconRotateCcw;
     self.rotate_ccw_tool_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).rotateCcwDocument();
+            getEditorFromMenuButton(button).rotateDocument(false);
         }
     }.click;
     self.rotate_ccw_tool_button.onEnterFn = struct {
@@ -522,7 +522,7 @@ fn initMenubar(self: *Self) !void {
     self.rotate_cw_tool_button.iconFn = icons.iconRotateCw;
     self.rotate_cw_tool_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).rotateCwDocument();
+            getEditorFromMenuButton(button).rotateDocument(true);
         }
     }.click;
     self.rotate_cw_tool_button.onEnterFn = struct {
@@ -1043,19 +1043,21 @@ fn fillDocument(self: *Self, color_layer: ColorLayer) void {
 }
 
 fn mirrorHorizontallyDocument(self: *Self) void {
-    self.document.mirrorHorizontally() catch {}; // TODO: handle
+    self.document.mirrorHorizontally() catch {
+        self.showErrorMessageBox("Mirror image", "Could not mirror the image.");
+    };
 }
 
 fn mirrorVerticallyDocument(self: *Self) void {
-    self.document.mirrorVertically() catch {}; // TODO: handle
+    self.document.mirrorVertically() catch {
+        self.showErrorMessageBox("Mirror image", "Could not mirror the image.");
+    };
 }
 
-fn rotateCwDocument(self: *Self) void {
-    self.document.rotateCw() catch {}; // TODO: handle
-}
-
-fn rotateCcwDocument(self: *Self) void {
-    self.document.rotateCcw() catch {}; // TODO: handle
+fn rotateDocument(self: *Self, clockwise: bool) void {
+    self.document.rotate(clockwise) catch {
+        self.showErrorMessageBox("Rotate image", "Could not rotate the image.");
+    };
 }
 
 fn setTool(self: *Self, tool: CanvasWidget.ToolType) void {

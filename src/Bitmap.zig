@@ -271,7 +271,7 @@ pub fn mirrorVertically(self: Self) !void {
     }
 }
 
-pub fn rotateCw(self: *Self) !void {
+pub fn rotate(self: *Self, clockwise: bool) !void {
     const tmp_bitmap = try self.clone();
     defer tmp_bitmap.deinit();
     std.mem.swap(u32, &self.width, &self.height);
@@ -280,21 +280,11 @@ pub fn rotateCw(self: *Self) !void {
         var x: u32 = 0;
         while (x < self.height) : (x += 1) {
             const color = tmp_bitmap.getPixelUnchecked(x, y);
-            self.setPixelUnchecked(self.width - 1 - y, x, color);
-        }
-    }
-}
-
-pub fn rotateCcw(self: *Self) !void {
-    const tmp_bitmap = try self.clone();
-    defer tmp_bitmap.deinit();
-    std.mem.swap(u32, &self.width, &self.height);
-    var y: u32 = 0;
-    while (y < self.width) : (y += 1) {
-        var x: u32 = 0;
-        while (x < self.height) : (x += 1) {
-            const color = tmp_bitmap.getPixelUnchecked(x, y);
-            self.setPixelUnchecked(y, self.height - 1 - x, color);
+            if (clockwise) {
+                self.setPixelUnchecked(self.width - 1 - y, x, color);
+            } else {
+                self.setPixelUnchecked(y, self.height - 1 - x, color);
+            }
         }
     }
 }
@@ -326,8 +316,8 @@ test "rotate" {
     var bmp = try initial.clone();
     defer bmp.deinit();
 
-    try bmp.rotateCw();
+    try bmp.rotate(true);
     try testing.expect(bmp.eql(rotated));
-    try bmp.rotateCcw();
+    try bmp.rotate(false);
     try testing.expect(bmp.eql(initial));
 }
