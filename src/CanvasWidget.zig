@@ -1286,10 +1286,7 @@ fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) voi
         nvg.scale(s, s);
         const intersection = rect.scaled(1 / s).intersection(document_rect.intersection(selection_rect));
         nvg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);
-        nvg.beginPath();
-        nvg.rect(selection_rect.x, selection_rect.y, selection_rect.w, selection_rect.h);
-        nvg.fillPaint(nvg.imagePattern(selection_rect.x, selection_rect.y, selection_rect.w, selection_rect.h, 0, selection.texture, 1));
-        nvg.fill();
+        self.document.drawSelection();
     }
 
     self.drawGrids();

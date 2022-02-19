@@ -118,8 +118,5 @@ fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) voi
     if (self.document.blend_mode == .replace) {
         self.drawBackground(selection_rect);
     }
-    nvg.beginPath();
-    nvg.rect(selection_rect.x, selection_rect.y, selection_rect.w, selection_rect.h);
-    nvg.fillPaint(nvg.imagePattern(selection_rect.x, selection_rect.y, selection_rect.w, selection_rect.h, 0, selection.texture, 1));
-    nvg.fill();
+    self.document.drawSelection();
 }
