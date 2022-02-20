@@ -359,6 +359,7 @@ pub fn convertToTruecolor(self: *Self) !void {
             self.recreateTexture();
         },
     }
+    try self.history.pushFrame(self);
 }
 
 pub fn convertToIndexed(self: *Self) !void {
@@ -384,9 +385,11 @@ pub fn convertToIndexed(self: *Self) !void {
             self.preview_bitmap.deinit();
             self.preview_bitmap = try self.bitmap.clone();
             self.recreateTexture();
+            nvg.updateImage(self.texture_palette, self.colormap);
         },
         .indexed => {},
     }
+    try self.history.pushFrame(self);
 }
 
 pub const PaletteUpdateMode = enum {

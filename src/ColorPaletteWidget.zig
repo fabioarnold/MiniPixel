@@ -4,18 +4,21 @@ const Allocator = std.mem.Allocator;
 const gui = @import("gui");
 const nvg = @import("nanovg");
 const Rect = @import("gui/geometry.zig").Rect;
+const col = @import("color.zig");
 
 const ColorPaletteWidget = @This();
 
 widget: gui.Widget,
 allocator: Allocator,
-colors: [256][3]u8 = [_][3]u8{[_]u8{ 0, 0, 0 }} ** 256,
-selected: ?u8 = null,
+colors: [4 * 256]u8 = undefined,
+selected: ?usize = null,
 selection_locked: bool = false,
 
 onSelectionChangedFn: ?fn (*Self) void = null,
 
 const Self = @This();
+
+const default_pal_contents = @embedFile("../data/palettes/arne16.pal");
 
 pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     var self = try allocator.create(Self);
@@ -23,6 +26,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .widget = gui.Widget.init(allocator, rect),
         .allocator = allocator,
     };
+
+    try self.loadPalContents(default_pal_contents);
 
     self.widget.onMouseMoveFn = onMouseMove;
     self.widget.onMouseDownFn = onMouseDown;
@@ -37,7 +42,7 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn setSelection(self: *Self, selected: ?u8) void {
+pub fn setSelection(self: *Self, selected: ?usize) void {
     if (self.selection_locked and selected == null) return;
     if (!std.meta.eql(self.selected, selected)) {
         self.selected = selected;
@@ -85,41 +90,33 @@ pub fn loadPalContents(self: *Self, contents: []const u8) !void {
         const red = try std.fmt.parseUnsigned(u8, red_string, 10);
         const green = try std.fmt.parseUnsigned(u8, green_string, 10);
         const blue = try std.fmt.parseUnsigned(u8, blue_string, 10);
-        self.colors[i][0] = red;
-        self.colors[i][1] = green;
-        self.colors[i][2] = blue;
+        const alpha = 0xff; // TODO
+        self.colors[4 * i + 0] = red;
+        self.colors[4 * i + 1] = green;
+        self.colors[4 * i + 2] = blue;
+        self.colors[4 * i + 3] = alpha;
     }
-    while (i < self.colors.len) : (i += 1) {
-        self.colors[i] = [_]u8{0} ** 3;
+    while (i < 256) : (i += 1) {
+        std.mem.copy(u8, self.colors[4 * i .. 4 * i + 4], &col.black);
     }
 }
 
-pub fn writePal(self: Self, filename: []const u8) !void {
+pub fn writePal(self: *Self, filename: []const u8) !void {
     var file = try std.fs.cwd().createFile(filename, .{});
     defer file.close();
 
-    const palette = self.trimBlackColorsRight();
+    const palette = col.trimBlackColorsRight(&self.colors);
 
     var writer = file.writer();
     _ = try writer.write(pal_header ++ line_ending);
     _ = try writer.write(pal_version ++ line_ending);
-    _ = try writer.print("{}" ++ line_ending, .{palette.len});
+    _ = try writer.print("{}" ++ line_ending, .{palette.len / 4});
 
     var i: usize = 0;
-    while (i < palette.len) : (i += 1) {
-        const color = palette[i];
+    while (i < palette.len) : (i += 4) {
+        const color = palette[i .. i + 4];
         _ = try writer.print("{} {} {}" ++ line_ending, .{ color[0], color[1], color[2] });
     }
-}
-
-// TODO: use col.trimBlackColorsRight
-fn trimBlackColorsRight(self: Self) []const [3]u8 {
-    var len = self.colors.len;
-    while (len > 0) : (len -= 1) {
-        const color = self.colors[len - 1];
-        if (color[0] != 0 or color[1] != 0 or color[2] != 0) break;
-    }
-    return self.colors[0..len];
 }
 
 fn onMouseMove(widget: *gui.Widget, event: *const gui.MouseEvent) void {
@@ -158,11 +155,13 @@ pub fn draw(widget: *gui.Widget) void {
     const tile_w = (rect.w - pad - (pad - 1)) / 16;
     const tile_h = (rect.h - pad - (pad - 1)) / 16;
 
-    for (self.colors) |color, i| {
+    var i: usize = 0;
+    while (i < 256) : (i += 1) {
         const x = @intToFloat(f32, i % 16);
         const y = @intToFloat(f32, i / 16);
         nvg.beginPath();
         nvg.rect(rect.x + pad + x * tile_w, rect.y + pad + y * tile_h, tile_w - 1, tile_h - 1);
+        const color = self.colors[i * 4 .. i * 4 + 4];
         nvg.fillColor(nvg.rgb(color[0], color[1], color[2]));
         nvg.fill();
     }
