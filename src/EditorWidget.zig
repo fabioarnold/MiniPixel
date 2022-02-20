@@ -226,6 +226,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     self.palette_toggle_button.onLeaveFn = menuButtonOnLeave;
 
     std.mem.copy(u8, self.document.colormap, &self.color_palette.colors);
+    try self.document.history.reset(self.document); // so palette is part of first snapshot
     self.color_palette.onSelectionChangedFn = struct {
         fn selectionChanged(color_palette: *ColorPaletteWidget) void {
             if (color_palette.widget.parent) |parent| {
