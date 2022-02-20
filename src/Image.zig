@@ -41,7 +41,18 @@ pub fn initFromFile(allocator: Allocator, file_path: []const u8) !Image {
         .allocator = allocator,
     };
     errdefer self.deinit();
-    if (colormap_entries > 0) self.colormap = try allocator.alloc(u8, 4 * colormap_len);
+    if (colormap_entries > 0) {
+        const colormap = try allocator.alloc(u8, 4 * colormap_len);
+        // init remaining entries to black
+        var i: usize = colormap_entries;
+        while (i < colormap_len) : (i += 1) {
+            colormap[4 * i + 0] = 0;
+            colormap[4 * i + 1] = 0;
+            colormap[4 * i + 2] = 0;
+            colormap[4 * i + 3] = 0xff;
+        }
+        self.colormap = colormap;
+    }
 
     err = readPngFile(c_file_path, self.pixels.ptr, if (self.colormap) |colormap| colormap.ptr else null);
     if (err != 0) return error.ReadPngFail;
