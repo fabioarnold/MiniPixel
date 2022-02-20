@@ -7,7 +7,6 @@ allocator: Allocator,
 width: u32,
 height: u32,
 indices: []u8,
-colormap: []u8,
 
 const Self = @This();
 const IndexedBitmap = @This();
@@ -18,17 +17,14 @@ pub fn init(allocator: Allocator, width: u32, height: u32) !Self {
         .width = width,
         .height = height,
         .indices = undefined,
-        .colormap = undefined,
     };
     self.indices = try allocator.alloc(u8, self.width * self.height);
-    self.colormap = try allocator.alloc(u8, 256 * 4);
 
     return self;
 }
 
 pub fn deinit(self: Self) void {
     self.allocator.free(self.indices);
-    self.allocator.free(self.colormap);
 }
 
 pub fn clone(self: Self) !Self {
@@ -37,7 +33,6 @@ pub fn clone(self: Self) !Self {
         .width = self.width,
         .height = self.height,
         .indices = try self.allocator.dupe(u8, self.indices),
-        .colormap = try self.allocator.dupe(u8, self.colormap),
     };
 }
 
