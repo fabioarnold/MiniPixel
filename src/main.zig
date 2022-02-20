@@ -835,8 +835,6 @@ pub fn main() !void {
     }
     std.process.argsFree(allocator, args);
 
-    editor_widget.newDocument();
-
     // quit app when there are no more windows open
     while (app.windows.items.len > 0) {
         var sdl_event: c.SDL_Event = undefined;
