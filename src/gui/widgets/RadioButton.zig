@@ -107,7 +107,7 @@ pub fn draw(widget: *gui.Widget) void {
     // const enabled = widget.isEnabled(); // TODO
     if (!widget.isFocused()) self.focused = false;
 
-    const cx = rect.x + 10;
+    const cx = rect.x + 6;
     const cy = rect.y + 0.5 * rect.h;
 
     nvg.beginPath();
@@ -135,12 +135,12 @@ pub fn draw(widget: *gui.Widget) void {
     nvg.fontSize(12);
     nvg.textAlign(nvg.TextAlign{ .vertical = .middle });
     nvg.fillColor(nvg.rgb(0, 0, 0));
-    _ = nvg.text(rect.x + 20, cy, self.text);
+    _ = nvg.text(rect.x + 16, cy, self.text);
     if (self.focused) {
         var bounds: [4]f32 = undefined;
-        _ = nvg.textBounds(rect.x + 20, cy, self.text, &bounds);
+        _ = nvg.textBounds(rect.x + 16, cy, self.text, &bounds);
         nvg.beginPath();
-        nvg.rect(bounds[0] - 0.5, bounds[1] - 0.5, @round(bounds[2] - bounds[0]) + 1, @round(bounds[3] - bounds[1]) + 1);
+        nvg.rect(@round(bounds[0]) - 0.5, @round(bounds[1]) - 0.5, @round(bounds[2] - bounds[0]) + 1, @round(bounds[3] - bounds[1]) + 1);
         nvg.strokeColor(nvg.rgb(0, 0, 0)); // TODO: dashed lines
         nvg.stroke();
     }
