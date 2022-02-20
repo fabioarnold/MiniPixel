@@ -29,9 +29,10 @@ onSelectedFn: ?fn (*Self) void = null,
 const Self = @This();
 
 pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
+    const rect = Rect(f32).make(0, 0, 240, 100);
     var self = try allocator.create(Self);
     self.* = Self{
-        .widget = gui.Widget.init(allocator, Rect(f32).make(0, 0, 240, 100)),
+        .widget = gui.Widget.init(allocator, rect),
         .allocator = allocator,
         .editor_widget = editor_widget,
         .width_label = try gui.Label.init(allocator, Rect(f32).make(10, 10, 45, 20), "Width:"),
@@ -39,10 +40,10 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
         .height_label = try gui.Label.init(allocator, Rect(f32).make(125, 10, 45, 20), "Height:"),
         .height_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(170, 10, 60, 20)),
         .color_label = try gui.Label.init(allocator, Rect(f32).make(10, 35, 45, 20), "Color:"),
-        .indexed_radio = try gui.RadioButton.init(allocator, Rect(f32).make(55, 35, 65, 20), "Indexed"),
-        .truecolor_radio = try gui.RadioButton.init(allocator, Rect(f32).make(120, 35, 80, 20), "True color"),
-        .ok_button = try gui.Button.init(allocator, Rect(f32).make(240 - 160 - 10 - 10, 100 - 25 - 10, 80, 25), "OK"),
-        .cancel_button = try gui.Button.init(allocator, Rect(f32).make(240 - 80 - 10, 100 - 25 - 10, 80, 25), "Cancel"),
+        .indexed_radio = try gui.RadioButton.init(allocator, Rect(f32).make(55, 35, 95, 20), "Indexed (8-bit)"),
+        .truecolor_radio = try gui.RadioButton.init(allocator, Rect(f32).make(160 - 3, 35, 70 + 3, 20), "True color"),
+        .ok_button = try gui.Button.init(allocator, Rect(f32).make(rect.w - 160 - 10 - 10, rect.h - 25 - 10, 80, 25), "OK"),
+        .cancel_button = try gui.Button.init(allocator, Rect(f32).make(rect.w - 80 - 10, rect.h - 25 - 10, 80, 25), "Cancel"),
     };
     self.widget.onKeyDownFn = onKeyDown;
 
@@ -147,10 +148,8 @@ fn cancel(self: *Self) void {
 }
 
 pub fn draw(widget: *gui.Widget) void {
-    nvg.beginPath();
-    nvg.rect(0, 0, 240, 100);
-    nvg.fillColor(gui.theme_colors.background);
-    nvg.fill();
+    const rect = widget.relative_rect;
+    gui.drawPanel(rect.x, rect.y, rect.w, rect.h, 1, false, false);
 
     widget.drawChildren();
 }
