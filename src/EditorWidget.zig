@@ -930,13 +930,14 @@ fn loadPaletteFromDocument(self: *Self) void {
         .color => {
             self.palette_toggle_button.checked = false;
             self.color_palette.selection_locked = false;
+            // TODO: overwrite documents palette
         },
-        .indexed => |indexed_bitmap| {
+        .indexed => {
             var i: usize = 0;
             while (i < 256) : (i += 1) {
-                self.color_palette.colors[i][0] = indexed_bitmap.colormap[4 * i + 0];
-                self.color_palette.colors[i][1] = indexed_bitmap.colormap[4 * i + 1];
-                self.color_palette.colors[i][2] = indexed_bitmap.colormap[4 * i + 2];
+                self.color_palette.colors[i][0] = self.document.colormap[4 * i + 0];
+                self.color_palette.colors[i][1] = self.document.colormap[4 * i + 1];
+                self.color_palette.colors[i][2] = self.document.colormap[4 * i + 2];
             }
             self.palette_toggle_button.checked = true;
             self.color_palette.selection_locked = true;
@@ -1134,15 +1135,10 @@ fn togglePalette(self: *Self) void {
 }
 
 fn updateDocumentPalette(self: *Self, i: usize) void {
-    switch (self.document.bitmap) {
-        .indexed => |indexed_bitmap| {
-            indexed_bitmap.colormap[4 * i + 0] = self.color_palette.colors[i][0];
-            indexed_bitmap.colormap[4 * i + 1] = self.color_palette.colors[i][1];
-            indexed_bitmap.colormap[4 * i + 2] = self.color_palette.colors[i][2];
-            self.document.dirty = true;
-        },
-        else => {},
-    }
+    self.document.colormap[4 * i + 0] = self.color_palette.colors[i][0];
+    self.document.colormap[4 * i + 1] = self.color_palette.colors[i][1];
+    self.document.colormap[4 * i + 2] = self.color_palette.colors[i][2];
+    self.document.dirty = true;
 }
 
 fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {

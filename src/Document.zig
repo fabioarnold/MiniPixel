@@ -41,12 +41,11 @@ const Bitmap = union(BitmapType) {
     }
 
     fn initFromImage(allocator: Allocator, image: Image) Bitmap {
-        return if (image.colormap) |colormap| .{ .indexed = IndexedBitmap{
+        return if (image.colormap != null) .{ .indexed = IndexedBitmap{
             .allocator = allocator,
             .width = image.width,
             .height = image.height,
             .indices = image.pixels,
-            .colormap = colormap,
         } } else .{ .color = ColorBitmap{
             .allocator = allocator,
             .width = image.width,
@@ -69,6 +68,23 @@ const Bitmap = union(BitmapType) {
         };
     }
 
+    fn createTexture(self: Bitmap) nvg.Image {
+        return switch (self) {
+            .color => |color_bitmap| nvg.createImageRgba(
+                color_bitmap.width,
+                color_bitmap.height,
+                .{ .nearest = true },
+                color_bitmap.pixels
+            ),
+            .indexed => |indexed_bitmap| nvg.createImageAlpha(
+                indexed_bitmap.width,
+                indexed_bitmap.height,
+                .{ .nearest = true },
+                indexed_bitmap.indices
+            ),
+        };
+    }
+
     fn toImage(self: *Bitmap, allocator: Allocator) Image {
         return switch (self.*) {
             .color => |color_bitmap| Image{
@@ -82,7 +98,6 @@ const Bitmap = union(BitmapType) {
                 .width = indexed_bitmap.width,
                 .height = indexed_bitmap.height,
                 .pixels = indexed_bitmap.indices,
-                .colormap = indexed_bitmap.colormap,
             },
         };
     }
@@ -113,13 +128,6 @@ pub const Selection = struct {
     rect: Recti,
     bitmap: Bitmap,
     texture: nvg.Image,
-
-    fn createTexture(self: *Selection) void {
-        self.texture = switch (self.bitmap) {
-            .color => |color_bitmap| nvg.createImageRgba(color_bitmap.width, color_bitmap.height, .{ .nearest = true }, color_bitmap.pixels),
-            .indexed => |indexed_bitmap| nvg.createImageAlpha(indexed_bitmap.width, indexed_bitmap.height, .{ .nearest = true }, indexed_bitmap.indices),
-        };
-    }
 
     fn updateTexture(self: Selection) void {
         switch (self.bitmap) {
@@ -157,8 +165,9 @@ x: i32 = 0,
 y: i32 = 0,
 
 texture: nvg.Image, // image for display using nvg
-texture_palette: ?nvg.Image = null,
+texture_palette: nvg.Image,
 bitmap: Bitmap,
+colormap: []u8,
 preview_bitmap: Bitmap, // preview brush and lines
 last_preview: PrimitivePreview = .none,
 dirty: bool = false, // bitmap needs to be uploaded to gpu on next draw call
@@ -182,14 +191,17 @@ pub fn init(allocator: Allocator) !*Self {
     self.* = Self{
         .allocator = allocator,
         .texture = undefined,
+        .texture_palette = undefined,
         .bitmap = try Bitmap.init(.color, allocator, 32, 32),
+        .colormap = try allocator.alloc(u8, 4 * 256),
         .preview_bitmap = undefined,
         .history = try HistoryBuffer.init(allocator),
     };
 
     self.bitmap.color.fill(self.background_color);
     self.preview_bitmap = try self.bitmap.clone();
-    self.texture = nvg.createImageRgba(self.bitmap.color.width, self.bitmap.color.height, .{ .nearest = true }, self.bitmap.color.pixels);
+    self.texture = self.bitmap.createTexture();
+    self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, self.colormap);
     try self.history.reset(self);
 
     return self;
@@ -199,11 +211,9 @@ pub fn deinit(self: *Self) void {
     self.history.deinit();
     self.bitmap.deinit();
     self.preview_bitmap.deinit();
+    self.allocator.free(self.colormap);
     nvg.deleteImage(self.texture);
-    if (self.texture_palette) |texture_palette| {
-        nvg.deleteImage(texture_palette);
-        self.texture_palette = null;
-    }
+    nvg.deleteImage(self.texture_palette);
     self.freeSelection();
     self.allocator.destroy(self);
 }
@@ -216,53 +226,35 @@ pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) 
     self.bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
     switch (bitmap_type) {
         .color => self.bitmap.color.fill(self.background_color),
-        .indexed => {
-            self.bitmap.indexed.fill(self.background_index);
-            // TODO: copy the original colormap
-        },
+        .indexed => self.bitmap.indexed.fill(self.background_index),
     }
     self.preview_bitmap = try self.bitmap.clone();
-    self.recreateTextures();
+    self.recreateTexture();
     self.x = 0;
     self.y = 0;
 
     try self.history.reset(self);
 }
 
-fn recreateTextures(self: *Self) void {
+fn recreateTexture(self: *Self) void {
     nvg.deleteImage(self.texture);
-    if (self.texture_palette) |texture_palette| {
-        nvg.deleteImage(texture_palette);
-        self.texture_palette = null;
-    }
-    switch (self.bitmap) {
-        .color => |color_bitmap| self.texture = nvg.createImageRgba(
-            color_bitmap.width,
-            color_bitmap.height,
-            .{ .nearest = true },
-            color_bitmap.pixels,
-        ),
-        .indexed => |indexed_bitmap| {
-            self.texture = nvg.createImageAlpha(
-                indexed_bitmap.width,
-                indexed_bitmap.height,
-                .{ .nearest = true },
-                indexed_bitmap.indices,
-            );
-            self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, indexed_bitmap.colormap);
-        },
-    }
+    self.texture = self.bitmap.createTexture();
 }
 
 pub fn load(self: *Self, file_path: []const u8) !void {
     const image = try Image.initFromFile(self.allocator, file_path);
+    if (image.colormap) |colormap| {
+        if (colormap.len != self.colormap.len) return error.UnexpectedColormapLen;
+        self.allocator.free(self.colormap);
+        self.colormap = colormap;
+        nvg.updateImage(self.texture_palette, self.colormap);
+    }
 
     self.bitmap.deinit();
     self.bitmap = Bitmap.initFromImage(self.allocator, image);
-
     self.preview_bitmap.deinit();
     self.preview_bitmap = try self.bitmap.clone();
-    self.recreateTextures();
+    self.recreateTexture();
     self.x = 0;
     self.y = 0;
 
@@ -272,7 +264,10 @@ pub fn load(self: *Self, file_path: []const u8) !void {
 }
 
 pub fn save(self: *Self, file_path: []const u8) !void {
-    const image = self.bitmap.toImage(self.allocator);
+    var image = self.bitmap.toImage(self.allocator);
+    if (self.getBitmapType() == .indexed) {
+        image.colormap = self.colormap;
+    }
     try image.writeToFile(file_path);
 }
 
@@ -291,11 +286,9 @@ pub fn createSnapshot(self: Document) ![]u8 {
     try writer.writeIntNative(std.meta.Tag(BitmapType), @enumToInt(self.getBitmapType()));
     switch (self.bitmap) {
         .color => |color_bitmap| _ = try writer.write(color_bitmap.pixels),
-        .indexed => |indexed_bitmap| {
-            _ = try writer.write(indexed_bitmap.indices);
-            _ = try writer.write(indexed_bitmap.colormap);
-        },
+        .indexed => |indexed_bitmap| _ = try writer.write(indexed_bitmap.indices),
     }
+    _ = try writer.write(self.colormap);
     // TODO: serialize selection
     try comp.close();
 
@@ -320,17 +313,15 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
     }
     switch (self.bitmap) {
         .color => |color_bitmap| _ = try reader.readAll(color_bitmap.pixels),
-        .indexed => |indexed_bitmap| {
-            _ = try reader.readAll(indexed_bitmap.indices);
-            _ = try reader.readAll(indexed_bitmap.colormap);
-        },
+        .indexed => |indexed_bitmap| _ = try reader.readAll(indexed_bitmap.indices),
     }
+    _ = try reader.readAll(self.colormap);
     _ = decomp.close();
 
     if (recreate) {
         self.preview_bitmap.deinit();
         self.preview_bitmap = try self.bitmap.clone();
-        self.recreateTextures();
+        self.recreateTexture();
     }
 
     if (self.x != x or self.y != y) {
@@ -355,7 +346,7 @@ pub fn convertToTruecolor(self: *Self) !void {
             var i: usize = 0;
             while (i < pixel_count) : (i += 1) {
                 const index = @intCast(usize, indexed_bitmap.indices[i]);
-                const pixel = indexed_bitmap.colormap[4 * index .. 4 * index + 4];
+                const pixel = self.colormap[4 * index .. 4 * index + 4];
                 color_bitmap.pixels[4 * i + 0] = pixel[0];
                 color_bitmap.pixels[4 * i + 1] = pixel[1];
                 color_bitmap.pixels[4 * i + 2] = pixel[2];
@@ -365,7 +356,7 @@ pub fn convertToTruecolor(self: *Self) !void {
             self.bitmap = .{ .color = color_bitmap };
             self.preview_bitmap.deinit();
             self.preview_bitmap = try self.bitmap.clone();
-            self.recreateTextures();
+            self.recreateTexture();
         },
     }
 }
@@ -435,13 +426,21 @@ pub fn cut(self: *Self) !void {
 
 pub fn copy(self: *Self) !void {
     if (self.selection) |*selection| {
-        try Clipboard.setImage(self.allocator, selection.bitmap.toImage(self.allocator));
+        var image = selection.bitmap.toImage(self.allocator);
+        if (self.getBitmapType() == .indexed) {
+            image.colormap = self.colormap;
+        }
+        try Clipboard.setImage(self.allocator, image);
         self.copy_location = Pointi{
             .x = selection.rect.x,
             .y = selection.rect.y,
         };
     } else {
-        try Clipboard.setImage(self.allocator, self.bitmap.toImage(self.allocator));
+        var image = self.bitmap.toImage(self.allocator);
+        if (self.getBitmapType() == .indexed) {
+            image.colormap = self.colormap;
+        }
+        try Clipboard.setImage(self.allocator, image);
         self.copy_location = null;
     }
 }
@@ -464,13 +463,12 @@ pub fn paste(self: *Self) !void {
     }
 
     // TODO: convert type and colors
-    var selection = Selection{
+    const bitmap = Bitmap.initFromImage(self.allocator, image);
+    self.selection = Selection{
         .rect = selection_rect,
-        .bitmap = Bitmap.initFromImage(self.allocator, image),
-        .texture = undefined,
+        .bitmap = bitmap,
+        .texture = bitmap.createTexture(),
     };
-    selection.createTexture();
-    self.selection = selection;
 }
 
 pub fn crop(self: *Self, rect: Recti) !void {
@@ -482,10 +480,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
     //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
     switch (new_bitmap) {
         .color => |color_bitmap| color_bitmap.fill(self.background_color),
-        .indexed => |indexed_bitmap| {
-            indexed_bitmap.fill(self.background_index);
-            std.mem.copy(u8, indexed_bitmap.colormap, self.bitmap.indexed.colormap);
-        },
+        .indexed => |indexed_bitmap| indexed_bitmap.fill(self.background_index),
     }
 
     const intersection = rect.intersection(.{
@@ -528,7 +523,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
     self.preview_bitmap.deinit();
     self.preview_bitmap = try self.bitmap.clone();
 
-    self.recreateTextures();
+    self.recreateTexture();
 
     self.x += rect.x;
     self.y += rect.y;
@@ -611,12 +606,6 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
     const h = @intCast(u32, intersection.h);
     const bitmap = try Bitmap.init(self.getBitmapType(), self.allocator, w, h);
 
-    var selection = Selection{
-        .rect = intersection,
-        .bitmap = bitmap,
-        .texture = undefined,
-    };
-
     // move pixels
     var y: u32 = 0;
     switch (self.bitmap) {
@@ -642,8 +631,12 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
             }
         },
     }
-    selection.createTexture();
 
+    var selection = Selection{
+        .rect = intersection,
+        .bitmap = bitmap,
+        .texture = bitmap.createTexture(),
+    };
     self.freeSelection(); // clean up previous selection
     self.selection = selection;
 
@@ -777,7 +770,7 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
             selection.rect.x -= d;
             selection.rect.y += d;
             nvg.deleteImage(selection.texture);
-            selection.createTexture();
+            selection.texture = selection.bitmap.createTexture();
         } else {
             selection.updateTexture();
         }
@@ -788,7 +781,7 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
             self.x -= d;
             self.y += d;
             self.canvas.translateByPixel(d, -d);
-            self.recreateTextures();
+            self.recreateTexture();
         }
         self.last_preview = .full;
         self.clearPreview();
@@ -857,10 +850,10 @@ pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
             if (indexed_bitmap.getIndex(x, y)) |index| {
                 const i: usize = index;
                 return [4]u8{
-                    indexed_bitmap.colormap[4 * i + 0],
-                    indexed_bitmap.colormap[4 * i + 1],
-                    indexed_bitmap.colormap[4 * i + 2],
-                    indexed_bitmap.colormap[4 * i + 3],
+                    self.colormap[4 * i + 0],
+                    self.colormap[4 * i + 1],
+                    self.colormap[4 * i + 2],
+                    self.colormap[4 * i + 3],
                 };
             }
         },
@@ -896,7 +889,7 @@ pub fn draw(self: *Self) void {
             },
             .indexed => |indexed_preview_bitmap| {
                 nvg.updateImage(self.texture, indexed_preview_bitmap.indices);
-                nvg.updateImage(self.texture_palette.?, self.bitmap.indexed.colormap);
+                nvg.updateImage(self.texture_palette, self.colormap);
             },
         }
         self.dirty = false;
@@ -907,7 +900,7 @@ pub fn draw(self: *Self) void {
     nvg.rect(0, 0, width, height);
     const pattern = switch (self.bitmap) {
         .color => nvg.imagePattern(0, 0, width, height, 0, self.texture, 1),
-        .indexed => nvg.indexedImagePattern(0, 0, width, height, 0, self.texture, self.texture_palette.?, 1),
+        .indexed => nvg.indexedImagePattern(0, 0, width, height, 0, self.texture, self.texture_palette, 1),
     };
     nvg.fillPaint(pattern);
     nvg.fill();
@@ -925,7 +918,7 @@ pub fn drawSelection(self: Self) void {
         nvg.rect(rect.x, rect.y, rect.w, rect.h);
         const pattern = switch (self.bitmap) {
             .color => nvg.imagePattern(rect.x, rect.y, rect.w, rect.h, 0, selection.texture, 1),
-            .indexed => nvg.indexedImagePattern(rect.x, rect.y, rect.w, rect.h, 0, selection.texture, self.texture_palette.?, 1),
+            .indexed => nvg.indexedImagePattern(rect.x, rect.y, rect.w, rect.h, 0, selection.texture, self.texture_palette, 1),
         };
         nvg.fillPaint(pattern);
         nvg.fill();
