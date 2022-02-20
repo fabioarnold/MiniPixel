@@ -23,6 +23,7 @@ icon_y: f32 = 2,
 style: ButtonStyle = .default,
 
 hovered: bool = false,
+focused: bool = false,
 pressed: bool = false,
 checked: bool = false,
 
@@ -52,7 +53,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*Self {
     self.widget.drawFn = draw;
     self.widget.onMouseDownFn = onMouseDown;
     self.widget.onMouseUpFn = onMouseUp;
+    self.widget.onKeyDownFn = onKeyDown;
     self.widget.onKeyUpFn = onKeyUp;
+    self.widget.onFocusFn = onFocus;
+    self.widget.onBlurFn = onBlur;
     self.widget.onEnterFn = onEnter;
     self.widget.onLeaveFn = onLeave;
 
@@ -102,11 +106,30 @@ fn onMouseUp(widget: *gui.Widget, mouse_event: *const gui.MouseEvent) void {
     }
 }
 
-fn onKeyUp(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
+fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
+    widget.onKeyDown(key_event);
     const self = @fieldParentPtr(Self, "widget", widget);
     if (key_event.key == .Space) {
+        self.pressed = true;
+    }
+}
+
+fn onKeyUp(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    if (key_event.key == .Space and self.pressed) {
+        self.pressed = false;
         self.click();
     }
+}
+
+fn onFocus(widget: *gui.Widget, focus_event: *gui.FocusEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    self.focused = focus_event.source == .keyboard;
+}
+
+fn onBlur(widget: *gui.Widget, _: *gui.FocusEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    self.pressed = false;
 }
 
 fn onEnter(widget: *gui.Widget) void {
@@ -133,15 +156,15 @@ pub fn draw(widget: *gui.Widget) void {
 
     const rect = widget.relative_rect;
     const enabled = widget.isEnabled();
+    if (!widget.isFocused()) self.focused = false;
+
     switch (self.style) {
         .default => {
             gui.drawPanel(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 1, enabled and self.hovered, (enabled and self.pressed) or self.checked);
 
-            const focused = widget.isFocused();
-
             // border
             nvg.beginPath();
-            if (focused) {
+            if (self.focused) {
                 nvg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
                 nvg.strokeWidth(2);
             } else {
@@ -171,7 +194,7 @@ pub fn draw(widget: *gui.Widget) void {
 
     nvg.fontFace("guifont");
     nvg.fontSize(self.font_size);
-    nvg.textAlign(.{ .horizontal = .center, .vertical = .middle});
+    nvg.textAlign(.{ .horizontal = .center, .vertical = .middle });
     nvg.fillColor(nvg.rgb(0, 0, 0));
     _ = nvg.text(rect.x + 0.5 * rect.w, rect.y + 0.5 * rect.h, self.text);
 
