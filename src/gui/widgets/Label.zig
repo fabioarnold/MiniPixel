@@ -38,9 +38,10 @@ pub fn draw(widget: *gui.Widget) void {
 
     if (self.draw_border) {
         gui.drawPanelInset(rect.x, rect.y, rect.w, rect.h, 1);
+        nvg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+    } else {
+        nvg.scissor(rect.x, rect.y, rect.w, rect.h);
     }
-
-    nvg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
     defer nvg.resetScissor();
 
     nvg.fontFace("guifont");
