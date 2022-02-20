@@ -373,20 +373,18 @@ const SelectTool = struct {
 
     fn onMouseMove(self: *SelectTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
         const point = canvas.toDocumentSpace(event.x, event.y);
+        var fx = @round(point.x);
+        var fy = @round(point.y);
+        canvas.snap(&fx, &fy);
+        self.edit_point = Pointi.make(ftoi(fx), ftoi(fy));
         if (canvas.document.selection) |*selection| {
-            self.edit_point = Pointi.make(ftoi(@floor(point.x)), ftoi(@floor(point.y)));
             if (self.drag_offset) |drag_offset| {
-                var fx = @round(point.x - drag_offset.x);
-                var fy = @round(point.y - drag_offset.y);
+                fx = @round(point.x - drag_offset.x);
+                fy = @round(point.y - drag_offset.y);
                 canvas.snap(&fx, &fy);
                 selection.rect.x = ftoi(fx);
                 selection.rect.y = ftoi(fy);
             }
-        } else {
-            var fx = @round(point.x);
-            var fy = @round(point.y);
-            canvas.snap(&fx, &fy);
-            self.edit_point = Pointi.make(ftoi(fx), ftoi(fy));
         }
     }
 
