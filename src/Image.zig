@@ -1,6 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
+const col = @import("color.zig");
+
 const Image = @This();
 
 const colormap_len = 0x100;
@@ -46,10 +48,7 @@ pub fn initFromFile(allocator: Allocator, file_path: []const u8) !Image {
         // init remaining entries to black
         var i: usize = colormap_entries;
         while (i < colormap_len) : (i += 1) {
-            colormap[4 * i + 0] = 0;
-            colormap[4 * i + 1] = 0;
-            colormap[4 * i + 2] = 0;
-            colormap[4 * i + 3] = 0xff;
+            std.mem.copy(u8, colormap[4 * i .. 4 * i + 4], &col.black);
         }
         self.colormap = colormap;
     }
@@ -77,7 +76,15 @@ pub fn initFromMemory(allocator: Allocator, memory: []const u8) !Image {
         .allocator = allocator,
     };
     errdefer self.deinit();
-    if (colormap_entries > 0) self.colormap = try allocator.alloc(u8, 4 * colormap_len);
+    if (colormap_entries > 0) {
+        const colormap = try allocator.alloc(u8, 4 * colormap_len);
+        // init remaining entries to black
+        var i: usize = colormap_entries;
+        while (i < colormap_len) : (i += 1) {
+            std.mem.copy(u8, colormap[4 * i .. 4 * i + 4], &col.black);
+        }
+        self.colormap = colormap;
+    }
 
     err = readPngMemory(memory.ptr, memory.len, self.pixels.ptr, if (self.colormap) |colormap| colormap.ptr else null);
     if (err != 0) return error.ReadPngFail;
@@ -101,21 +108,31 @@ pub fn clone(self: Image, allocator: std.mem.Allocator) !Image {
 }
 
 pub fn writeToFile(self: Image, file_path: []const u8) !void {
-    const colormap: [*c]const u8 = if (self.colormap) |colormap| colormap.ptr else null;
+    var colormap_entries: u32 = 0;
+    var colormap_ptr: [*c]const u8 = null;
+    if (self.colormap) |colormap| {
+        colormap_ptr = colormap.ptr;
+        colormap_entries = @truncate(u32, colormap.len / 4);
+    }
     const c_file_path = try std.cstr.addNullByte(self.allocator, file_path);
     defer self.allocator.free(c_file_path);
-    const err = writePngFile(c_file_path, self.width, self.height, self.pixels.ptr, colormap, colormap_len);
+    const err = writePngFile(c_file_path, self.width, self.height, self.pixels.ptr, colormap_ptr, colormap_entries);
     if (err != 0) return error.WritePngFail;
 }
 
 pub fn writeToMemory(self: Image, allocator: Allocator) ![]const u8 {
-    const colormap: [*c]const u8 = if (self.colormap) |colormap| colormap.ptr else null;
+    var colormap_entries: u32 = 0;
+    var colormap_ptr: [*c]const u8 = null;
+    if (self.colormap) |colormap| {
+        colormap_ptr = colormap.ptr;
+        colormap_entries = @truncate(u32, colormap.len / 4);
+    }
     var mem_len: usize = undefined;
-    var err = writePngMemory(null, &mem_len, self.width, self.height, self.pixels.ptr, colormap, colormap_len);
+    var err = writePngMemory(null, &mem_len, self.width, self.height, self.pixels.ptr, colormap_ptr, colormap_entries);
     if (err != 0) return error.WritePngDetermineSizeFail;
     const mem = try allocator.alloc(u8, mem_len);
     errdefer allocator.free(mem);
-    err = writePngMemory(mem.ptr, &mem_len, self.width, self.height, self.pixels.ptr, colormap, colormap_len);
+    err = writePngMemory(mem.ptr, &mem_len, self.width, self.height, self.pixels.ptr, colormap_ptr, colormap_entries);
     if (err != 0) return error.WritePngFail;
     return mem;
 }

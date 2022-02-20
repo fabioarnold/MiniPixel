@@ -74,13 +74,13 @@ const Bitmap = union(BitmapType) {
                 color_bitmap.width,
                 color_bitmap.height,
                 .{ .nearest = true },
-                color_bitmap.pixels
+                color_bitmap.pixels,
             ),
             .indexed => |indexed_bitmap| nvg.createImageAlpha(
                 indexed_bitmap.width,
                 indexed_bitmap.height,
                 .{ .nearest = true },
-                indexed_bitmap.indices
+                indexed_bitmap.indices,
             ),
         };
     }
@@ -266,7 +266,7 @@ pub fn load(self: *Self, file_path: []const u8) !void {
 pub fn save(self: *Self, file_path: []const u8) !void {
     var image = self.bitmap.toImage(self.allocator);
     if (self.getBitmapType() == .indexed) {
-        image.colormap = self.colormap;
+        image.colormap = col.trimBlackColorsRight(self.colormap);
     }
     try image.writeToFile(file_path);
 }
@@ -385,7 +385,7 @@ pub fn convertToIndexed(self: *Self) !void {
             self.preview_bitmap = try self.bitmap.clone();
             self.recreateTexture();
         },
-        .indexed => {}
+        .indexed => {},
     }
 }
 
@@ -493,7 +493,7 @@ pub fn copy(self: *Self) !void {
     if (self.selection) |*selection| {
         var image = selection.bitmap.toImage(self.allocator);
         if (self.getBitmapType() == .indexed) {
-            image.colormap = self.colormap;
+            image.colormap = col.trimBlackColorsRight(self.colormap);
         }
         try Clipboard.setImage(self.allocator, image);
         self.copy_location = Pointi{
@@ -503,7 +503,7 @@ pub fn copy(self: *Self) !void {
     } else {
         var image = self.bitmap.toImage(self.allocator);
         if (self.getBitmapType() == .indexed) {
-            image.colormap = self.colormap;
+            image.colormap = col.trimBlackColorsRight(self.colormap);
         }
         try Clipboard.setImage(self.allocator, image);
         self.copy_location = null;

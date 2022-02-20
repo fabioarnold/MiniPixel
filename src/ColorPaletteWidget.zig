@@ -112,6 +112,7 @@ pub fn writePal(self: Self, filename: []const u8) !void {
     }
 }
 
+// TODO: use col.trimBlackColorsRight
 fn trimBlackColorsRight(self: Self) []const [3]u8 {
     var len = self.colors.len;
     while (len > 0) : (len -= 1) {
