@@ -101,6 +101,7 @@ pub const KeyCode = enum(u8) {
     Comma,
     Escape,
     Backspace,
+    Space,
     Plus,
     Minus,
     Asterisk,

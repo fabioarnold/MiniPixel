@@ -101,9 +101,9 @@ pub fn configure(self: *MessageBoxWidget, icon: Icon, buttons: Buttons, message:
             self.ok_button.widget.visible = false;
             self.cancel_button.widget.setPosition(rect.w - 90, rect.h - 35);
             self.cancel_button.widget.visible = true;
-            self.yes_button.widget.setPosition(rect.w - 90 - 85 - 85, rect.h - 35);
+            self.yes_button.widget.setPosition(rect.w - 90 - 90 - 90, rect.h - 35);
             self.yes_button.widget.visible = true;
-            self.no_button.widget.setPosition(rect.w - 90 - 85, rect.h - 35);
+            self.no_button.widget.setPosition(rect.w - 90 - 90, rect.h - 35);
             self.no_button.widget.visible = true;
         }
     }

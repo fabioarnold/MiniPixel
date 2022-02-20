@@ -25,7 +25,7 @@ const HistorySnapshot = @import("history.zig").Snapshot;
 
 const Document = @This();
 
-const BitmapType = enum(u8) {
+pub const BitmapType = enum(u8) {
     color,
     indexed,
 };

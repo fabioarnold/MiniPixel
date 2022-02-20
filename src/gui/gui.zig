@@ -12,6 +12,7 @@ pub const Widget = @import("Widget.zig");
 pub const Panel = @import("widgets/Panel.zig");
 pub const Label = @import("widgets/Label.zig");
 pub const Button = @import("widgets/Button.zig");
+pub const RadioButton = @import("widgets/RadioButton.zig");
 pub const TextBox = @import("widgets/TextBox.zig");
 pub const Toolbar = @import("widgets/Toolbar.zig");
 pub const Slider = @import("widgets/Slider.zig").Slider;
