@@ -36,3 +36,14 @@ pub fn blend(a: []const u8, b: []const u8) Color {
     }
     return out;
 }
+
+// squared differences
+pub fn distance(a: []const u8, b: []const u8) f32 {
+    const d = [_]f32{
+        @intToFloat(f32, a[0]) - @intToFloat(f32, b[0]),
+        @intToFloat(f32, a[1]) - @intToFloat(f32, b[1]),
+        @intToFloat(f32, a[2]) - @intToFloat(f32, b[2]),
+        @intToFloat(f32, a[3]) - @intToFloat(f32, b[3]),
+    };
+    return d[0] * d[0] + d[1] * d[1] + d[2] * d[2] + d[3] * d[3];
+}

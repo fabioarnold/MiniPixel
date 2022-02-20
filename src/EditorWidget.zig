@@ -219,7 +219,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     }.click;
     self.palette_toggle_button.onEnterFn = struct {
         fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Toggle between 8-bit paletted mode and true color");
+            getEditorFromMenuButton(button).setHelpText("Toggle between 8-bit indexed mode and true color");
         }
     }.enter;
     self.palette_toggle_button.onLeaveFn = menuButtonOnLeave;
@@ -1122,13 +1122,16 @@ fn trySavePalette(self: *Self) void {
 fn togglePalette(self: *Self) void {
     if (self.palette_toggle_button.checked) {
         self.document.convertToTruecolor() catch {
-            // TODO: show error message
+            self.showErrorMessageBox("Toggle color mode", "Conversion to true color failed.");
             return;
         };
         self.palette_toggle_button.checked = false;
         self.color_palette.selection_locked = false;
     } else {
-        self.document.convertToIndexed();
+        self.document.convertToIndexed() catch {
+            self.showErrorMessageBox("Toggle color mode", "Conversion to indexed color failed.");
+            return;
+        };
         self.palette_toggle_button.checked = true;
         self.color_palette.selection_locked = true;
     }
