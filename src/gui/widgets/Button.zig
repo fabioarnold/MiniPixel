@@ -3,7 +3,6 @@ const Allocator = std.mem.Allocator;
 
 const nvg = @import("nanovg");
 const gui = @import("../gui.zig");
-const event = @import("../event.zig");
 const Point = @import("../geometry.zig").Point;
 const Rect = @import("../geometry.zig").Rect;
 
@@ -53,6 +52,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*Self {
     self.widget.drawFn = draw;
     self.widget.onMouseDownFn = onMouseDown;
     self.widget.onMouseUpFn = onMouseUp;
+    self.widget.onKeyUpFn = onKeyUp;
     self.widget.onEnterFn = onEnter;
     self.widget.onLeaveFn = onLeave;
 
@@ -72,7 +72,7 @@ fn click(self: *Self) void {
     }
 }
 
-pub fn onMouseDown(widget: *gui.Widget, mouse_event: *const event.MouseEvent) void {
+pub fn onMouseDown(widget: *gui.Widget, mouse_event: *const gui.MouseEvent) void {
     if (!widget.isEnabled()) return;
     const self = @fieldParentPtr(Self, "widget", widget);
     const mouse_position = Point(f32).make(mouse_event.x, mouse_event.y);
@@ -88,7 +88,7 @@ pub fn onMouseDown(widget: *gui.Widget, mouse_event: *const event.MouseEvent) vo
     }
 }
 
-fn onMouseUp(widget: *gui.Widget, mouse_event: *const event.MouseEvent) void {
+fn onMouseUp(widget: *gui.Widget, mouse_event: *const gui.MouseEvent) void {
     if (!widget.isEnabled()) return;
     const self = @fieldParentPtr(Self, "widget", widget);
     const mouse_position = Point(f32).make(mouse_event.x, mouse_event.y);
@@ -99,6 +99,13 @@ fn onMouseUp(widget: *gui.Widget, mouse_event: *const event.MouseEvent) void {
         if (self.hovered and self.auto_repeat_interval == 0) {
             self.click();
         }
+    }
+}
+
+fn onKeyUp(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    if (key_event.key == .Space) {
+        self.click();
     }
 }
 
@@ -130,17 +137,17 @@ pub fn draw(widget: *gui.Widget) void {
         .default => {
             gui.drawPanel(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 1, enabled and self.hovered, (enabled and self.pressed) or self.checked);
 
-            const is_focused = widget.isFocused();
+            const focused = widget.isFocused();
 
             // border
             nvg.beginPath();
-            // if (is_focused) {
-            //     nvg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
-            //     nvg.strokeWidth(2);
-            // } else {
-            nvg.rect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
-            // }
-            nvg.strokeColor(if (is_focused) nvg.rgb(0, 0, 0) else gui.theme_colors.border);
+            if (focused) {
+                nvg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+                nvg.strokeWidth(2);
+            } else {
+                nvg.rect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
+            }
+            nvg.strokeColor(gui.theme_colors.border);
             nvg.stroke();
             nvg.strokeWidth(1);
         },

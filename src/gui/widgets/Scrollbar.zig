@@ -46,8 +46,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32), orientation: gui.Orientation)
 
     self.thumb_button.widget.onMouseDownFn = thumbMouseDown;
     self.thumb_button.widget.onMouseMoveFn = thumbMouseMove;
+    self.thumb_button.widget.focus_policy = gui.FocusPolicy.none();
 
     self.decrement_button.onClickFn = decrementClick;
+    self.decrement_button.widget.focus_policy = gui.FocusPolicy.none();
     self.decrement_button.auto_repeat_interval = 10;
     self.decrement_button.iconFn = if (self.orientation == .vertical)
         gui.drawSmallArrowUp
@@ -56,6 +58,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), orientation: gui.Orientation)
     self.decrement_button.icon_x = 5;
     self.decrement_button.icon_y = 5;
     self.increment_button.onClickFn = incrementClick;
+    self.increment_button.widget.focus_policy = gui.FocusPolicy.none();
     self.increment_button.auto_repeat_interval = 10;
     self.increment_button.iconFn = if (self.orientation == .vertical)
         gui.drawSmallArrowDown

@@ -475,6 +475,7 @@ fn translateSdlKey(sym: c.SDL_Keycode) gui.KeyCode {
         c.SDLK_COMMA => .Comma,
         c.SDLK_ESCAPE => .Escape,
         c.SDLK_BACKSPACE => .Backspace,
+        c.SDLK_SPACE => .Space,
         c.SDLK_PLUS, c.SDLK_KP_PLUS => .Plus,
         c.SDLK_MINUS, c.SDLK_KP_MINUS => .Minus,
         c.SDLK_ASTERISK, c.SDLK_KP_MULTIPLY => .Asterisk,
@@ -833,6 +834,8 @@ pub fn main() !void {
         editor_widget.tryLoadDocument(args[1]);
     }
     std.process.argsFree(allocator, args);
+
+    editor_widget.newDocument();
 
     // quit app when there are no more windows open
     while (app.windows.items.len > 0) {

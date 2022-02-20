@@ -845,7 +845,7 @@ pub fn showErrorMessageBox(self: *Self, title: [:0]const u8, message: []const u8
 }
 
 pub fn showUnsavedChangesDialog(self: *Self, onResultFn: ?fn (usize, MessageBoxWidget.Result) void, result_context: usize) void {
-    self.message_box_widget.setSize(300, 100);
+    self.message_box_widget.setSize(280, 100);
     self.message_box_widget.configure(.question, .yes_no_cancel, "This file has been changed.\nWould you like to save those changes?");
     self.message_box_widget.yes_button.text = "Save";
     self.message_box_widget.no_button.text = "Discard";
@@ -878,7 +878,7 @@ fn onMessageBoxClosed(context: usize) void {
     }
 }
 
-fn newDocument(self: *Self) void {
+pub fn newDocument(self: *Self) void { // TODO
     if (self.widget.getWindow()) |parent_window| {
         var window_or_error = parent_window.createChildWindow(
             "New Document",
@@ -913,8 +913,8 @@ fn showAboutDialog(self: *Self) void {
     }
 }
 
-pub fn createNewDocument(self: *Self, width: u32, height: u32) !void {
-    try self.document.createNew(width, height, .color); // TODO: indexed
+pub fn createNewDocument(self: *Self, width: u32, height: u32, bitmap_type: Document.BitmapType) !void {
+    try self.document.createNew(width, height, bitmap_type);
     self.has_unsaved_changes = false;
     self.canvas.centerAndZoomDocument();
     self.updateImageStatus();

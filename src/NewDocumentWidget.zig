@@ -18,6 +18,9 @@ width_label: *gui.Label,
 width_spinner: *gui.Spinner(i32),
 height_label: *gui.Label,
 height_spinner: *gui.Spinner(i32),
+color_label: *gui.Label,
+indexed_radio: *gui.RadioButton,
+truecolor_radio: *gui.RadioButton,
 ok_button: *gui.Button,
 cancel_button: *gui.Button,
 
@@ -31,10 +34,13 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
         .widget = gui.Widget.init(allocator, Rect(f32).make(0, 0, 240, 100)),
         .allocator = allocator,
         .editor_widget = editor_widget,
-        .width_label = try gui.Label.init(allocator, Rect(f32).make(10, 20, 45, 20), "Width:"),
-        .width_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(55, 20, 60, 20)),
-        .height_label = try gui.Label.init(allocator, Rect(f32).make(125, 20, 45, 20), "Height:"),
-        .height_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(170, 20, 60, 20)),
+        .width_label = try gui.Label.init(allocator, Rect(f32).make(10, 10, 45, 20), "Width:"),
+        .width_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(55, 10, 60, 20)),
+        .height_label = try gui.Label.init(allocator, Rect(f32).make(125, 10, 45, 20), "Height:"),
+        .height_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(170, 10, 60, 20)),
+        .color_label = try gui.Label.init(allocator, Rect(f32).make(10, 35, 45, 20), "Color:"),
+        .indexed_radio = try gui.RadioButton.init(allocator, Rect(f32).make(55, 35, 80, 20), "Indexed"),
+        .truecolor_radio = try gui.RadioButton.init(allocator, Rect(f32).make(145, 35, 85, 20), "True color"),
         .ok_button = try gui.Button.init(allocator, Rect(f32).make(240 - 160 - 10 - 10, 100 - 25 - 10, 80, 25), "OK"),
         .cancel_button = try gui.Button.init(allocator, Rect(f32).make(240 - 80 - 10, 100 - 25 - 10, 80, 25), "Cancel"),
     };
@@ -46,6 +52,9 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
     self.height_spinner.min_value = 1;
     self.width_spinner.max_value = 1 << 14; // 16k
     self.height_spinner.max_value = 1 << 14;
+    self.truecolor_radio.checked = true;
+    self.truecolor_radio.onClickFn = onTruecolorRadioClick;
+    self.indexed_radio.onClickFn = onIndexedRadioClick;
 
     self.ok_button.onClickFn = onOkButtonClick;
     self.cancel_button.onClickFn = onCancelButtonClick;
@@ -54,6 +63,9 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
     try self.widget.addChild(&self.width_spinner.widget);
     try self.widget.addChild(&self.height_label.widget);
     try self.widget.addChild(&self.height_spinner.widget);
+    try self.widget.addChild(&self.color_label.widget);
+    try self.widget.addChild(&self.indexed_radio.widget);
+    try self.widget.addChild(&self.truecolor_radio.widget);
     try self.widget.addChild(&self.ok_button.widget);
     try self.widget.addChild(&self.cancel_button.widget);
 
@@ -67,6 +79,9 @@ pub fn deinit(self: *Self) void {
     self.width_spinner.deinit();
     self.height_label.deinit();
     self.height_spinner.deinit();
+    self.color_label.deinit();
+    self.indexed_radio.deinit();
+    self.truecolor_radio.deinit();
     self.ok_button.deinit();
     self.cancel_button.deinit();
     self.widget.deinit();
@@ -79,6 +94,22 @@ fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
         .Return => self.accept(),
         .Escape => self.cancel(),
         else => event.event.ignore(),
+    }
+}
+
+fn onIndexedRadioClick(radio: *gui.RadioButton) void {
+    if (radio.widget.parent) |parent| {
+        var self = @fieldParentPtr(Self, "widget", parent);
+        self.indexed_radio.checked = true;
+        self.truecolor_radio.checked = false;
+    }
+}
+
+fn onTruecolorRadioClick(radio: *gui.RadioButton) void {
+    if (radio.widget.parent) |parent| {
+        var self = @fieldParentPtr(Self, "widget", parent);
+        self.indexed_radio.checked = false;
+        self.truecolor_radio.checked = true;
     }
 }
 
@@ -100,6 +131,7 @@ fn accept(self: *Self) void {
     self.editor_widget.createNewDocument(
         @intCast(u32, self.width_spinner.value),
         @intCast(u32, self.height_spinner.value),
+        if (self.truecolor_radio.checked) .color else .indexed,
     ) catch {
         // TODO: error dialog
     };
@@ -116,11 +148,7 @@ fn cancel(self: *Self) void {
 
 pub fn draw(widget: *gui.Widget) void {
     nvg.beginPath();
-    nvg.rect(0, 0, 240, 55);
-    nvg.fillColor(nvg.rgbf(1, 1, 1));
-    nvg.fill();
-    nvg.beginPath();
-    nvg.rect(0, 55, 240, 45);
+    nvg.rect(0, 0, 240, 100);
     nvg.fillColor(gui.theme_colors.background);
     nvg.fill();
 
