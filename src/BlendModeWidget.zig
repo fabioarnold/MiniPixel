@@ -52,7 +52,7 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn setActive(self: *Self, active: BlendMode) void {
+fn setActive(self: *Self, active: BlendMode) void {
     if (self.active != active) {
         self.active = active;
         if (self.onChangedFn) |onChanged| onChanged(self);
@@ -60,6 +60,7 @@ pub fn setActive(self: *Self, active: BlendMode) void {
 }
 
 fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
+    if (!widget.enabled) return;
     if (event.button == .left) {
         var self = @fieldParentPtr(Self, "widget", widget);
         const point = Point(f32).make(event.x, event.y);
@@ -86,15 +87,16 @@ pub fn draw(widget: *gui.Widget) void {
     const active_rect = self.rects[@enumToInt(self.active)];
     nvg.beginPath();
     nvg.rect(active_rect.x, active_rect.y, active_rect.w, active_rect.h);
-    nvg.fillColor(gui.theme_colors.focus);
+    nvg.fillColor(if (widget.enabled) gui.theme_colors.focus else gui.theme_colors.shadow);
     nvg.fill();
 
+    const alpha: f32 = if (widget.enabled) 1 else 0.5;
     nvg.beginPath();
     nvg.rect(32, 33 - 25, 32, 24);
-    nvg.fillPaint(nvg.imagePattern(32, 33 - 25, 32, 24, 0, self.image_alpha, 1));
+    nvg.fillPaint(nvg.imagePattern(32, 33 - 25, 32, 24, 0, self.image_alpha, alpha));
     nvg.fill();
     nvg.beginPath();
     nvg.rect(32, 33 + 1, 32, 24);
-    nvg.fillPaint(nvg.imagePattern(32, 33 + 1, 32, 24, 0, self.image_replace, 1));
+    nvg.fillPaint(nvg.imagePattern(32, 33 + 1, 32, 24, 0, self.image_replace, alpha));
     nvg.fill();
 }
