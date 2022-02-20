@@ -204,7 +204,7 @@ fn onTouchZoom(self: *Self, touch_event: *event.TouchEvent) void {
     _ = self;
 }
 
-fn onKeyDown(self: *Self, key_event: *event.KeyEvent) void {
+pub fn onKeyDown(self: *Self, key_event: *event.KeyEvent) void {
     if (key_event.key == .Tab) {
         if (key_event.modifiers == 0) {
             self.focusNextWidget(.keyboard);

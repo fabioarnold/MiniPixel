@@ -39,8 +39,8 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
         .height_label = try gui.Label.init(allocator, Rect(f32).make(125, 10, 45, 20), "Height:"),
         .height_spinner = try gui.Spinner(i32).init(allocator, Rect(f32).make(170, 10, 60, 20)),
         .color_label = try gui.Label.init(allocator, Rect(f32).make(10, 35, 45, 20), "Color:"),
-        .indexed_radio = try gui.RadioButton.init(allocator, Rect(f32).make(55, 35, 80, 20), "Indexed"),
-        .truecolor_radio = try gui.RadioButton.init(allocator, Rect(f32).make(145, 35, 85, 20), "True color"),
+        .indexed_radio = try gui.RadioButton.init(allocator, Rect(f32).make(55, 35, 65, 20), "Indexed"),
+        .truecolor_radio = try gui.RadioButton.init(allocator, Rect(f32).make(120, 35, 80, 20), "True color"),
         .ok_button = try gui.Button.init(allocator, Rect(f32).make(240 - 160 - 10 - 10, 100 - 25 - 10, 80, 25), "OK"),
         .cancel_button = try gui.Button.init(allocator, Rect(f32).make(240 - 80 - 10, 100 - 25 - 10, 80, 25), "Cancel"),
     };

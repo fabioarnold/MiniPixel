@@ -13,6 +13,7 @@ allocator: Allocator,
 text: []const u8,
 
 hovered: bool = false,
+focused: bool = false,
 pressed: bool = false,
 checked: bool = false,
 
@@ -31,7 +32,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*RadioBu
     self.widget.drawFn = draw;
     self.widget.onMouseDownFn = onMouseDown;
     self.widget.onMouseUpFn = onMouseUp;
-    self.widget.onKeyUpFn = onKeyUp;
+    self.widget.onKeyDownFn = onKeyDown;
+    self.widget.onFocusFn = onFocus;
     self.widget.onEnterFn = onEnter;
     self.widget.onLeaveFn = onLeave;
 
@@ -75,11 +77,17 @@ fn onMouseUp(widget: *gui.Widget, mouse_event: *const gui.MouseEvent) void {
     }
 }
 
-fn onKeyUp(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
+fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
+    widget.onKeyDown(key_event);
     const self = @fieldParentPtr(RadioButton, "widget", widget);
     if (key_event.key == .Space) {
         self.click();
     }
+}
+
+fn onFocus(widget: *gui.Widget, focus_event : *gui.FocusEvent) void {
+    const self = @fieldParentPtr(RadioButton, "widget", widget);
+    self.focused = focus_event.source == .keyboard;
 }
 
 fn onEnter(widget: *gui.Widget) void {
@@ -97,7 +105,7 @@ pub fn draw(widget: *gui.Widget) void {
 
     const rect = widget.relative_rect;
     // const enabled = widget.isEnabled(); // TODO
-    const focused = widget.isFocused();
+    if (!widget.isFocused()) self.focused = false;
 
     const cx = rect.x + 10;
     const cy = rect.y + 0.5 * rect.h;
@@ -128,7 +136,7 @@ pub fn draw(widget: *gui.Widget) void {
     nvg.textAlign(nvg.TextAlign{ .vertical = .middle });
     nvg.fillColor(nvg.rgb(0, 0, 0));
     _ = nvg.text(rect.x + 20, cy, self.text);
-    if (focused) {
+    if (self.focused) {
         var bounds: [4]f32 = undefined;
         _ = nvg.textBounds(rect.x + 20, cy, self.text, &bounds);
         nvg.beginPath();
