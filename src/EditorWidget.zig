@@ -225,29 +225,26 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     }.enter;
     self.palette_toggle_button.onLeaveFn = menuButtonOnLeave;
 
-    try self.color_palette.loadPalContents(@embedFile("../data/palettes/arne16.pal"));
-    for (self.color_palette.colors) |color, i| {
-        self.document.colormap[4 * i + 0] = color[0];
-        self.document.colormap[4 * i + 1] = color[1];
-        self.document.colormap[4 * i + 2] = color[2];
-        self.document.colormap[4 * i + 2] = 0xff; // TODO
-    }
+    std.mem.copy(u8, self.document.colormap, &self.color_palette.colors);
     self.color_palette.onSelectionChangedFn = struct {
         fn selectionChanged(color_palette: *ColorPaletteWidget) void {
             if (color_palette.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 if (color_palette.selected) |selected| {
-                    const color = color_palette.colors[selected];
-                    editor.color_picker.setRgb(color);
+                    const color = color_palette.colors[4 * selected .. 4 * selected + 4]; // TODO: ugly
+                    switch (editor.document.getBitmapType()) {
+                        .color => editor.color_picker.setRgb(color[0..3]), // in true color mode we don't set the alpha
+                        .indexed => editor.color_picker.setRgba(color),
+                    }
                     editor.color_foreground_background.setActiveRgba(editor.color_picker.color);
                     switch (editor.color_foreground_background.active) {
                         .foreground => {
                             editor.document.foreground_color = editor.color_picker.color;
-                            editor.document.foreground_index = selected;
+                            editor.document.foreground_index = @truncate(u8, selected);
                         },
                         .background => {
                             editor.document.background_color = editor.color_picker.color;
-                            editor.document.background_index = selected;
+                            editor.document.background_index = @truncate(u8, selected);
                         },
                     }
                 }
@@ -280,7 +277,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
             if (color_picker.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 if (editor.color_palette.selected) |selected| {
-                    std.mem.copy(u8, editor.color_palette.colors[selected][0..], color_picker.color[0..3]);
+                    std.mem.copy(u8, editor.color_palette.colors[4 * selected .. 4 * selected + 4], &color_picker.color); // TODO: ugly
                     editor.updateDocumentPaletteAt(selected);
                 }
                 editor.color_foreground_background.setActiveRgba(color_picker.color);
@@ -298,12 +295,12 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 const color = color_foreground_background.getActiveRgba();
                 if (editor.color_palette.selected) |selected| {
-                    const palette_color = editor.color_palette.colors[selected];
-                    if (!std.mem.eql(u8, palette_color[0..], color[0..3])) {
+                    const palette_color = editor.color_palette.colors[4 * selected .. 4 * selected + 4]; // TODO: ugly
+                    if (!std.mem.eql(u8, palette_color[0..3], color[0..3])) {
                         editor.color_palette.clearSelection();
                     }
                 }
-                editor.color_picker.setRgba(color);
+                editor.color_picker.setRgba(&color);
                 editor.document.foreground_color = editor.color_foreground_background.getRgba(.foreground);
                 editor.document.background_color = editor.color_foreground_background.getRgba(.background);
             }
@@ -780,6 +777,7 @@ pub fn onUndoChanged(self: *Self, document: *Document) void {
         icons.iconRedoEnabled
     else
         icons.iconRedoDisabled;
+    self.loadPaletteFromDocument();
     self.updateImageStatus();
     self.has_unsaved_changes = true;
     self.updateWindowTitle();
@@ -933,6 +931,7 @@ fn loadDocument(self: *Self, file_path: []const u8) !void {
 }
 
 fn loadPaletteFromDocument(self: *Self) void {
+    std.mem.copy(u8, &self.color_palette.colors, self.document.colormap);
     switch (self.document.bitmap) {
         .color => {
             self.palette_toggle_button.checked = false;
@@ -940,12 +939,6 @@ fn loadPaletteFromDocument(self: *Self) void {
             // TODO: overwrite documents palette
         },
         .indexed => {
-            var i: usize = 0;
-            while (i < 256) : (i += 1) {
-                self.color_palette.colors[i][0] = self.document.colormap[4 * i + 0];
-                self.color_palette.colors[i][1] = self.document.colormap[4 * i + 1];
-                self.color_palette.colors[i][2] = self.document.colormap[4 * i + 2];
-            }
             self.palette_toggle_button.checked = true;
             self.color_palette.selection_locked = true;
             if (self.color_palette.selected == null) {
@@ -1147,21 +1140,11 @@ fn togglePalette(self: *Self) void {
 }
 
 fn updateDocumentPalette(self: *Self, mode: Document.PaletteUpdateMode) !void {
-    var palette: [1024]u8 = undefined;
-    var i: usize = 0;
-    while (i < 256) : (i += 1) {
-        palette[4 * i + 0] = self.color_palette.colors[i][0];
-        palette[4 * i + 1] = self.color_palette.colors[i][1];
-        palette[4 * i + 2] = self.color_palette.colors[i][2];
-        palette[4 * i + 3] = 0xff; // TODO: expand color_palette to 4 components
-    }
-    try self.document.applyPalette(&palette, mode);
+    try self.document.applyPalette(&self.color_palette.colors, mode);
 }
 
 fn updateDocumentPaletteAt(self: *Self, i: usize) void {
-    self.document.colormap[4 * i + 0] = self.color_palette.colors[i][0];
-    self.document.colormap[4 * i + 1] = self.color_palette.colors[i][1];
-    self.document.colormap[4 * i + 2] = self.color_palette.colors[i][2];
+    std.mem.copy(u8, self.document.colormap[4 * i .. 4 * i + 4], self.color_palette.colors[4 * i .. 4 * i + 4]);
     self.document.dirty = true;
 }
 

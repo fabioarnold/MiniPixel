@@ -41,7 +41,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         try self.widget.addChild(&self.spinners[i].widget);
     }
 
-    self.setRgba(self.color);
+    self.setRgba(&self.color); // update the spinner values
 
     return self;
 }
@@ -56,7 +56,8 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn setRgba(self: *Self, color: [4]u8) void {
+pub fn setRgba(self: *Self, color: []const u8) void {
+    std.debug.assert(color.len == 4);
     for (color) |c, i| {
         self.color[i] = c;
         self.sliders[i].setValue(@intToFloat(f32, c) / 255.0);
@@ -64,7 +65,8 @@ pub fn setRgba(self: *Self, color: [4]u8) void {
     }
 }
 
-pub fn setRgb(self: *Self, color: [3]u8) void {
+pub fn setRgb(self: *Self, color: []const u8) void {
+    std.debug.assert(color.len == 3);
     for (color) |c, i| {
         self.color[i] = c;
         self.sliders[i].setValue(@intToFloat(f32, c) / 255.0);
