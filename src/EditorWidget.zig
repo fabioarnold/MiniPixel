@@ -936,6 +936,7 @@ fn loadPaletteFromDocument(self: *Self) void {
         .color => {
             self.palette_toggle_button.checked = false;
             self.color_palette.selection_locked = false;
+            self.blend_mode.widget.enabled = true;
             // TODO: overwrite documents palette
         },
         .indexed => {
@@ -944,6 +945,7 @@ fn loadPaletteFromDocument(self: *Self) void {
             if (self.color_palette.selected == null) {
                 self.color_palette.setSelection(self.document.foreground_index);
             }
+            self.blend_mode.widget.enabled = false;
         },
     }
 }
