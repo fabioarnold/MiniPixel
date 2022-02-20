@@ -345,7 +345,7 @@ pub fn convertToTruecolor(self: *Self) !void {
             const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
             var i: usize = 0;
             while (i < pixel_count) : (i += 1) {
-                const index = @intCast(usize, indexed_bitmap.indices[i]);
+                const index = @as(usize, indexed_bitmap.indices[i]);
                 const pixel = self.colormap[4 * index .. 4 * index + 4];
                 color_bitmap.pixels[4 * i + 0] = pixel[0];
                 color_bitmap.pixels[4 * i + 1] = pixel[1];
@@ -361,9 +361,33 @@ pub fn convertToTruecolor(self: *Self) !void {
     }
 }
 
-pub fn convertToIndexed(self: Self) void {
-    _ = self;
-    @panic("TODO");
+pub fn convertToIndexed(self: *Self) !void {
+    switch (self.bitmap) {
+        .color => |color_bitmap| {
+            const indexed_bitmap = try IndexedBitmap.init(self.allocator, color_bitmap.width, color_bitmap.height);
+            const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
+            var i: usize = 0;
+            while (i < pixel_count) : (i += 1) {
+                const target_color = color_bitmap.pixels[4 * i .. 4 * i + 4];
+                var nearest = std.math.inf_f32;
+                var j: usize = 0;
+                while (j < 256) : (j += 1) {
+                    const distance = col.distance(target_color, self.colormap[4 * j .. 4 * j + 4]);
+                    if (distance < nearest) {
+                        nearest = distance;
+                        indexed_bitmap.indices[i] = @truncate(u8, j);
+                        if (distance == 0) break;
+                    }
+                }
+            }
+            self.bitmap.deinit();
+            self.bitmap = .{ .indexed = indexed_bitmap };
+            self.preview_bitmap.deinit();
+            self.preview_bitmap = try self.bitmap.clone();
+            self.recreateTexture();
+        },
+        .indexed => {}
+    }
 }
 
 pub fn getWidth(self: Self) u32 {
