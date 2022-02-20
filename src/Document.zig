@@ -179,7 +179,7 @@ history: *HistoryBuffer,
 foreground_color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
 foreground_index: u8 = 0,
-background_index: u8 = 255,
+background_index: u8 = 1,
 blend_mode: BlendMode = .replace,
 
 canvas: *CanvasWidget = undefined,
@@ -369,14 +369,13 @@ pub fn convertToIndexed(self: *Self) !void {
             var i: usize = 0;
             while (i < pixel_count) : (i += 1) {
                 const target_color = color_bitmap.pixels[4 * i .. 4 * i + 4];
-                var nearest = std.math.inf_f32;
+                var nearest: f32 = std.math.inf_f32;
                 var j: usize = 0;
-                while (j < 256) : (j += 1) {
+                while (j < 256 and nearest > 0) : (j += 1) {
                     const distance = col.distance(target_color, self.colormap[4 * j .. 4 * j + 4]);
                     if (distance < nearest) {
                         nearest = distance;
                         indexed_bitmap.indices[i] = @truncate(u8, j);
-                        if (distance == 0) break;
                     }
                 }
             }
@@ -388,6 +387,48 @@ pub fn convertToIndexed(self: *Self) !void {
         },
         .indexed => {}
     }
+}
+
+pub const PaletteUpdateMode = enum {
+    replace,
+    map,
+};
+
+pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
+    if (mode == .map) {
+        switch (self.bitmap) {
+            .indexed => |indexed_bitmap| {
+                var map: [256]u8 = undefined; // colormap -> palette
+                var i: usize = 0;
+                while (i < 256) : (i += 1) {
+                    const target_color = self.colormap[4 * i .. 4 * i + 4];
+                    // find an equivalent in palette
+                    var nearest: f32 = std.math.f32_max;
+                    var j: usize = 0;
+                    while (j < 256 and nearest > 0) : (j += 1) {
+                        const color = palette[4 * j .. 4 * j + 4];
+                        const distance = col.distance(target_color, color);
+                        if (distance < nearest) {
+                            nearest = distance;
+                            map[i] = @truncate(u8, j);
+                        }
+                    }
+                }
+
+                const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
+                i = 0;
+                while (i < pixel_count) : (i += 1) {
+                    indexed_bitmap.indices[i] = map[indexed_bitmap.indices[i]];
+                }
+                self.last_preview = .full;
+                self.clearPreview();
+            },
+            .color => {},
+        }
+    }
+    std.mem.copy(u8, self.colormap, palette);
+    self.dirty = true;
+    try self.history.pushFrame(self);
 }
 
 pub fn getWidth(self: Self) u32 {
