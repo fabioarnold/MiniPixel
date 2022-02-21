@@ -866,6 +866,8 @@ fn showMessageBox(self: *Self, title: [:0]const u8) void {
         if (window_or_error) |window| {
             window.is_modal = true;
             window.setMainWidget(&self.message_box_widget.widget);
+            self.message_box_widget.ok_button.widget.setFocus(true, .programmatic);
+            self.message_box_widget.yes_button.widget.setFocus(true, .programmatic);
             window.closed_context = @ptrToInt(self);
             window.onClosedFn = onMessageBoxClosed;
         } else |_| {}
@@ -908,6 +910,7 @@ fn showAboutDialog(self: *Self) void {
         if (window_or_error) |window| {
             window.is_modal = true;
             window.setMainWidget(&self.about_dialog_widget.widget);
+            self.about_dialog_widget.close_button.widget.setFocus(true, .programmatic);
         } else |_| {
             // TODO: show error
         }

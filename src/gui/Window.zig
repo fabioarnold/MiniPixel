@@ -89,14 +89,6 @@ pub fn setMainWidget(self: *Self, widget: ?*gui.Widget) void {
     self.main_widget = widget;
     if (self.main_widget) |main_widget| {
         main_widget.window = self;
-
-        // focus first widget
-        var focusable_widgets = std.ArrayList(*gui.Widget).init(self.children.allocator);
-        defer focusable_widgets.deinit();
-        self.collectFocusableWidgets(&focusable_widgets, .programmatic) catch return;
-        if (focusable_widgets.items.len > 0) {
-            focusable_widgets.items[0].setFocus(true, .programmatic);
-        }
     }
 }
 
