@@ -337,6 +337,38 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
     self.freeSelection();
 }
 
+pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
+    switch (self.bitmap) {
+        .indexed => return true,
+        .color => |color_bitmap| {
+            var color_set = std.AutoHashMap([4]u8, void).init(self.allocator);
+            defer color_set.deinit();
+            var i: usize = 0;
+            while (i < 256) : (i += 1) {
+                const color = [4]u8 {
+                    self.colormap[4 * i + 0],
+                    self.colormap[4 * i + 1],
+                    self.colormap[4 * i + 2],
+                    self.colormap[4 * i + 3],
+                };
+                try color_set.put(color, {});
+            }
+            const pixel_count = color_bitmap.width * color_bitmap.height;
+            i = 0;
+            while (i < pixel_count) : (i += 1) {
+                const color = [4]u8 {
+                    color_bitmap.pixels[4 * i + 0],
+                    color_bitmap.pixels[4 * i + 1],
+                    color_bitmap.pixels[4 * i + 2],
+                    color_bitmap.pixels[4 * i + 3],
+                };
+                if (!color_set.contains(color)) return false;
+            }
+            return true;
+        }
+    }
+}
+
 pub fn convertToTruecolor(self: *Self) !void {
     switch (self.bitmap) {
         .color => {},
