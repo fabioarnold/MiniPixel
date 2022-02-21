@@ -215,7 +215,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     self.palette_toggle_button.iconFn = icons.iconColorPalette;
     self.palette_toggle_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).togglePalette();
+            getEditorFromMenuButton(button).tryTogglePalette();
         }
     }.click;
     self.palette_toggle_button.onEnterFn = struct {
@@ -1127,22 +1127,35 @@ fn trySavePalette(self: *Self) void {
     };
 }
 
-fn togglePalette(self: *Self) void {
+fn togglePalette(self: *Self) !void {
     if (self.palette_toggle_button.checked) {
-        self.document.convertToTruecolor() catch {
-            self.showErrorMessageBox("Toggle color mode", "Conversion to true color failed.");
-            return;
-        };
-        self.palette_toggle_button.checked = false;
-        self.color_palette.selection_locked = false;
+        try self.document.convertToTruecolor();
     } else {
-        self.document.convertToIndexed() catch {
-            self.showErrorMessageBox("Toggle color mode", "Conversion to indexed color failed.");
-            return;
-        };
-        self.palette_toggle_button.checked = true;
-        self.color_palette.selection_locked = true;
+        if (try self.document.canLosslesslyConvertToIndexed()) {
+            try self.document.convertToIndexed();
+        } else {
+            self.message_box_widget.setSize(190, 100);
+            self.message_box_widget.configure(.warning, .ok_cancel, "Some colors will be lost\nduring conversion.");
+            self.onMessageBoxResultFn = struct {
+                fn onResult(context: usize, result: MessageBoxWidget.Result) void {
+            std.debug.print("context2 {}\n", .{context});
+                    if (result == .ok) {
+                        var editor = @intToPtr(*Self, context);
+                        editor.document.convertToIndexed() catch {}; // TODO: Can't show message box because the widget is in use
+                    }
+                }
+            }.onResult;
+            self.message_box_result_context = @ptrToInt(self);
+            std.debug.print("context {}\n", .{self.message_box_result_context});
+            self.showMessageBox("Toggle color mode");
+        }
     }
+}
+
+fn tryTogglePalette(self: *Self) void {
+    self.togglePalette() catch {
+        self.showErrorMessageBox("Toggle color mode", "Color conversion failed.");
+    };
 }
 
 fn updateDocumentPalette(self: *Self, mode: Document.PaletteUpdateMode) !void {

@@ -8,11 +8,15 @@ const Rect = geometry.Rect;
 
 pub const Buttons = enum {
     ok,
+    ok_cancel,
+    yes_no,
     yes_no_cancel,
 };
 
 pub const Icon = enum {
+    none,
     @"error",
+    warning,
     question,
 };
 
@@ -85,7 +89,9 @@ pub fn setSize(self: *MessageBoxWidget, width: f32, height: f32) void {
 
 pub fn configure(self: *MessageBoxWidget, icon: Icon, buttons: Buttons, message: []const u8) void {
     self.drawIconFn = switch (icon) {
+        .none => drawNoIcon,
         .@"error" => drawErrorIcon,
+        .warning => drawWarningIcon,
         .question => drawQuestionIcon,
     };
     const rect = self.widget.relative_rect;
@@ -96,6 +102,22 @@ pub fn configure(self: *MessageBoxWidget, icon: Icon, buttons: Buttons, message:
             self.cancel_button.widget.visible = false;
             self.yes_button.widget.visible = false;
             self.no_button.widget.visible = false;
+        },
+        .ok_cancel => {
+            self.ok_button.widget.setPosition(rect.w - 90 - 90, rect.h - 35);
+            self.ok_button.widget.visible = true;
+            self.cancel_button.widget.setPosition(rect.w - 90, rect.h - 35);
+            self.cancel_button.widget.visible = true;
+            self.yes_button.widget.visible = false;
+            self.no_button.widget.visible = false;
+        },
+        .yes_no => {
+            self.ok_button.widget.visible = false;
+            self.cancel_button.widget.visible = false;
+            self.yes_button.widget.setPosition(rect.w - 90 - 90, rect.h - 35);
+            self.yes_button.widget.visible = true;
+            self.no_button.widget.setPosition(rect.w - 90, rect.h - 35);
+            self.no_button.widget.visible = true;
         },
         .yes_no_cancel => {
             self.ok_button.widget.visible = false;
@@ -178,6 +200,32 @@ fn drawErrorIcon(x: f32, y: f32) void {
     nvg.strokeColor(nvg.rgbf(1, 1, 1));
     nvg.strokeWidth(3);
     nvg.stroke();
+}
+
+fn drawWarningIcon(x: f32, y: f32) void {
+    nvg.save();
+    defer nvg.restore();
+    nvg.translate(x, y);
+    nvg.beginPath();
+    nvg.moveTo(16, 31.5);
+    nvg.arcTo(31.5, 31.5, 16, 0.5, 2);
+    nvg.arcTo(16, 0.5, 0.5, 31.5, 2);
+    nvg.arcTo(0.5, 31.5, 16, 31.5, 2);
+    nvg.closePath();
+    nvg.fillColor(nvg.rgb(247, 226,107));
+    nvg.fill();
+    nvg.strokeColor(nvg.rgb(164, 100, 34));
+    nvg.stroke();
+    nvg.beginPath();
+    nvg.moveTo(16, 12);
+    nvg.arcTo(14, 12, 15, 23, 1);
+    nvg.arcTo(15, 23, 17, 23, 1);
+    nvg.arcTo(17, 23, 18, 12, 1);
+    nvg.arcTo(18, 12, 16, 12, 1);
+    nvg.closePath();
+    nvg.ellipse(16, 26, 2, 2);
+    nvg.fillColor(nvg.rgb(66, 66, 66));
+    nvg.fill();
 }
 
 fn drawQuestionIcon(x: f32, y: f32) void {
