@@ -293,7 +293,7 @@ pub fn handleEvent(self: *Self, e: *event.Event) void {
 }
 
 pub fn acceptsFocus(self: Self, source: event.FocusSource) bool {
-    return self.isEnabled() and self.focus_policy.accepts(source);
+    return self.visible and self.focus_policy.accepts(source) and self.isEnabled();
 }
 
 fn focusNextWidget(self: *Self, source: event.FocusSource) void {
