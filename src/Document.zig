@@ -170,7 +170,8 @@ bitmap: Bitmap,
 colormap: []u8,
 preview_bitmap: Bitmap, // preview brush and lines
 last_preview: PrimitivePreview = .none,
-dirty: bool = false, // bitmap needs to be uploaded to gpu on next draw call
+need_texture_update: bool = false, // bitmap needs to be uploaded to gpu on next draw call
+need_texture_recreation: bool = false,
 
 selection: ?Selection = null,
 copy_location: ?Pointi = null, // where the source was copied from
@@ -229,16 +230,11 @@ pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) 
         .indexed => self.bitmap.indexed.fill(self.background_index),
     }
     self.preview_bitmap = try self.bitmap.clone();
-    self.recreateTexture();
+    self.need_texture_recreation = true;
     self.x = 0;
     self.y = 0;
 
     try self.history.reset(self);
-}
-
-fn recreateTexture(self: *Self) void {
-    nvg.deleteImage(self.texture);
-    self.texture = self.bitmap.createTexture();
 }
 
 pub fn load(self: *Self, file_path: []const u8) !void {
@@ -247,14 +243,13 @@ pub fn load(self: *Self, file_path: []const u8) !void {
         if (colormap.len != self.colormap.len) return error.UnexpectedColormapLen;
         self.allocator.free(self.colormap);
         self.colormap = colormap;
-        nvg.updateImage(self.texture_palette, self.colormap);
     }
 
     self.bitmap.deinit();
     self.bitmap = Bitmap.initFromImage(self.allocator, image);
     self.preview_bitmap.deinit();
     self.preview_bitmap = try self.bitmap.clone();
-    self.recreateTexture();
+    self.need_texture_recreation = true;
     self.x = 0;
     self.y = 0;
 
@@ -321,7 +316,7 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
     if (recreate) {
         self.preview_bitmap.deinit();
         self.preview_bitmap = try self.bitmap.clone();
-        self.recreateTexture();
+        self.need_texture_recreation = true;
     }
 
     if (self.x != x or self.y != y) {
@@ -388,7 +383,7 @@ pub fn convertToTruecolor(self: *Self) !void {
             self.bitmap = .{ .color = color_bitmap };
             self.preview_bitmap.deinit();
             self.preview_bitmap = try self.bitmap.clone();
-            self.recreateTexture();
+            self.need_texture_recreation = true;
         },
     }
     try self.history.pushFrame(self);
@@ -416,8 +411,7 @@ pub fn convertToIndexed(self: *Self) !void {
             self.bitmap = .{ .indexed = indexed_bitmap };
             self.preview_bitmap.deinit();
             self.preview_bitmap = try self.bitmap.clone();
-            self.recreateTexture();
-            nvg.updateImage(self.texture_palette, self.colormap);
+            self.need_texture_recreation = true;
         },
         .indexed => {},
     }
@@ -462,7 +456,7 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
         }
     }
     std.mem.copy(u8, self.colormap, palette);
-    self.dirty = true;
+    self.need_texture_update = true;
     try self.history.pushFrame(self);
 }
 
@@ -623,7 +617,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
     self.preview_bitmap.deinit();
     self.preview_bitmap = try self.bitmap.clone();
 
-    self.recreateTexture();
+    self.need_texture_recreation = true;
 
     self.x += rect.x;
     self.y += rect.y;
@@ -814,7 +808,7 @@ pub fn clearPreview(self: *Self) void {
         },
     }
     self.last_preview = .none;
-    self.dirty = true;
+    self.need_texture_update = true;
 }
 
 pub fn fill(self: *Self, color_layer: ColorLayer) !void {
@@ -881,7 +875,7 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
             self.x -= d;
             self.y += d;
             self.canvas.translateByPixel(d, -d);
-            self.recreateTexture();
+            self.need_texture_recreation = true;
         }
         self.last_preview = .full;
         self.clearPreview();
@@ -982,7 +976,13 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
 }
 
 pub fn draw(self: *Self) void {
-    if (self.dirty) {
+    if (self.need_texture_recreation) {
+        nvg.deleteImage(self.texture);
+        self.texture = self.bitmap.createTexture();
+        self.need_texture_recreation = false;
+        nvg.updateImage(self.texture_palette, self.colormap);
+        self.need_texture_update = false;
+    } else if (self.need_texture_update) {
         switch (self.preview_bitmap) {
             .color => |color_preview_bitmap| {
                 nvg.updateImage(self.texture, color_preview_bitmap.pixels);
@@ -992,7 +992,7 @@ pub fn draw(self: *Self) void {
                 nvg.updateImage(self.texture_palette, self.colormap);
             },
         }
-        self.dirty = false;
+        self.need_texture_update = false;
     }
     const width = @intToFloat(f32, self.getWidth());
     const height = @intToFloat(f32, self.getHeight());

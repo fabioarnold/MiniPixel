@@ -1164,7 +1164,7 @@ fn updateDocumentPalette(self: *Self, mode: Document.PaletteUpdateMode) !void {
 
 fn updateDocumentPaletteAt(self: *Self, i: usize) void {
     std.mem.copy(u8, self.document.colormap[4 * i .. 4 * i + 4], self.color_palette.colors[4 * i .. 4 * i + 4]);
-    self.document.dirty = true;
+    self.document.need_texture_update = true;
 }
 
 fn setDocumentFilePath(self: *Self, maybe_file_path: ?[]const u8) !void {
