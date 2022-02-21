@@ -111,6 +111,7 @@ pub fn configure(self: *MessageBoxWidget, icon: Icon, buttons: Buttons, message:
 }
 
 fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
+    widget.onKeyDown(event);
     var self = @fieldParentPtr(MessageBoxWidget, "widget", widget);
     switch (event.key) {
         .Return => self.setResult(if (self.ok_button.widget.visible) .ok else .yes),
