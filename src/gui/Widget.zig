@@ -87,6 +87,7 @@ pub fn isFocused(self: *Self) bool {
 }
 
 pub fn setFocus(self: *Self, focus: bool, source: gui.FocusSource) void {
+    if (focus and !self.acceptsFocus(source)) return;
     if (self.getWindow()) |window| {
         window.setFocusedWidget(if (focus) self else null, source);
     }
