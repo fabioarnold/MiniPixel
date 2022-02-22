@@ -128,6 +128,7 @@ pub const Selection = struct {
     rect: Recti,
     bitmap: Bitmap,
     texture: nvg.Image,
+    need_texture_recreation: bool = false,
 
     fn updateTexture(self: Selection) void {
         switch (self.bitmap) {
@@ -338,6 +339,12 @@ pub fn convertToTruecolor(self: *Self) !void {
         .color => {},
         .indexed => |indexed_bitmap| {
             const color_bitmap = try indexed_bitmap.convertToTruecolor(self.colormap);
+            if (self.selection) |*selection| {
+                const selection_bitmap = try selection.bitmap.indexed.convertToTruecolor(self.colormap);
+                selection.bitmap.deinit();
+                selection.bitmap = .{ .color = selection_bitmap };
+                selection.need_texture_recreation = true;
+            }
             self.bitmap.deinit();
             self.bitmap = .{ .color = color_bitmap };
             self.preview_bitmap.deinit();
@@ -349,16 +356,29 @@ pub fn convertToTruecolor(self: *Self) !void {
 }
 
 pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
-    return switch (self.bitmap) {
-        .indexed => true,
-        .color => |color_bitmap| try color_bitmap.canLosslesslyConvertToIndexed(self.colormap),
-    };
+    switch (self.bitmap) {
+        .indexed => return true,
+        .color => |color_bitmap| {
+            if (self.selection) |selection| {
+                if (!try selection.bitmap.color.canLosslesslyConvertToIndexed(self.colormap)) {
+                    return false;
+                }
+            }
+            return try color_bitmap.canLosslesslyConvertToIndexed(self.colormap);
+        },
+    }
 }
 
 pub fn convertToIndexed(self: *Self) !void {
     switch (self.bitmap) {
         .color => |color_bitmap| {
             const indexed_bitmap = try color_bitmap.convertToIndexed(self.colormap);
+            if (self.selection) |*selection| {
+                const selection_bitmap = try selection.bitmap.color.convertToIndexed(self.colormap);
+                selection.bitmap.deinit();
+                selection.bitmap = .{ .indexed = selection_bitmap };
+                selection.need_texture_recreation = true;
+            }
             self.bitmap.deinit();
             self.bitmap = .{ .indexed = indexed_bitmap };
             self.preview_bitmap.deinit();
@@ -511,8 +531,8 @@ pub fn paste(self: *Self) !void {
     var bitmap = Bitmap.initFromImage(self.allocator, image);
     if (std.meta.activeTag(bitmap) != self.getBitmapType()) {
         const converted_bitmap: Bitmap = switch (bitmap) {
-            .color => |color_bitmap| .{ .indexed = try color_bitmap.convertToIndexed(self.colormap)},
-            .indexed => |indexed_bitmap| .{ .color = try indexed_bitmap.convertToTruecolor(self.colormap)},
+            .color => |color_bitmap| .{ .indexed = try color_bitmap.convertToIndexed(self.colormap) },
+            .indexed => |indexed_bitmap| .{ .color = try indexed_bitmap.convertToTruecolor(self.colormap) },
         };
         bitmap.deinit();
         bitmap = converted_bitmap;
@@ -966,8 +986,13 @@ pub fn draw(self: *Self) void {
     nvg.fill();
 }
 
-pub fn drawSelection(self: Self) void {
-    if (self.selection) |selection| {
+pub fn drawSelection(self: *Self) void {
+    if (self.selection) |*selection| {
+        if (selection.need_texture_recreation) {
+            nvg.deleteImage(selection.texture);
+            selection.texture = selection.bitmap.createTexture();
+            selection.need_texture_recreation = false;
+        }
         const rect = Rect(f32).make(
             @intToFloat(f32, selection.rect.x),
             @intToFloat(f32, selection.rect.y),
