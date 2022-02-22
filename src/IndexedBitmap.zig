@@ -2,6 +2,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const testing = std.testing;
 
+const ColorBitmap = @import("Bitmap.zig");
+
 allocator: Allocator,
 
 width: u32,
@@ -40,6 +42,21 @@ pub fn eql(self: Self, bitmap: IndexedBitmap) bool {
     return self.width == bitmap.width and
         self.width == bitmap.width and
         std.mem.eql(u8, self.indices, bitmap.indices);
+}
+
+pub fn convertToTruecolor(self: IndexedBitmap, colormap: []const u8) !ColorBitmap {
+    const color_bitmap = try ColorBitmap.init(self.allocator, self.width, self.height);
+    const pixel_count = color_bitmap.width * color_bitmap.height;
+    var i: usize = 0;
+    while (i < pixel_count) : (i += 1) {
+        const index = @as(usize, self.indices[i]);
+        const pixel = colormap[4 * index .. 4 * index + 4];
+        color_bitmap.pixels[4 * i + 0] = pixel[0];
+        color_bitmap.pixels[4 * i + 1] = pixel[1];
+        color_bitmap.pixels[4 * i + 2] = pixel[2];
+        color_bitmap.pixels[4 * i + 3] = pixel[3];
+    }
+    return color_bitmap;
 }
 
 pub fn setIndex(self: Self, x: i32, y: i32, index: u8) bool {

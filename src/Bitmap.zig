@@ -4,6 +4,7 @@ const testing = std.testing;
 
 const col = @import("color.zig");
 const Color = col.Color;
+const IndexedBitmap = @import("IndexedBitmap.zig");
 
 allocator: Allocator,
 
@@ -43,6 +44,52 @@ pub fn eql(self: Self, bitmap: Bitmap) bool {
     return self.width == bitmap.width and
         self.width == bitmap.width and
         std.mem.eql(u8, self.pixels, bitmap.pixels);
+}
+
+pub fn canLosslesslyConvertToIndexed(self: Bitmap, colormap: []const u8) !bool {
+    var color_set = std.AutoHashMap([4]u8, void).init(self.allocator);
+    defer color_set.deinit();
+    var i: usize = 0;
+    while (i < 256) : (i += 1) {
+        const color = [4]u8{
+            colormap[4 * i + 0],
+            colormap[4 * i + 1],
+            colormap[4 * i + 2],
+            colormap[4 * i + 3],
+        };
+        try color_set.put(color, {});
+    }
+    const pixel_count = self.width * self.height;
+    i = 0;
+    while (i < pixel_count) : (i += 1) {
+        const color = [4]u8{
+            self.pixels[4 * i + 0],
+            self.pixels[4 * i + 1],
+            self.pixels[4 * i + 2],
+            self.pixels[4 * i + 3],
+        };
+        if (!color_set.contains(color)) return false;
+    }
+    return true;
+}
+
+pub fn convertToIndexed(self: Bitmap, colormap: []const u8) !IndexedBitmap {
+    const indexed_bitmap = try IndexedBitmap.init(self.allocator, self.width, self.height);
+    const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
+    var i: usize = 0;
+    while (i < pixel_count) : (i += 1) {
+        const target_color = self.pixels[4 * i .. 4 * i + 4];
+        var nearest: f32 = std.math.inf_f32;
+        var j: usize = 0;
+        while (j < 256 and nearest > 0) : (j += 1) {
+            const distance = col.distance(target_color, colormap[4 * j .. 4 * j + 4]);
+            if (distance < nearest) {
+                nearest = distance;
+                indexed_bitmap.indices[i] = @truncate(u8, j);
+            }
+        }
+    }
+    return indexed_bitmap;
 }
 
 pub fn setPixel(self: Self, x: i32, y: i32, color: Color) bool {
