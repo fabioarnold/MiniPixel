@@ -177,6 +177,7 @@ selection: ?Selection = null,
 copy_location: ?Pointi = null, // where the source was copied from
 
 history: *HistoryBuffer,
+
 foreground_color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 background_color: [4]u8 = [_]u8{ 0xff, 0xff, 0xff, 0xff },
 foreground_index: u8 = 0,
@@ -332,90 +333,41 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
     self.freeSelection();
 }
 
-pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
-    switch (self.bitmap) {
-        .indexed => return true,
-        .color => |color_bitmap| {
-            var color_set = std.AutoHashMap([4]u8, void).init(self.allocator);
-            defer color_set.deinit();
-            var i: usize = 0;
-            while (i < 256) : (i += 1) {
-                const color = [4]u8 {
-                    self.colormap[4 * i + 0],
-                    self.colormap[4 * i + 1],
-                    self.colormap[4 * i + 2],
-                    self.colormap[4 * i + 3],
-                };
-                try color_set.put(color, {});
-            }
-            const pixel_count = color_bitmap.width * color_bitmap.height;
-            i = 0;
-            while (i < pixel_count) : (i += 1) {
-                const color = [4]u8 {
-                    color_bitmap.pixels[4 * i + 0],
-                    color_bitmap.pixels[4 * i + 1],
-                    color_bitmap.pixels[4 * i + 2],
-                    color_bitmap.pixels[4 * i + 3],
-                };
-                if (!color_set.contains(color)) return false;
-            }
-            return true;
-        }
-    }
-}
-
 pub fn convertToTruecolor(self: *Self) !void {
     switch (self.bitmap) {
         .color => {},
         .indexed => |indexed_bitmap| {
-            const color_bitmap = try ColorBitmap.init(self.allocator, indexed_bitmap.width, indexed_bitmap.height);
-            const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
-            var i: usize = 0;
-            while (i < pixel_count) : (i += 1) {
-                const index = @as(usize, indexed_bitmap.indices[i]);
-                const pixel = self.colormap[4 * index .. 4 * index + 4];
-                color_bitmap.pixels[4 * i + 0] = pixel[0];
-                color_bitmap.pixels[4 * i + 1] = pixel[1];
-                color_bitmap.pixels[4 * i + 2] = pixel[2];
-                color_bitmap.pixels[4 * i + 3] = pixel[3];
-            }
+            const color_bitmap = try indexed_bitmap.convertToTruecolor(self.colormap);
             self.bitmap.deinit();
             self.bitmap = .{ .color = color_bitmap };
             self.preview_bitmap.deinit();
             self.preview_bitmap = try self.bitmap.clone();
             self.need_texture_recreation = true;
+            try self.history.pushFrame(self);
         },
     }
-    try self.history.pushFrame(self);
+}
+
+pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
+    return switch (self.bitmap) {
+        .indexed => true,
+        .color => |color_bitmap| try color_bitmap.canLosslesslyConvertToIndexed(self.colormap),
+    };
 }
 
 pub fn convertToIndexed(self: *Self) !void {
     switch (self.bitmap) {
         .color => |color_bitmap| {
-            const indexed_bitmap = try IndexedBitmap.init(self.allocator, color_bitmap.width, color_bitmap.height);
-            const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
-            var i: usize = 0;
-            while (i < pixel_count) : (i += 1) {
-                const target_color = color_bitmap.pixels[4 * i .. 4 * i + 4];
-                var nearest: f32 = std.math.inf_f32;
-                var j: usize = 0;
-                while (j < 256 and nearest > 0) : (j += 1) {
-                    const distance = col.distance(target_color, self.colormap[4 * j .. 4 * j + 4]);
-                    if (distance < nearest) {
-                        nearest = distance;
-                        indexed_bitmap.indices[i] = @truncate(u8, j);
-                    }
-                }
-            }
+            const indexed_bitmap = try color_bitmap.convertToIndexed(self.colormap);
             self.bitmap.deinit();
             self.bitmap = .{ .indexed = indexed_bitmap };
             self.preview_bitmap.deinit();
             self.preview_bitmap = try self.bitmap.clone();
             self.need_texture_recreation = true;
+            try self.history.pushFrame(self);
         },
         .indexed => {},
     }
-    try self.history.pushFrame(self);
 }
 
 pub const PaletteUpdateMode = enum {
@@ -556,8 +508,16 @@ pub fn paste(self: *Self) !void {
         selection_rect.y = @intCast(i32, self.getHeight() / 2) - @intCast(i32, image.height / 2);
     }
 
-    // TODO: convert type and colors
-    const bitmap = Bitmap.initFromImage(self.allocator, image);
+    var bitmap = Bitmap.initFromImage(self.allocator, image);
+    if (std.meta.activeTag(bitmap) != self.getBitmapType()) {
+        const converted_bitmap: Bitmap = switch (bitmap) {
+            .color => |color_bitmap| .{ .indexed = try color_bitmap.convertToIndexed(self.colormap)},
+            .indexed => |indexed_bitmap| .{ .color = try indexed_bitmap.convertToTruecolor(self.colormap)},
+        };
+        bitmap.deinit();
+        bitmap = converted_bitmap;
+    }
+
     self.selection = Selection{
         .rect = selection_rect,
         .bitmap = bitmap,
