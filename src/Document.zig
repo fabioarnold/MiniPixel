@@ -268,7 +268,7 @@ pub fn save(self: *Self, file_path: []const u8) !void {
     try image.writeToFile(file_path);
 }
 
-pub fn createSnapshot(self: Document) ![]u8 {
+pub fn serialize(self: Document) ![]u8 {
     const allocator = self.allocator;
     var output = ArrayList(u8).init(allocator);
 
@@ -286,13 +286,28 @@ pub fn createSnapshot(self: Document) ![]u8 {
         .indexed => |indexed_bitmap| _ = try writer.write(indexed_bitmap.indices),
     }
     _ = try writer.write(self.colormap);
-    // TODO: serialize selection
+    if (self.selection) |selection| {
+        try writer.writeIntNative(u8, 1);
+        try writer.writeIntNative(i32, selection.rect.x);
+        try writer.writeIntNative(i32, selection.rect.y);
+        try writer.writeIntNative(i32, selection.rect.w);
+        try writer.writeIntNative(i32, selection.rect.h);
+        try writer.writeIntNative(std.meta.Tag(BitmapType), @enumToInt(std.meta.activeTag(selection.bitmap)));
+        switch (selection.bitmap) {
+            .color => |color_bitmap| _ = try writer.write(color_bitmap.pixels),
+            .indexed => |indexed_bitmap| _ = try writer.write(indexed_bitmap.indices),
+        }
+    } else {
+        try writer.writeIntNative(u8, 0);
+    }
     try comp.close();
 
     return output.items;
 }
 
-pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
+pub fn deserialize(self: *Document, snapshot: []u8) !void {
+    self.freeSelection();
+
     var input = std.io.fixedBufferStream(snapshot);
     var decomp = try std.compress.deflate.decompressor(self.allocator, input.reader(), null);
     defer decomp.deinit();
@@ -313,6 +328,27 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
         .indexed => |indexed_bitmap| _ = try reader.readAll(indexed_bitmap.indices),
     }
     _ = try reader.readAll(self.colormap);
+    const has_selection = (try reader.readIntNative(u8)) == 1;
+    if (has_selection) {
+        const rect = Recti{
+            .x = try reader.readIntNative(i32),
+            .y = try reader.readIntNative(i32),
+            .w = try reader.readIntNative(i32),
+            .h = try reader.readIntNative(i32),
+        };
+        const selection_bitmap_type = @intToEnum(BitmapType, try reader.readIntNative(std.meta.Tag(BitmapType)));
+        const bitmap = try Bitmap.init(selection_bitmap_type, self.allocator, @intCast(u32, rect.w), @intCast(u32, rect.h));
+        switch (bitmap) {
+            .color => |color_bitmap| _ = try reader.readAll(color_bitmap.pixels),
+            .indexed => |indexed_bitmap| _ = try reader.readAll(indexed_bitmap.indices),
+        }
+        self.selection = Selection{
+            .rect = rect,
+            .bitmap = bitmap,
+            .texture = bitmap.createTexture(),
+        };
+    }
+
     _ = decomp.close();
 
     if (recreate) {
@@ -330,8 +366,6 @@ pub fn restoreFromSnapshot(self: *Document, snapshot: []u8) !void {
     }
     self.last_preview = .full;
     self.clearPreview();
-
-    self.freeSelection();
 }
 
 pub fn convertToTruecolor(self: *Self) !void {
@@ -716,6 +750,12 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
 
     self.last_preview = .full; // TODO: just a rect?
     self.clearPreview();
+
+    try self.history.pushFrame(self);
+}
+
+pub fn movedSelection(self: *Self) !void {
+    try self.history.pushFrame(self);
 }
 
 pub fn deleteSelection(self: *Self) !void {
