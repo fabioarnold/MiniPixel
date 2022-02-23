@@ -408,6 +408,9 @@ const SelectTool = struct {
         if (canvas.document.selection) |_| {
             if (event.button == .left) {
                 self.drag_offset = null;
+                canvas.document.movedSelection() catch {
+                    // TODO: show error
+                };
             } else if (event.button == .right) {
                 canvas.document.clearSelection() catch {
                     // TODO: show error

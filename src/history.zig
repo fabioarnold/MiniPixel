@@ -42,7 +42,7 @@ pub const Buffer = struct {
 
     pub fn reset(self: *Buffer, document: *Document) !void {
         self.clearAndFreeStack();
-        try self.stack.append(try document.createSnapshot());
+        try self.stack.append(try document.serialize());
         self.notifyChanged(document);
     }
 
@@ -58,7 +58,7 @@ pub const Buffer = struct {
         if (!self.canUndo()) return;
         self.index -= 1;
         const snapshot = self.stack.items[self.index];
-        try document.restoreFromSnapshot(snapshot);
+        try document.deserialize(snapshot);
         self.notifyChanged(document);
     }
 
@@ -70,14 +70,14 @@ pub const Buffer = struct {
         if (!self.canRedo()) return;
         self.index += 1;
         const snapshot = self.stack.items[self.index];
-        try document.restoreFromSnapshot(snapshot);
+        try document.deserialize(snapshot);
         self.notifyChanged(document);
     }
 
     pub fn pushFrame(self: *Buffer, document: *Document) !void { // TODO: handle error cases
         // do comparison
         const top = self.stack.items[self.index];
-        const snapshot = try document.createSnapshot();
+        const snapshot = try document.serialize();
         if (std.mem.eql(u8, top, snapshot)) {
             document.allocator.free(snapshot);
             return;
