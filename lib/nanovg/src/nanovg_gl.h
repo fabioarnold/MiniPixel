@@ -662,7 +662,8 @@ static int glnvg__renderCreate(void* uptr)
 		"			color = texture(colormap, vec2(color.x, 0.5));\n"
 		"#else\n"
 		"			color = texture2D(colormap, vec2(color.x, 0.5));\n"
-		"#endif\n" //
+		"#endif\n"
+		"			color = vec4(color.xyz*color.w,color.w);\n"
 		"		}\n"
 		"		// Apply color tint and alpha.\n"
 		"		color *= innerCol;\n"
@@ -685,6 +686,7 @@ static int glnvg__renderCreate(void* uptr)
 		"#else\n"
 		"			color = texture2D(colormap, vec2(color.x, 0.5));\n"
 		"#endif\n"
+		"			color = vec4(color.xyz*color.w,color.w);\n"
 		"		}\n"
 		"		color *= scissor;\n"
 		"		result = color * innerCol;\n"
