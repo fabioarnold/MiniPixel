@@ -232,12 +232,14 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
             if (color_palette.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 if (color_palette.selected) |selected| {
-                    const color = color_palette.colors[4 * selected .. 4 * selected + 4]; // TODO: ugly
+                    const color = color_palette.colors[4 * selected ..][0..4];
                     switch (editor.document.getBitmapType()) {
-                        .color => editor.color_picker.setRgb(color[0..3]), // in true color mode we don't set the alpha
+                        .color => {
+                            editor.color_picker.setRgb(color[0..3]); // in true color mode we don't set the alpha
+                            editor.color_foreground_background.setActiveRgba(editor.color_picker.color);
+                        },
                         .indexed => editor.color_picker.setRgba(color),
                     }
-                    editor.color_foreground_background.setActiveRgba(editor.color_picker.color);
                     switch (editor.color_foreground_background.active) {
                         .foreground => {
                             editor.document.foreground_color = editor.color_picker.color;
@@ -259,7 +261,13 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 switch (editor.document.bitmap) {
                     .color => editor.color_foreground_background.setRgba(.foreground, editor.document.foreground_color),
-                    .indexed => editor.color_palette.setSelection(editor.document.foreground_index),
+                    .indexed => {
+                        if (editor.color_foreground_background.active == .foreground) {
+                            editor.color_palette.setSelection(editor.document.foreground_index);
+                        } else {
+                            editor.color_foreground_background.setRgba(.foreground, editor.document.foreground_color);
+                        }
+                    }
                 }
             }
         }
@@ -278,7 +286,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
             if (color_picker.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 if (editor.color_palette.selected) |selected| {
-                    std.mem.copy(u8, editor.color_palette.colors[4 * selected .. 4 * selected + 4], &color_picker.color); // TODO: ugly
+                    std.mem.copy(u8, editor.color_palette.colors[4 * selected ..][0..4], &color_picker.color);
                     editor.updateDocumentPaletteAt(selected);
                 }
                 editor.color_foreground_background.setActiveRgba(color_picker.color);
@@ -296,7 +304,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 const color = color_foreground_background.getActiveRgba();
                 if (editor.color_palette.selected) |selected| {
-                    const palette_color = editor.color_palette.colors[4 * selected .. 4 * selected + 4]; // TODO: ugly
+                    // In true color mode deselect
+                    const palette_color = editor.color_palette.colors[4 * selected ..][0..4];
                     if (!std.mem.eql(u8, palette_color[0..3], color[0..3])) {
                         editor.color_palette.clearSelection();
                     }
@@ -778,7 +787,7 @@ pub fn onUndoChanged(self: *Self, document: *Document) void {
         icons.iconRedoEnabled
     else
         icons.iconRedoDisabled;
-    self.loadPaletteFromDocument();
+    self.onDocumentChanged();
     self.updateImageStatus();
     self.has_unsaved_changes = true;
     self.updateWindowTitle();
@@ -927,33 +936,10 @@ pub fn createNewDocument(self: *Self, width: u32, height: u32, bitmap_type: Docu
 
 fn loadDocument(self: *Self, file_path: []const u8) !void {
     try self.document.load(file_path);
-    // self.loadPaletteFromDocument();
     self.has_unsaved_changes = false;
     self.canvas.centerAndZoomDocument();
     self.updateImageStatus();
     try self.setDocumentFilePath(file_path);
-}
-
-fn loadPaletteFromDocument(self: *Self) void {
-    std.mem.copy(u8, &self.color_palette.colors, self.document.colormap);
-    switch (self.document.bitmap) {
-        .color => {
-            self.palette_toggle_button.checked = false;
-            self.color_palette.selection_locked = false;
-            self.blend_mode.widget.enabled = true;
-        },
-        .indexed => {
-            self.palette_toggle_button.checked = true;
-            // TODO: find nearest
-            const fc = self.color_palette.colors[4 * @as(u16, self.document.foreground_index) ..][0..4];
-            self.color_foreground_background.setRgba(.foreground, [_]u8{ fc[0], fc[1], fc[2], fc[3] });
-            const bc = self.color_palette.colors[4 * @as(u16, self.document.background_index) ..][0..4];
-            self.color_foreground_background.setRgba(.background, [_]u8{ bc[0], bc[1], bc[2], bc[3] });
-            self.color_palette.selection_locked = true;
-            self.color_palette.setSelection(self.document.foreground_index);
-            self.blend_mode.widget.enabled = false;
-        },
-    }
 }
 
 pub fn tryLoadDocument(self: *Self, file_path: []const u8) void {
@@ -1159,6 +1145,31 @@ fn tryTogglePalette(self: *Self) void {
     self.togglePalette() catch {
         self.showErrorMessageBox("Toggle color mode", "Color conversion failed.");
     };
+}
+
+fn onDocumentChanged(self: *Self) void {
+    // update GUI
+    std.mem.copy(u8, &self.color_palette.colors, self.document.colormap);
+    switch (self.document.bitmap) {
+        .color => {
+            self.palette_toggle_button.checked = false;
+            self.color_palette.selection_locked = false;
+            self.blend_mode.widget.enabled = true;
+        },
+        .indexed => {
+            self.palette_toggle_button.checked = true;
+            // find nearest colors in colormap
+            self.document.foreground_index = @truncate(u8, col.findNearest(self.document.colormap, &self.document.foreground_color));
+            std.mem.copy(u8, &self.document.foreground_color, self.document.colormap[4 * self.document.foreground_index ..][0..4]);
+            self.document.background_index = @truncate(u8, col.findNearest(self.document.colormap, &self.document.background_color));
+            std.mem.copy(u8, &self.document.background_color, self.document.colormap[4 * self.document.background_index ..][0..4]);
+            self.color_foreground_background.setRgba(.foreground, self.document.foreground_color);
+            self.color_foreground_background.setRgba(.background, self.document.background_color);
+            self.color_palette.selection_locked = true;
+            self.color_palette.setSelection(self.document.foreground_index);
+            self.blend_mode.widget.enabled = false;
+        },
+    }
 }
 
 fn updateDocumentPalette(self: *Self, mode: Document.PaletteUpdateMode) !void {

@@ -434,29 +434,22 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
         switch (self.bitmap) {
             .indexed => |indexed_bitmap| {
                 var map: [256]u8 = undefined; // colormap -> palette
-                var i: usize = 0;
-                while (i < 256) : (i += 1) {
-                    const target_color = self.colormap[4 * i ..][0..4];
-                    // find an equivalent in palette
-                    var nearest: f32 = std.math.f32_max;
-                    var j: usize = 0;
-                    while (j < 256 and nearest > 0) : (j += 1) {
-                        const color = palette[4 * j ..][0..4];
-                        const distance = col.distance(target_color, color);
-                        if (distance < nearest) {
-                            nearest = distance;
-                            map[i] = @truncate(u8, j);
-                        }
-                    }
+                for (map) |*m, i| {
+                    m.* = @truncate(u8, col.findNearest(palette, self.colormap[4 * i ..]));
                 }
-
                 const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
-                i = 0;
+                var i: usize = 0;
                 while (i < pixel_count) : (i += 1) {
                     indexed_bitmap.indices[i] = map[indexed_bitmap.indices[i]];
                 }
                 self.last_preview = .full;
                 self.clearPreview();
+
+                // update fg and bg color
+                self.foreground_index = map[self.foreground_index];
+                std.mem.copy(u8, &self.foreground_color, palette[4 * self.foreground_index ..][0..4]);
+                self.background_index = map[self.background_index];
+                std.mem.copy(u8, &self.background_color, palette[4 * self.background_index ..][0..4]);
             },
             .color => {},
         }
@@ -952,6 +945,8 @@ pub fn pick(self: *Self, x: i32, y: i32) void {
         .indexed => |indexed_bitmap| {
             if (indexed_bitmap.getIndex(x, y)) |index| {
                 self.foreground_index = index;
+                const color = self.colormap[4 * @as(usize, self.foreground_index) ..][0..4];
+                std.mem.copy(u8, &self.foreground_color, color);
             }
         },
     }

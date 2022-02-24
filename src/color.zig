@@ -41,8 +41,7 @@ pub fn blend(a: []const u8, b: []const u8) Color {
     return out;
 }
 
-// squared differences
-pub fn distance(a: []const u8, b: []const u8) f32 {
+pub fn distanceSqr(a: []const u8, b: []const u8) f32 {
     const d = [_]f32{
         @intToFloat(f32, a[0]) - @intToFloat(f32, b[0]),
         @intToFloat(f32, a[1]) - @intToFloat(f32, b[1]),
@@ -52,8 +51,22 @@ pub fn distance(a: []const u8, b: []const u8) f32 {
     return d[0] * d[0] + d[1] * d[1] + d[2] * d[2] + d[3] * d[3];
 }
 
+pub fn findNearest(colors: []const u8, color: []const u8) usize {
+    var nearest: f32 = std.math.f32_max;
+    var nearest_i: usize = 0;
+    var i: usize = 0;
+    while (i < colors.len and nearest > 0) : (i += 4) {
+        const distance = distanceSqr(colors[i..], color);
+        if (distance < nearest) {
+            nearest = distance;
+            nearest_i = i;
+        }
+    }
+    return nearest_i / 4;
+}
+
 pub fn trimBlackColorsRight(colors: []u8) []u8 {
     var len = colors.len / 4;
-    while (len > 0 and std.mem.eql(u8, colors[4 * len - 4 .. 4 * len], &black)) : (len -= 1) {}
+    while (len > 0 and std.mem.eql(u8, colors[4 * len - 4 ..][0..4], &black)) : (len -= 1) {}
     return colors[0 .. 4 * len];
 }
