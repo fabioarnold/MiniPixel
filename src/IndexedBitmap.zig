@@ -50,7 +50,7 @@ pub fn convertToTruecolor(self: IndexedBitmap, colormap: []const u8) !ColorBitma
     var i: usize = 0;
     while (i < pixel_count) : (i += 1) {
         const index = @as(usize, self.indices[i]);
-        const pixel = colormap[4 * index .. 4 * index + 4];
+        const pixel = colormap[4 * index ..][0..4];
         color_bitmap.pixels[4 * i + 0] = pixel[0];
         color_bitmap.pixels[4 * i + 1] = pixel[1];
         color_bitmap.pixels[4 * i + 2] = pixel[2];

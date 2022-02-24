@@ -97,7 +97,7 @@ pub fn loadPalContents(self: *Self, contents: []const u8) !void {
         self.colors[4 * i + 3] = alpha;
     }
     while (i < 256) : (i += 1) {
-        std.mem.copy(u8, self.colors[4 * i .. 4 * i + 4], &col.black);
+        std.mem.copy(u8, self.colors[4 * i ..][0..4], &col.black);
     }
 }
 
@@ -161,7 +161,7 @@ pub fn draw(widget: *gui.Widget) void {
         const y = @intToFloat(f32, i / 16);
         nvg.beginPath();
         nvg.rect(rect.x + pad + x * tile_w, rect.y + pad + y * tile_h, tile_w - 1, tile_h - 1);
-        const color = self.colors[i * 4 .. i * 4 + 4];
+        const color = self.colors[i * 4 ..][0..4];
         nvg.fillColor(nvg.rgb(color[0], color[1], color[2]));
         nvg.fill();
     }
