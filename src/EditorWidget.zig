@@ -941,7 +941,6 @@ fn loadPaletteFromDocument(self: *Self) void {
             self.palette_toggle_button.checked = false;
             self.color_palette.selection_locked = false;
             self.blend_mode.widget.enabled = true;
-            // TODO: overwrite documents palette
         },
         .indexed => {
             self.palette_toggle_button.checked = true;
@@ -1022,14 +1021,16 @@ fn selectAll(self: *Self) void {
 
 fn cutDocument(self: *Self) void {
     self.document.cut() catch {
-        // TODO handle
+        self.showErrorMessageBox("Cut image", "Could not cut to clipboard.");
+        return;
     };
     self.checkClipboard();
 }
 
 fn copyDocument(self: *Self) void {
     self.document.copy() catch {
-        // TODO handle
+        self.showErrorMessageBox("Copy image", "Could not copy to clipboard.");
+        return;
     };
     self.checkClipboard();
 }
@@ -1138,7 +1139,6 @@ fn togglePalette(self: *Self) !void {
             self.message_box_widget.configure(.warning, .ok_cancel, "Some colors will be lost\nduring conversion.");
             self.onMessageBoxResultFn = struct {
                 fn onResult(context: usize, result: MessageBoxWidget.Result) void {
-            std.debug.print("context2 {}\n", .{context});
                     if (result == .ok) {
                         var editor = @intToPtr(*Self, context);
                         editor.document.convertToIndexed() catch {}; // TODO: Can't show message box because the widget is in use
