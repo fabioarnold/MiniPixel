@@ -436,12 +436,12 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
                 var map: [256]u8 = undefined; // colormap -> palette
                 var i: usize = 0;
                 while (i < 256) : (i += 1) {
-                    const target_color = self.colormap[4 * i .. 4 * i + 4];
+                    const target_color = self.colormap[4 * i ..][0..4];
                     // find an equivalent in palette
                     var nearest: f32 = std.math.f32_max;
                     var j: usize = 0;
                     while (j < 256 and nearest > 0) : (j += 1) {
-                        const color = palette[4 * j .. 4 * j + 4];
+                        const color = palette[4 * j ..][0..4];
                         const distance = col.distance(target_color, color);
                         if (distance < nearest) {
                             nearest = distance;
@@ -962,13 +962,8 @@ pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
         .color => |color_bitmap| return color_bitmap.getPixel(x, y),
         .indexed => |indexed_bitmap| {
             if (indexed_bitmap.getIndex(x, y)) |index| {
-                const i: usize = index;
-                return [4]u8{
-                    self.colormap[4 * i + 0],
-                    self.colormap[4 * i + 1],
-                    self.colormap[4 * i + 2],
-                    self.colormap[4 * i + 3],
-                };
+                const c = self.colormap[4 * @as(usize, index) ..];
+                return [4]u8{ c[0], c[1], c[2], c[3] };
             }
         },
     }

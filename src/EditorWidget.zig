@@ -927,7 +927,7 @@ pub fn createNewDocument(self: *Self, width: u32, height: u32, bitmap_type: Docu
 
 fn loadDocument(self: *Self, file_path: []const u8) !void {
     try self.document.load(file_path);
-    self.loadPaletteFromDocument();
+    // self.loadPaletteFromDocument();
     self.has_unsaved_changes = false;
     self.canvas.centerAndZoomDocument();
     self.updateImageStatus();
@@ -944,10 +944,13 @@ fn loadPaletteFromDocument(self: *Self) void {
         },
         .indexed => {
             self.palette_toggle_button.checked = true;
+            // TODO: find nearest
+            const fc = self.color_palette.colors[4 * @as(u16, self.document.foreground_index) ..][0..4];
+            self.color_foreground_background.setRgba(.foreground, [_]u8{ fc[0], fc[1], fc[2], fc[3] });
+            const bc = self.color_palette.colors[4 * @as(u16, self.document.background_index) ..][0..4];
+            self.color_foreground_background.setRgba(.background, [_]u8{ bc[0], bc[1], bc[2], bc[3] });
             self.color_palette.selection_locked = true;
-            if (self.color_palette.selected == null) {
-                self.color_palette.setSelection(self.document.foreground_index);
-            }
+            self.color_palette.setSelection(self.document.foreground_index);
             self.blend_mode.widget.enabled = false;
         },
     }
