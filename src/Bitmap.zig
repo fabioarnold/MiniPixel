@@ -69,16 +69,7 @@ pub fn convertToIndexed(self: Bitmap, colormap: []const u8) !IndexedBitmap {
     const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
     var i: usize = 0;
     while (i < pixel_count) : (i += 1) {
-        const target_color = self.pixels[4 * i ..][0..4];
-        var nearest: f32 = std.math.inf_f32;
-        var j: usize = 0;
-        while (j < 256 and nearest > 0) : (j += 1) {
-            const distance = col.distance(target_color, colormap[4 * j ..][0..4]);
-            if (distance < nearest) {
-                nearest = distance;
-                indexed_bitmap.indices[i] = @truncate(u8, j);
-            }
-        }
+        indexed_bitmap.indices[i] = @truncate(u8, col.findNearest(colormap, self.pixels[4 * i ..]));
     }
     return indexed_bitmap;
 }
