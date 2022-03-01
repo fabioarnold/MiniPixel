@@ -234,12 +234,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                 if (color_palette.selected) |selected| {
                     const color = color_palette.colors[4 * selected ..][0..4];
                     switch (editor.document.getBitmapType()) {
-                        .color => {
-                            editor.color_picker.setRgb(color[0..3]); // in true color mode we don't set the alpha
-                            editor.color_foreground_background.setActiveRgba(editor.color_picker.color);
-                        },
+                        .color => editor.color_picker.setRgb(color[0..3]), // in true color mode we don't set the alpha
                         .indexed => editor.color_picker.setRgba(color),
                     }
+                    editor.color_foreground_background.setActiveRgba(&editor.color_picker.color);
                     switch (editor.color_foreground_background.active) {
                         .foreground => {
                             editor.document.foreground_color = editor.color_picker.color;
@@ -260,14 +258,14 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
             if (canvas.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 switch (editor.document.bitmap) {
-                    .color => editor.color_foreground_background.setRgba(.foreground, editor.document.foreground_color),
+                    .color => editor.color_foreground_background.setRgba(.foreground, &editor.document.foreground_color),
                     .indexed => {
                         if (editor.color_foreground_background.active == .foreground) {
                             editor.color_palette.setSelection(editor.document.foreground_index);
                         } else {
-                            editor.color_foreground_background.setRgba(.foreground, editor.document.foreground_color);
+                            editor.color_foreground_background.setRgba(.foreground, &editor.document.foreground_color);
                         }
-                    }
+                    },
                 }
             }
         }
@@ -289,7 +287,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                     std.mem.copy(u8, editor.color_palette.colors[4 * selected ..][0..4], &color_picker.color);
                     editor.updateDocumentPaletteAt(selected);
                 }
-                editor.color_foreground_background.setActiveRgba(color_picker.color);
+                editor.color_foreground_background.setActiveRgba(&color_picker.color);
                 switch (editor.color_foreground_background.active) {
                     .foreground => editor.document.foreground_color = editor.color_picker.color,
                     .background => editor.document.background_color = editor.color_picker.color,
@@ -299,20 +297,35 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     }.changed;
 
     self.color_foreground_background.onChangedFn = struct {
-        fn changed(color_foreground_background: *ColorForegroundBackgroundWidget) void {
+        fn changed(color_foreground_background: *ColorForegroundBackgroundWidget, change_type: ColorForegroundBackgroundWidget.ChangeType) void {
             if (color_foreground_background.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 const color = color_foreground_background.getActiveRgba();
-                if (editor.color_palette.selected) |selected| {
-                    // In true color mode deselect
-                    const palette_color = editor.color_palette.colors[4 * selected ..][0..4];
-                    if (!std.mem.eql(u8, palette_color[0..3], color[0..3])) {
-                        editor.color_palette.clearSelection();
-                    }
+                switch (editor.document.getBitmapType()) {
+                    .color => {
+                        if (editor.color_palette.selected) |selected| {
+                            // In true color mode deselect
+                            const palette_color = editor.color_palette.colors[4 * selected ..][0..4];
+                            if (!std.mem.eql(u8, palette_color[0..3], color[0..3])) {
+                                editor.color_palette.clearSelection();
+                            }
+                        }
+                        editor.document.foreground_color = editor.color_foreground_background.getRgba(.foreground);
+                        editor.document.background_color = editor.color_foreground_background.getRgba(.background);
+                    },
+                    .indexed => {
+                        if (change_type == .swap) {
+                            std.mem.swap(u8, &editor.document.foreground_index, &editor.document.background_index);
+                        }
+                        if (change_type == .active or change_type == .swap) {
+                            switch (color_foreground_background.active) {
+                                .foreground => editor.color_palette.selected = editor.document.foreground_index,
+                                .background => editor.color_palette.selected = editor.document.background_index,
+                            }
+                        }
+                    },
                 }
                 editor.color_picker.setRgba(&color);
-                editor.document.foreground_color = editor.color_foreground_background.getRgba(.foreground);
-                editor.document.background_color = editor.color_foreground_background.getRgba(.background);
             }
         }
     }.changed;
@@ -1154,19 +1167,35 @@ fn onDocumentChanged(self: *Self) void {
         .color => {
             self.palette_toggle_button.checked = false;
             self.color_palette.selection_locked = false;
+            std.mem.copy(u8, &self.document.foreground_color, &self.color_foreground_background.getRgba(.foreground));
+            std.mem.copy(u8, &self.document.background_color, &self.color_foreground_background.getRgba(.background));
             self.blend_mode.widget.enabled = true;
         },
         .indexed => {
             self.palette_toggle_button.checked = true;
+
             // find nearest colors in colormap
-            self.document.foreground_index = @truncate(u8, col.findNearest(self.document.colormap, &self.document.foreground_color));
-            std.mem.copy(u8, &self.document.foreground_color, self.document.colormap[4 * self.document.foreground_index ..][0..4]);
-            self.document.background_index = @truncate(u8, col.findNearest(self.document.colormap, &self.document.background_color));
-            std.mem.copy(u8, &self.document.background_color, self.document.colormap[4 * self.document.background_index ..][0..4]);
-            self.color_foreground_background.setRgba(.foreground, self.document.foreground_color);
-            self.color_foreground_background.setRgba(.background, self.document.background_color);
+            const fgc = self.color_foreground_background.getRgba(.foreground);
+            var dfgc = self.document.colormap[4 * @as(usize, self.document.foreground_index) ..][0..4];
+            if (!std.mem.eql(u8, &fgc, dfgc)) {
+                self.document.foreground_index = @truncate(u8, col.findNearest(self.document.colormap, &fgc));
+                dfgc = self.document.colormap[4 * @as(usize, self.document.foreground_index) ..][0..4];
+                self.color_foreground_background.setRgba(.foreground, dfgc);
+            }
+            const bgc = self.color_foreground_background.getRgba(.background);
+            var dbgc = self.document.colormap[4 * @as(usize, self.document.background_index) ..][0..4];
+            if (!std.mem.eql(u8, &bgc, dbgc)) {
+                self.document.background_index = @truncate(u8, col.findNearest(self.document.colormap, &bgc));
+                dbgc = self.document.colormap[4 * @as(usize, self.document.background_index) ..][0..4];
+                self.color_foreground_background.setRgba(.background, dbgc);
+            }
+
             self.color_palette.selection_locked = true;
-            self.color_palette.setSelection(self.document.foreground_index);
+            switch (self.color_foreground_background.active) {
+                .foreground => self.color_palette.setSelection(self.document.foreground_index),
+                .background => self.color_palette.setSelection(self.document.background_index),
+            }
+
             self.blend_mode.widget.enabled = false;
         },
     }
