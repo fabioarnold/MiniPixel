@@ -444,12 +444,6 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
                 }
                 self.last_preview = .full;
                 self.clearPreview();
-
-                // update fg and bg color
-                self.foreground_index = map[self.foreground_index];
-                std.mem.copy(u8, &self.foreground_color, palette[4 * self.foreground_index ..][0..4]);
-                self.background_index = map[self.background_index];
-                std.mem.copy(u8, &self.background_color, palette[4 * self.background_index ..][0..4]);
             },
             .color => {},
         }

@@ -7,6 +7,12 @@ const Rect = @import("gui/geometry.zig").Rect;
 const Point = @import("gui/geometry.zig").Point;
 const ColorLayer = @import("color.zig").ColorLayer;
 
+pub const ChangeType = enum {
+    color,
+    active,
+    swap,
+};
+
 const ColorForegroundBackgroundWidget = @This();
 
 widget: gui.Widget,
@@ -21,7 +27,7 @@ rects: [2]Rect(f32),
 
 background_image: nvg.Image,
 
-onChangedFn: ?fn (*Self) void = null,
+onChangedFn: ?fn (*Self, change_type: ChangeType) void = null,
 
 const pad = 5;
 
@@ -58,27 +64,31 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn setActive(self: *Self, active: ColorLayer) void {
+fn notifyChanged(self: *Self, change_type: ChangeType) void {
+    if (self.onChangedFn) |onChanged| onChanged(self, change_type);
+}
+
+fn setActive(self: *Self, active: ColorLayer) void {
     if (self.active != active) {
         self.active = active;
-        if (self.onChangedFn) |onChanged| onChanged(self);
+        self.notifyChanged(.active);
     }
 }
 
 pub fn swap(self: *Self) void {
     std.mem.swap([4]u8, &self.colors[0], &self.colors[1]);
-    if (self.onChangedFn) |onChanged| onChanged(self);
+    self.notifyChanged(.swap);
 }
 
 pub fn getRgba(self: Self, color_layer: ColorLayer) [4]u8 {
     return self.colors[@enumToInt(color_layer)];
 }
 
-pub fn setRgba(self: *Self, color_layer: ColorLayer, color: [4]u8) void {
-    const t = @enumToInt(color_layer);
-    if (!std.mem.eql(u8, self.colors[t][0..], color[0..])) {
-        std.mem.copy(u8, self.colors[t][0..], color[0..]);
-        if (self.onChangedFn) |onChanged| onChanged(self);
+pub fn setRgba(self: *Self, color_layer: ColorLayer, color: []u8) void {
+    const i = @enumToInt(color_layer);
+    if (!std.mem.eql(u8, &self.colors[i], color)) {
+        std.mem.copy(u8, &self.colors[i], color);
+        self.notifyChanged(.color);
     }
 }
 
@@ -86,7 +96,7 @@ pub fn getActiveRgba(self: Self) [4]u8 {
     return self.getRgba(self.active);
 }
 
-pub fn setActiveRgba(self: *Self, color: [4]u8) void {
+pub fn setActiveRgba(self: *Self, color: []u8) void {
     self.setRgba(self.active, color);
 }
 
