@@ -20,3 +20,5 @@
 * App internal clipboard for platforms other than Windows
 * Add custom grid with snapping
 * Implement horizontal and vertical scrolling using the mouse wheel
+* Add loading and saving of color palettes
+* Add 8-bit indexed color mode
