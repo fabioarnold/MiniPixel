@@ -8,6 +8,7 @@ const Pkg = std.build.Pkg;
 const win32 = Pkg{ .name = "win32", .path = FileSource.relative("deps/zigwin32/win32.zig") };
 const nfd = Pkg{ .name = "nfd", .path = FileSource.relative("deps/nfd-zig/src/lib.zig") };
 const nanovg = Pkg{ .name = "nanovg", .path = FileSource.relative("deps/nanovg/src/nanovg.zig") };
+const s2s = Pkg{ .name = "s2s", .path = FileSource.relative("deps/s2s/s2s.zig") };
 const gui = Pkg{ .name = "gui", .path = FileSource.relative("src/gui/gui.zig"), .dependencies = &.{nanovg} };
 
 fn printError(str: []const u8) void {
@@ -67,6 +68,7 @@ pub fn build(b: *Builder) !void {
     exe.addPackage(win32);
     exe.addPackage(nfd);
     exe.addPackage(nanovg);
+    exe.addPackage(s2s);
     exe.addPackage(gui);
     const nfd_lib = try @import("deps/nfd-zig/build.zig").makeLib(b, mode, target, "deps/nfd-zig/");
     exe.linkLibrary(nfd_lib);

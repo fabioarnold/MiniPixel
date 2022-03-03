@@ -18,6 +18,7 @@ See [INSTALL.md](INSTALL.md).
 
 * [nanovg library](https://github.com/memononen/nanovg) by Mikko Mononen
 * [zigwin32](https://github.com/marlersoft/zigwin32) by Jonathan Marler
+* [s2s](https://github.com/ziglibs/s2s) by Felix Queißner
 
 ## License
 

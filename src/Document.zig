@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
 const nvg = @import("nanovg");
+const s2s = @import("s2s");
 const gui = @import("gui");
 const geometry = gui.geometry;
 const Point = geometry.Point;
