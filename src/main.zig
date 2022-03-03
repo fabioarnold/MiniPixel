@@ -874,7 +874,7 @@ fn onUnsavedChangesDialogResult(result_context: usize, result: MessageBoxWidget.
         const main_window = @intToPtr(*gui.Window, result_context);
         main_window.close();
     } else if (result == .yes) {
-        editor_widget.trySaveDocument(true); // TODO: if success, continue closing app
+        editor_widget.trySaveAsDocument(); // TODO: if success, continue closing app
     }
 }
 

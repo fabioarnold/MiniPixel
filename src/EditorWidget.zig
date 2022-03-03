@@ -188,42 +188,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     try self.widget.addChild(&self.panel_right.widget);
     try self.widget.addChild(&self.status_bar.widget);
 
-    self.palette_open_button.iconFn = icons.iconOpen;
-    self.palette_open_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).tryOpenPalette();
-        }
-    }.click;
-    self.palette_open_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Open Palette");
-        }
-    }.enter;
-    self.palette_open_button.onLeaveFn = menuButtonOnLeave;
-    self.palette_save_button.iconFn = icons.iconSave;
-    self.palette_save_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).trySavePalette();
-        }
-    }.click;
-    self.palette_save_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Save Palette");
-        }
-    }.enter;
-    self.palette_save_button.onLeaveFn = menuButtonOnLeave;
-    self.palette_toggle_button.iconFn = icons.iconColorPalette;
-    self.palette_toggle_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).tryTogglePalette();
-        }
-    }.click;
-    self.palette_toggle_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Toggle between 8-bit indexed mode and true color");
-        }
-    }.enter;
-    self.palette_toggle_button.onLeaveFn = menuButtonOnLeave;
+    configureToolbarButton(self.palette_open_button, icons.iconOpen, tryOpenPalette, "Open Palette");
+    configureToolbarButton(self.palette_save_button, icons.iconSave, trySavePalette, "Save Palette");
+    configureToolbarButton(self.palette_toggle_button, icons.iconColorPalette, tryTogglePalette, "Toggle between 8-bit indexed mode and true color");
 
     std.mem.copy(u8, self.document.colormap, &self.color_palette.colors);
     try self.document.history.reset(self.document); // so palette is part of first snapshot
@@ -349,255 +316,52 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     return self;
 }
 
+fn configureToolbarButton(button: *gui.Button, icon: fn () void, comptime onEditorClick: fn (*Self) void, comptime helpText: []const u8) void {
+    button.iconFn = icon;
+    button.onClickFn = struct {
+        fn click(b: *gui.Button) void {
+            onEditorClick(getEditorFromMenuButton(b));
+        }
+    }.click;
+    button.onEnterFn = struct {
+        fn enter(b: *gui.Button) void {
+            getEditorFromMenuButton(b).setHelpText(helpText);
+        }
+    }.enter;
+    button.onLeaveFn = menuButtonOnLeave;
+}
+
 fn initMenubar(self: *Self) !void {
-    self.new_button.iconFn = icons.iconNew;
-    self.new_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).newDocument();
-        }
-    }.click;
-    self.new_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("New Document (Ctrl+N)");
-        }
-    }.enter;
-    self.new_button.onLeaveFn = menuButtonOnLeave;
-    self.open_button.iconFn = icons.iconOpen;
-    self.open_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).tryOpenDocument();
-        }
-    }.click;
-    self.open_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Open Document (Ctrl+O)");
-        }
-    }.enter;
-    self.open_button.onLeaveFn = menuButtonOnLeave;
-    self.save_button.iconFn = icons.iconSave;
-    self.save_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).trySaveDocument(false);
-        }
-    }.click;
-    self.save_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Save Document (Ctrl+S)");
-        }
-    }.enter;
-    self.save_button.onLeaveFn = menuButtonOnLeave;
-    self.saveas_button.iconFn = icons.iconSaveAs;
-    self.saveas_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).trySaveDocument(true);
-        }
-    }.click;
-    self.saveas_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Save Document As (Ctrl+Shift+S)");
-        }
-    }.enter;
-    self.saveas_button.onLeaveFn = menuButtonOnLeave;
-    self.undo_button.iconFn = icons.iconUndoDisabled;
-    self.undo_button.widget.enabled = false;
-    self.undo_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).tryUndoDocument();
-        }
-    }.click;
-    self.undo_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Undo Action (Ctrl+Z)");
-        }
-    }.enter;
-    self.undo_button.onLeaveFn = menuButtonOnLeave;
-    self.redo_button.iconFn = icons.iconRedoDisabled;
-    self.redo_button.widget.enabled = false;
-    self.redo_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).tryRedoDocument();
-        }
-    }.click;
-    self.redo_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Redo Action (Ctrl+Y)");
-        }
-    }.enter;
-    self.redo_button.onLeaveFn = menuButtonOnLeave;
-    self.cut_button.iconFn = icons.iconCut;
-    self.cut_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).cutDocument();
-        }
-    }.click;
-    self.cut_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Cut Selection to Clipboard (Ctrl+X)");
-        }
-    }.enter;
-    self.cut_button.onLeaveFn = menuButtonOnLeave;
-    self.copy_button.iconFn = icons.iconCopy;
-    self.copy_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).copyDocument();
-        }
-    }.click;
-    self.copy_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Copy Selection to Clipboard (Ctrl+C)");
-        }
-    }.enter;
-    self.copy_button.onLeaveFn = menuButtonOnLeave;
-    self.paste_button.iconFn = icons.iconPasteEnabled;
+    configureToolbarButton(self.new_button, icons.iconNew, newDocument, "New Document (Ctrl+N)");
+    configureToolbarButton(self.open_button, icons.iconOpen, tryOpenDocument, "Open Document (Ctrl+O)");
+    configureToolbarButton(self.save_button, icons.iconSave, trySaveDocument, "Save Document (Ctrl+S)");
+    configureToolbarButton(self.saveas_button, icons.iconSaveAs, trySaveAsDocument, "Save Document As (Ctrl+Shift+S)");
+
+    configureToolbarButton(self.undo_button, icons.iconUndoDisabled, tryUndoDocument, "Undo Action (Ctrl+Z)");
+    configureToolbarButton(self.redo_button, icons.iconRedoDisabled, tryRedoDocument, "Redo Action (Ctrl+Y)");
+
+    configureToolbarButton(self.cut_button, icons.iconCut, cutDocument, "Cut Selection to Clipboard (Ctrl+X)");
+    configureToolbarButton(self.copy_button, icons.iconCopy, copyDocument, "Copy Selection to Clipboard (Ctrl+C)");
+    configureToolbarButton(self.paste_button, icons.iconPasteEnabled, pasteDocument, "Paste from Clipboard (Ctrl+V)");
     self.checkClipboard(); // will set the correct icon
-    self.paste_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).pasteDocument();
-        }
-    }.click;
-    self.paste_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Paste from Clipboard (Ctrl+V)");
-        }
-    }.enter;
-    self.paste_button.onLeaveFn = menuButtonOnLeave;
-    self.crop_tool_button.iconFn = icons.iconToolCrop;
-    self.crop_tool_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setTool(.crop);
-        }
-    }.click;
-    self.crop_tool_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Crop/Enlarge Tool (C)");
-        }
-    }.enter;
-    self.crop_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.select_tool_button.iconFn = icons.iconToolSelect;
-    self.select_tool_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setTool(.select);
-        }
-    }.click;
-    self.select_tool_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Rectangle Select Tool (R)");
-        }
-    }.enter;
-    self.select_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.draw_tool_button.iconFn = icons.iconToolPen;
-    self.draw_tool_button.checked = true;
-    self.draw_tool_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setTool(.draw);
-        }
-    }.click;
-    self.draw_tool_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Pen Tool (N)");
-        }
-    }.enter;
-    self.draw_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.fill_tool_button.iconFn = icons.iconToolBucket;
-    self.fill_tool_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setTool(.fill);
-        }
-    }.click;
-    self.fill_tool_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Fill Tool (B)");
-        }
-    }.enter;
-    self.fill_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.mirror_h_tool_button.iconFn = icons.iconMirrorHorizontally;
-    self.mirror_h_tool_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).mirrorHorizontallyDocument();
-        }
-    }.click;
-    self.mirror_h_tool_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Mirror Horizontally");
-        }
-    }.enter;
-    self.mirror_h_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.mirror_v_tool_button.iconFn = icons.iconMirrorVertically;
-    self.mirror_v_tool_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).mirrorVerticallyDocument();
-        }
-    }.click;
-    self.mirror_v_tool_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Mirror Vertically");
-        }
-    }.enter;
-    self.mirror_v_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.rotate_ccw_tool_button.iconFn = icons.iconRotateCcw;
-    self.rotate_ccw_tool_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).rotateDocument(false);
-        }
-    }.click;
-    self.rotate_ccw_tool_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Rotate Counterclockwise");
-        }
-    }.enter;
-    self.rotate_ccw_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.rotate_cw_tool_button.iconFn = icons.iconRotateCw;
-    self.rotate_cw_tool_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).rotateDocument(true);
-        }
-    }.click;
-    self.rotate_cw_tool_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Rotate Clockwise");
-        }
-    }.enter;
-    self.rotate_cw_tool_button.onLeaveFn = menuButtonOnLeave;
-    self.pixel_grid_button.iconFn = icons.iconPixelGrid;
+
+    configureToolbarButton(self.crop_tool_button, icons.iconToolCrop, setToolCrop, "Crop/Enlarge Tool (C)");
+    configureToolbarButton(self.select_tool_button, icons.iconToolSelect, setToolSelect, "Rectangle Select Tool (R)");
+    configureToolbarButton(self.draw_tool_button, icons.iconToolPen, setToolDraw, "Pen Tool (N)");
+    configureToolbarButton(self.fill_tool_button, icons.iconToolBucket, setToolFill, "Fill Tool (B)");
+
+    configureToolbarButton(self.mirror_h_tool_button, icons.iconMirrorHorizontally, mirrorHorizontallyDocument, "Mirror Horizontally");
+    configureToolbarButton(self.mirror_v_tool_button, icons.iconMirrorVertically, mirrorVerticallyDocument, "Mirror Vertically");
+    configureToolbarButton(self.rotate_ccw_tool_button, icons.iconRotateCcw, rotateDocumentCcw, "Rotate Counterclockwise");
+    configureToolbarButton(self.rotate_cw_tool_button, icons.iconRotateCw, rotateDocumentCw, "Rotate Clockwise");
+
+    configureToolbarButton(self.pixel_grid_button, icons.iconPixelGrid, togglePixelGrid, "Toggle Pixel Grid (#)");
     self.pixel_grid_button.checked = self.canvas.pixel_grid_enabled;
-    self.pixel_grid_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).togglePixelGrid();
-        }
-    }.click;
-    self.pixel_grid_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Toggle Pixel Grid (#)");
-        }
-    }.enter;
-    self.pixel_grid_button.onLeaveFn = menuButtonOnLeave;
-    self.custom_grid_button.iconFn = icons.iconCustomGrid;
+    configureToolbarButton(self.custom_grid_button, icons.iconCustomGrid, toggleCustomGrid, "Toggle Custom Grid");
     self.custom_grid_button.checked = self.canvas.pixel_grid_enabled;
-    self.custom_grid_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).toggleCustomGrid();
-        }
-    }.click;
-    self.custom_grid_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Toggle Custom Grid");
-        }
-    }.enter;
-    self.custom_grid_button.onLeaveFn = menuButtonOnLeave;
-    self.snap_button.iconFn = icons.iconSnapDisabled;
+    configureToolbarButton(self.snap_button, icons.iconSnapDisabled, toggleGridSnapping, "Toggle Grid Snapping");
     self.snap_button.widget.enabled = false;
     self.snap_button.checked = self.canvas.grid_snapping_enabled;
-    self.snap_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).toggleGridSnapping();
-        }
-    }.click;
-    self.snap_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("Toggle Grid Snapping");
-        }
-    }.enter;
-    self.snap_button.onLeaveFn = menuButtonOnLeave;
     self.custom_grid_x_spinner.min_value = 2;
     self.custom_grid_x_spinner.max_value = 512;
     self.custom_grid_x_spinner.step_mode = .exponential;
@@ -628,6 +392,7 @@ fn initMenubar(self: *Self) !void {
             }
         }
     }.changed;
+
     self.zoom_spinner.setValue(self.canvas.scale);
     self.zoom_spinner.min_value = CanvasWidget.min_scale;
     self.zoom_spinner.max_value = CanvasWidget.max_scale;
@@ -644,18 +409,8 @@ fn initMenubar(self: *Self) !void {
             }
         }
     }.changed;
-    self.about_button.iconFn = icons.iconAbout;
-    self.about_button.onClickFn = struct {
-        fn click(button: *gui.Button) void {
-            getEditorFromMenuButton(button).showAboutDialog();
-        }
-    }.click;
-    self.about_button.onEnterFn = struct {
-        fn enter(button: *gui.Button) void {
-            getEditorFromMenuButton(button).setHelpText("About Mini Pixel");
-        }
-    }.enter;
-    self.about_button.onLeaveFn = menuButtonOnLeave;
+
+    configureToolbarButton(self.about_button, icons.iconAbout, showAboutDialog, "About Mini Pixel");
 
     // build menu bar
     try self.menu_bar.addButton(self.new_button);
@@ -763,7 +518,7 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
         switch (key_event.key) {
             .N => self.newDocument(),
             .O => self.tryOpenDocument(),
-            .S => self.trySaveDocument(shift_held),
+            .S => if (shift_held) self.trySaveAsDocument() else self.trySaveDocument(),
             .Z => self.tryUndoDocument(),
             .Y => self.tryRedoDocument(),
             .A => self.selectAll(),
@@ -993,8 +748,14 @@ fn saveDocument(self: *Self, force_save_as: bool) !void {
     }
 }
 
-pub fn trySaveDocument(self: *Self, force_save_as: bool) void {
-    self.saveDocument(force_save_as) catch {
+pub fn trySaveDocument(self: *Self) void {
+    self.saveDocument(false) catch {
+        self.showErrorMessageBox("Save document", "Could not save document.");
+    };
+}
+
+pub fn trySaveAsDocument(self: *Self) void {
+    self.saveDocument(true) catch {
         self.showErrorMessageBox("Save document", "Could not save document.");
     };
 }
@@ -1064,10 +825,34 @@ fn mirrorVerticallyDocument(self: *Self) void {
     };
 }
 
+fn rotateDocumentCw(self: *Self) void {
+    self.rotateDocument(true);
+}
+
+fn rotateDocumentCcw(self: *Self) void {
+    self.rotateDocument(false);
+}
+
 fn rotateDocument(self: *Self, clockwise: bool) void {
     self.document.rotate(clockwise) catch {
         self.showErrorMessageBox("Rotate image", "Could not rotate the image.");
     };
+}
+
+fn setToolCrop(self: *Self) void {
+    self.setTool(.crop);
+}
+
+fn setToolSelect(self: *Self) void {
+    self.setTool(.select);
+}
+
+fn setToolDraw(self: *Self) void {
+    self.setTool(.draw);
+}
+
+fn setToolFill(self: *Self) void {
+    self.setTool(.fill);
 }
 
 fn setTool(self: *Self, tool: CanvasWidget.ToolType) void {
