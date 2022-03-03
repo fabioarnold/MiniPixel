@@ -82,6 +82,8 @@ canvas: *CanvasWidget,
 palette_bar: *gui.Toolbar,
 palette_open_button: *gui.Button,
 palette_save_button: *gui.Button,
+palette_copy_button: *gui.Button,
+palette_paste_button: *gui.Button,
 palette_toggle_button: *gui.Button,
 color_palette: *ColorPaletteWidget,
 color_picker: *ColorPickerWidget,
@@ -140,6 +142,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .palette_bar = try gui.Toolbar.init(allocator, Rect(f32).make(0, 0, 163, 24)),
         .palette_open_button = try gui.Button.init(allocator, rect, ""),
         .palette_save_button = try gui.Button.init(allocator, rect, ""),
+        .palette_copy_button = try gui.Button.init(allocator, rect, ""),
+        .palette_paste_button = try gui.Button.init(allocator, rect, ""),
         .palette_toggle_button = try gui.Button.init(allocator, rect, ""),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
@@ -179,6 +183,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     try self.palette_bar.addButton(self.palette_open_button);
     try self.palette_bar.addButton(self.palette_save_button);
     try self.palette_bar.addSeparator();
+    try self.palette_bar.addButton(self.palette_copy_button);
+    try self.palette_bar.addButton(self.palette_paste_button);
+    try self.palette_bar.addSeparator();
     try self.palette_bar.addButton(self.palette_toggle_button);
     try self.widget.addChild(&self.color_palette.widget);
     try self.widget.addChild(&self.color_picker.widget);
@@ -190,6 +197,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
     configureToolbarButton(self.palette_open_button, icons.iconOpen, tryOpenPalette, "Open Palette");
     configureToolbarButton(self.palette_save_button, icons.iconSave, trySavePalette, "Save Palette");
+    configureToolbarButton(self.palette_copy_button, icons.iconCopy, tryCopyPalette, "Copy Color");
+    configureToolbarButton(self.palette_paste_button, icons.iconPasteDisabled, tryPastePalette, "Paste Color");
     configureToolbarButton(self.palette_toggle_button, icons.iconColorPalette, tryTogglePalette, "Toggle between 8-bit indexed mode and true color");
 
     std.mem.copy(u8, self.document.colormap, &self.color_palette.colors);
@@ -493,6 +502,8 @@ pub fn deinit(self: *Self) void {
     self.palette_bar.deinit();
     self.palette_open_button.deinit();
     self.palette_save_button.deinit();
+    self.palette_copy_button.deinit();
+    self.palette_paste_button.deinit();
     self.palette_toggle_button.deinit();
     self.color_palette.deinit();
     self.color_picker.deinit();
@@ -913,6 +924,16 @@ fn trySavePalette(self: *Self) void {
     self.savePalette() catch {
         self.showErrorMessageBox("Save palette", "Could not save palette.");
     };
+}
+
+fn tryCopyPalette(self: *Self) void {
+    _ = self;
+    // TODO
+}
+
+fn tryPastePalette(self: *Self) void {
+    _ = self;
+    // TODO
 }
 
 fn togglePalette(self: *Self) !void {
