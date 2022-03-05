@@ -197,8 +197,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
     configureToolbarButton(self.palette_open_button, icons.iconOpen, tryOpenPalette, "Open Palette");
     configureToolbarButton(self.palette_save_button, icons.iconSave, trySavePalette, "Save Palette");
-    configureToolbarButton(self.palette_copy_button, icons.iconCopy, tryCopyPalette, "Copy Color");
-    configureToolbarButton(self.palette_paste_button, icons.iconPasteDisabled, tryPastePalette, "Paste Color");
+    configureToolbarButton(self.palette_copy_button, icons.iconCopyEnabled, tryCopyPalette, "Copy Color");
+    configureToolbarButton(self.palette_paste_button, icons.iconPasteEnabled, tryPastePalette, "Paste Color");
     configureToolbarButton(self.palette_toggle_button, icons.iconColorPalette, tryTogglePalette, "Toggle between 8-bit indexed mode and true color");
 
     std.mem.copy(u8, self.document.colormap, &self.color_palette.colors);
@@ -225,6 +225,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
                         },
                     }
                 }
+                editor.checkClipboard();
             }
         }
     }.selectionChanged;
@@ -321,6 +322,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     self.setTool(.draw);
     self.canvas.centerDocument();
     self.updateImageStatus();
+    self.checkClipboard();
 
     return self;
 }
@@ -350,9 +352,8 @@ fn initMenubar(self: *Self) !void {
     configureToolbarButton(self.redo_button, icons.iconRedoDisabled, tryRedoDocument, "Redo Action (Ctrl+Y)");
 
     configureToolbarButton(self.cut_button, icons.iconCut, cutDocument, "Cut Selection to Clipboard (Ctrl+X)");
-    configureToolbarButton(self.copy_button, icons.iconCopy, copyDocument, "Copy Selection to Clipboard (Ctrl+C)");
+    configureToolbarButton(self.copy_button, icons.iconCopyEnabled, copyDocument, "Copy Selection to Clipboard (Ctrl+C)");
     configureToolbarButton(self.paste_button, icons.iconPasteEnabled, pasteDocument, "Paste from Clipboard (Ctrl+V)");
-    self.checkClipboard(); // will set the correct icon
 
     configureToolbarButton(self.crop_tool_button, icons.iconToolCrop, setToolCrop, "Crop/Enlarge Tool (C)");
     configureToolbarButton(self.select_tool_button, icons.iconToolSelect, setToolSelect, "Rectangle Select Tool (R)");
@@ -584,6 +585,21 @@ fn checkClipboard(self: *Self) void {
     } else {
         self.paste_button.widget.enabled = false;
         self.paste_button.iconFn = icons.iconPasteDisabled;
+    }
+
+    if (self.color_palette.selected != null) {
+        self.palette_copy_button.widget.enabled = true;
+        self.palette_copy_button.iconFn = icons.iconCopyEnabled;
+    } else {
+        self.palette_copy_button.widget.enabled = false;
+        self.palette_copy_button.iconFn = icons.iconCopyDisabled;
+    }
+    if (self.color_palette.selected != null and Clipboard.hasColor()) {
+        self.palette_paste_button.widget.enabled = true;
+        self.palette_paste_button.iconFn = icons.iconPasteEnabled;
+    } else {
+        self.palette_paste_button.widget.enabled = false;
+        self.palette_paste_button.iconFn = icons.iconPasteDisabled;
     }
 }
 
@@ -927,13 +943,26 @@ fn trySavePalette(self: *Self) void {
 }
 
 fn tryCopyPalette(self: *Self) void {
-    _ = self;
-    // TODO
+    if (self.color_palette.selected) |selected| {
+        const c = self.color_palette.colors[4 * @as(usize, selected) ..][0..4];
+        Clipboard.setColor(.{ c[0], c[1], c[2], c[3] }) catch {
+            self.showErrorMessageBox("Copy color", "Could not copy color.");
+            return;
+        };
+        self.checkClipboard();
+    }
 }
 
 fn tryPastePalette(self: *Self) void {
-    _ = self;
-    // TODO
+    if (Clipboard.getColor()) |color| {
+        if (self.color_palette.selected) |selected| {
+            std.mem.copy(u8, self.color_palette.colors[4 * @as(usize, selected) ..][0..4], &color);
+            self.updateDocumentPaletteAt(selected);
+        }
+        self.color_foreground_background.setActiveRgba(&color);
+    } else |_| {
+        self.showErrorMessageBox("Paste color", "Could not paste color.");
+    }
 }
 
 fn togglePalette(self: *Self) !void {

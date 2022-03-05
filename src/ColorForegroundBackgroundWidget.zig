@@ -84,7 +84,7 @@ pub fn getRgba(self: Self, color_layer: ColorLayer) [4]u8 {
     return self.colors[@enumToInt(color_layer)];
 }
 
-pub fn setRgba(self: *Self, color_layer: ColorLayer, color: []u8) void {
+pub fn setRgba(self: *Self, color_layer: ColorLayer, color: []const u8) void {
     const i = @enumToInt(color_layer);
     if (!std.mem.eql(u8, &self.colors[i], color)) {
         std.mem.copy(u8, &self.colors[i], color);
@@ -96,7 +96,7 @@ pub fn getActiveRgba(self: Self) [4]u8 {
     return self.getRgba(self.active);
 }
 
-pub fn setActiveRgba(self: *Self, color: []u8) void {
+pub fn setActiveRgba(self: *Self, color: []const u8) void {
     self.setRgba(self.active, color);
 }
 
