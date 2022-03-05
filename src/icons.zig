@@ -221,7 +221,15 @@ pub fn iconCut() void {
     nvg.fill();
 }
 
-pub fn iconCopy() void {
+pub fn iconCopyEnabled() void {
+    iconCopy(true);
+}
+
+pub fn iconCopyDisabled() void {
+    iconCopy(false);
+}
+
+pub fn iconCopy(enabled: bool) void {
     for ([_]u0{ 0, 0 }) |_| {
         nvg.beginPath();
         nvg.moveTo(2.5, 0.5);
@@ -230,9 +238,9 @@ pub fn iconCopy() void {
         nvg.lineTo(10.5, 2.5);
         nvg.lineTo(8.5, 0.5);
         nvg.closePath();
-        nvg.fillColor(nvg.rgb(255, 255, 255));
+        nvg.fillColor(if (enabled) nvg.rgb(255, 255, 255) else nvg.rgb(224, 224, 224));
         nvg.fill();
-        nvg.strokeColor(nvg.rgb(66, 66, 66));
+        nvg.strokeColor(if (enabled) nvg.rgb(66, 66, 66) else nvg.rgb(170, 170, 170));
         nvg.stroke();
         nvg.beginPath();
         nvg.moveTo(7.5, 0.5);
