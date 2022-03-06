@@ -692,8 +692,11 @@ fn sdlSetWindowTitle(window_id: u32, title: [:0]const u8) void {
     }
 }
 
+pub fn sdlHasClipboardText() bool {
+    return c.SDL_HasClipboardText() == c.SDL_TRUE;
+}
+
 pub fn sdlGetClipboardText(allocator: std.mem.Allocator) !?[]const u8 {
-    if (c.SDL_HasClipboardText() == c.SDL_FALSE) return null;
     const sdl_text = c.SDL_GetClipboardText();
     if (sdl_text == null) return null;
     var text = try allocator.dupe(u8, std.mem.sliceTo(sdl_text, 0));
@@ -781,13 +784,14 @@ pub fn main() !void {
         sdl_windows.deinit();
     }
 
-    app = try gui.Application.init(allocator, gui.Application.SystemCallbacks{
+    app = try gui.Application.init(allocator, .{
         .createWindow = sdlCreateWindow,
         .destroyWindow = sdlDestroyWindow,
         .setWindowTitle = sdlSetWindowTitle,
         .startTimer = sdlAddTimer,
         .cancelTimer = sdlCancelTimer,
         .showCursor = sdlShowCursor,
+        .hasClipboardText = sdlHasClipboardText,
         .getClipboardText = sdlGetClipboardText,
         .setClipboardText = sdlSetClipboardText,
     });

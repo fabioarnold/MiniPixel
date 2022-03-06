@@ -260,45 +260,39 @@ fn onTextInput(widget: *gui.Widget, event: *const gui.TextInputEvent) void {
 }
 
 fn cut(self: *Self) !void {
-    if (self.widget.getApplication()) |app| {
-        if (self.hasSelection()) {
-            try app.setClipboardText(self.allocator, self.getSelection());
-            self.deleteSelection();
-        } else {
-            try app.setClipboardText(self.allocator, self.text.items);
-            self.text.clearRetainingCapacity();
-            self.cursor_position = 0;
-            self.clearSelection();
-        }
-        self.onChanged();
+    if (self.hasSelection()) {
+        try gui.Application.setClipboardText(self.allocator, self.getSelection());
+        self.deleteSelection();
+    } else {
+        try gui.Application.setClipboardText(self.allocator, self.text.items);
+        self.text.clearRetainingCapacity();
+        self.cursor_position = 0;
+        self.clearSelection();
     }
+    self.onChanged();
 }
 
 fn copy(self: *Self) !void {
-    if (self.widget.getApplication()) |app| {
-        const text = if (self.hasSelection()) self.getSelection() else self.text.items;
-        try app.setClipboardText(self.allocator, text);
-    }
+    const text = if (self.hasSelection()) self.getSelection() else self.text.items;
+    try gui.Application.setClipboardText(self.allocator, text);
 }
 
 fn paste(self: *Self) !void {
-    if (self.widget.getApplication()) |app| {
-        const text = (try app.getClipboardText(self.allocator)) orelse return;
-        defer self.allocator.free(text);
+    const text = (try gui.Application.getClipboardText(self.allocator)) orelse return;
+    defer self.allocator.free(text);
 
-        const codepoint_count = try std.unicode.utf8CountCodepoints(text);
+    const codepoint_count = try std.unicode.utf8CountCodepoints(text);
 
-        if (self.hasSelection()) {
-            self.deleteSelection();
-        }
-        const offset = getCodepointOffset(self.text.items, self.cursor_position);
-        self.text.insertSlice(offset, text) catch unreachable;
-        self.cursor_position += codepoint_count;
-
-        self.show_cursor_position_preview = true;
-
-        self.onChanged();
+    if (self.hasSelection()) {
+        self.deleteSelection();
     }
+    const offset = getCodepointOffset(self.text.items, self.cursor_position);
+    self.text.insertSlice(offset, text) catch unreachable;
+    self.cursor_position += codepoint_count;
+
+    self.show_cursor_position_preview = true;
+
+    self.onChanged();
 }
 
 fn getCodepointOffset(text: []const u8, position: usize) usize {
@@ -427,7 +421,7 @@ pub fn draw(widget: *gui.Widget) void {
 
     nvg.fontFace("guifont");
     nvg.fontSize(12);
-    var text_align = nvg.TextAlign{.vertical = .middle};
+    var text_align = nvg.TextAlign{ .vertical = .middle };
     const padding = 5;
     var x = rect.x;
     switch (self.text_alignment) {
