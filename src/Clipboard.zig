@@ -1,8 +1,8 @@
 const std = @import("std");
+const Application = @import("gui").Application;
 const Image = @import("Image.zig");
 
 var clipboard_image: ?Image = null;
-var clipboard_color: ?[4]u8 = null;
 
 pub fn deinit() void {
     if (clipboard_image) |image| {
@@ -32,14 +32,39 @@ usingnamespace switch (@import("builtin").os.tag) {
     },
 };
 
-pub fn hasColor() bool {
-    return clipboard_color != null;
+fn isColorString(string: []const u8) bool {
+    if (string.len != 9) return false;
+    if (string[0] != '#') return false;
+    for (string[1..]) |c| {
+        switch (c) {
+            '0'...'9', 'A'...'F' => {},
+            else => return false,
+        }
+    }
+    return true;
 }
 
-pub fn getColor() ![4]u8 {
-    return clipboard_color orelse error.EmptyClipboard;
+pub fn hasColor(allocator: std.mem.Allocator) bool {
+    if (!Application.hasClipboardText()) return false;
+    const string = (Application.getClipboardText(allocator) catch return false).?;
+    defer allocator.free(string);
+    return isColorString(string);
 }
 
-pub fn setColor(color: [4]u8) !void {
-    clipboard_color = color;
+pub fn getColor(allocator: std.mem.Allocator) ![4]u8 {
+    const string = (try Application.getClipboardText(allocator)).?;
+    defer allocator.free(string);
+    if (!isColorString(string)) return error.InvalidColorFormat;
+    return [_]u8{
+        try std.fmt.parseInt(u8, string[1..3], 16),
+        try std.fmt.parseInt(u8, string[3..5], 16),
+        try std.fmt.parseInt(u8, string[5..7], 16),
+        try std.fmt.parseInt(u8, string[7..9], 16),
+    };
+}
+
+pub fn setColor(allocator: std.mem.Allocator, color: [4]u8) !void {
+    var string: [9]u8 = undefined;
+    _ = try std.fmt.bufPrint(&string, "#{X:0>2}{X:0>2}{X:0>2}{X:0>2}", .{ color[0], color[1], color[2], color[3] });
+    try Application.setClipboardText(allocator, &string);
 }
