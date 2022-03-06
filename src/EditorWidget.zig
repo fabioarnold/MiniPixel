@@ -327,7 +327,12 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     return self;
 }
 
-fn configureToolbarButton(button: *gui.Button, icon: fn () void, comptime onEditorClick: fn (*Self) void, comptime helpText: []const u8) void {
+fn configureToolbarButton(
+    button: *gui.Button,
+    icon: fn () void,
+    comptime onEditorClick: fn (*Self) void,
+    comptime help_text: []const u8,
+) void {
     button.iconFn = icon;
     button.onClickFn = struct {
         fn click(b: *gui.Button) void {
@@ -336,7 +341,7 @@ fn configureToolbarButton(button: *gui.Button, icon: fn () void, comptime onEdit
     }.click;
     button.onEnterFn = struct {
         fn enter(b: *gui.Button) void {
-            getEditorFromMenuButton(b).setHelpText(helpText);
+            getEditorFromMenuButton(b).setHelpText(help_text);
         }
     }.enter;
     button.onLeaveFn = menuButtonOnLeave;
@@ -594,7 +599,7 @@ fn checkClipboard(self: *Self) void {
         self.palette_copy_button.widget.enabled = false;
         self.palette_copy_button.iconFn = icons.iconCopyDisabled;
     }
-    if (self.color_palette.selected != null and Clipboard.hasColor()) {
+    if (self.color_palette.selected != null and Clipboard.hasColor(self.allocator)) {
         self.palette_paste_button.widget.enabled = true;
         self.palette_paste_button.iconFn = icons.iconPasteEnabled;
     } else {
@@ -945,7 +950,7 @@ fn trySavePalette(self: *Self) void {
 fn tryCopyPalette(self: *Self) void {
     if (self.color_palette.selected) |selected| {
         const c = self.color_palette.colors[4 * @as(usize, selected) ..][0..4];
-        Clipboard.setColor(.{ c[0], c[1], c[2], c[3] }) catch {
+        Clipboard.setColor(self.allocator, .{ c[0], c[1], c[2], c[3] }) catch {
             self.showErrorMessageBox("Copy color", "Could not copy color.");
             return;
         };
@@ -954,7 +959,7 @@ fn tryCopyPalette(self: *Self) void {
 }
 
 fn tryPastePalette(self: *Self) void {
-    if (Clipboard.getColor()) |color| {
+    if (Clipboard.getColor(self.allocator)) |color| {
         if (self.color_palette.selected) |selected| {
             std.mem.copy(u8, self.color_palette.colors[4 * @as(usize, selected) ..][0..4], &color);
             self.updateDocumentPaletteAt(selected);
