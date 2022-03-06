@@ -29,17 +29,17 @@ usingnamespace switch (@import("builtin").os.tag) {
             deinit();
             clipboard_image = try image.clone(allocator);
         }
-
-        pub fn hasColor() bool {
-            return clipboard_color != null;
-        }
-
-        pub fn getColor() ![4]u8 {
-            return clipboard_color orelse error.EmptyClipboard;
-        }
-
-        pub fn setColor(color: [4]u8) !void {
-            clipboard_color = color;
-        }
     },
 };
+
+pub fn hasColor() bool {
+    return clipboard_color != null;
+}
+
+pub fn getColor() ![4]u8 {
+    return clipboard_color orelse error.EmptyClipboard;
+}
+
+pub fn setColor(color: [4]u8) !void {
+    clipboard_color = color;
+}
