@@ -227,11 +227,11 @@ pub fn setSize(self: *Self, width: f32, height: f32) void {
 }
 
 pub fn setTitle(self: *Self, title: [:0]const u8) void {
-    self.application.setWindowTitle(self.id, title);
+    gui.Application.setWindowTitle(self.id, title);
 }
 
 pub fn setCursor(self: *Self, cursor: ?fn () void) void {
-    self.application.showCursor(cursor == null);
+    gui.Application.showCursor(cursor == null);
     self.cursorFn = cursor;
 }
 
