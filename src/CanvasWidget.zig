@@ -603,9 +603,7 @@ const DrawTool = struct {
 
     fn onMouseUp(self: *DrawTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
         if (event.button == .left) {
-            canvas.document.endStroke() catch {
-                gui.showMessageBox(.err, "Stroke", "Out of memory"); // TODO: nicer error message
-            };
+            canvas.document.endStroke() catch {}; // TODO: show error message
             self.drawing = false;
         } else if (event.button == .right) {
             canvas.document.pick(self.edit_point.x, self.edit_point.y);
@@ -711,9 +709,7 @@ const FillTool = struct {
 
     fn onMouseUp(self: *FillTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
         if (event.button == .left) {
-            canvas.document.floodFill(self.edit_point.x, self.edit_point.y) catch {
-                gui.showMessageBox(.err, "Stroke", "Out of memory"); // TODO: nicer error message
-            };
+            canvas.document.floodFill(self.edit_point.x, self.edit_point.y) catch {}; // TODO: show error message
         } else if (event.button == .right) {
             canvas.document.pick(self.edit_point.x, self.edit_point.y);
             canvas.notifyColorPicked();

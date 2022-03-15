@@ -30,8 +30,9 @@ const ThemeColors = struct {
 };
 
 pub var theme_colors: ThemeColors = undefined;
+pub var grid_image: nvg.Image = undefined;
 
-pub fn defaultColorTheme() ThemeColors {
+fn defaultColorTheme() ThemeColors {
     return .{
         .background = nvg.rgb(224, 224, 224),
         .shadow = nvg.rgb(170, 170, 170),
@@ -42,18 +43,17 @@ pub fn defaultColorTheme() ThemeColors {
     };
 }
 
-pub const MessageBoxIcon = enum {
-    err,
-    warn,
-    info,
-};
+pub fn init() void {
+    theme_colors = defaultColorTheme();
 
-pub fn showMessageBox(icon: MessageBoxIcon, title: [:0]const u8, message: [:0]const u8) void {
-    // TODO: modal window
-    //if (systemShowMessageBoxFn) |systemShowMessageBox| systemShowMessageBox(icon, title, message);
-    _ = icon;
-    _ = title;
-    _ = message;
+    grid_image = nvg.createImageRgba(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
+        0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF,
+    });
+}
+
+pub fn deinit() void {
+    nvg.deleteImage(grid_image);
 }
 
 pub fn pixelsToPoints(pixel_size: f32) f32 {

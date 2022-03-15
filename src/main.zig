@@ -814,7 +814,8 @@ pub fn main() !void {
     try nvg.init();
     defer nvg.quit();
 
-    gui.theme_colors = gui.defaultColorTheme();
+    gui.init();
+    defer gui.deinit();
 
     const roboto_regular = @embedFile("../data/fonts/Roboto-Regular.ttf");
     const roboto_bold = @embedFile("../data/fonts/Roboto-Bold.ttf");

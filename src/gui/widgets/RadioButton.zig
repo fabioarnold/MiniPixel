@@ -140,8 +140,8 @@ pub fn draw(widget: *gui.Widget) void {
         var bounds: [4]f32 = undefined;
         _ = nvg.textBounds(rect.x + 16, cy, self.text, &bounds);
         nvg.beginPath();
-        nvg.rect(@round(bounds[0]) - 0.5, @round(bounds[1]) - 0.5, @round(bounds[2] - bounds[0]) + 1, @round(bounds[3] - bounds[1]) + 1);
-        nvg.strokeColor(nvg.rgb(0, 0, 0)); // TODO: dashed lines
+        nvg.rect(@round(bounds[0]) - 1.5, @round(bounds[1]) - 1.5, @round(bounds[2] - bounds[0]) + 3, @round(bounds[3] - bounds[1]) + 3);
+        nvg.strokePaint(nvg.imagePattern(0, 0, 2, 2, 0, gui.grid_image, 1));
         nvg.stroke();
     }
 }
