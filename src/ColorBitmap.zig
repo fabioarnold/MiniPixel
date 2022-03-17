@@ -273,18 +273,17 @@ pub fn mirrorHorizontally(self: ColorBitmap) void {
     }
 }
 
-pub fn mirrorVertically(self: ColorBitmap) !void {
-    const pitch = 4 * self.width;
-    var tmp = try self.allocator.alloc(u8, pitch);
-    defer self.allocator.free(tmp);
+pub fn mirrorVertically(self: ColorBitmap) void {
     var y0: u32 = 0;
     var y1: u32 = self.height - 1;
     while (y0 < y1) {
-        const line0 = self.pixels[y0 * pitch .. (y0 + 1) * pitch];
-        const line1 = self.pixels[y1 * pitch .. (y1 + 1) * pitch];
-        std.mem.copy(u8, tmp, line0);
-        std.mem.copy(u8, line0, line1);
-        std.mem.copy(u8, line1, tmp);
+        var x: u32 = 0;
+        while (x < self.width) : (x += 1) {
+            const color0 = self.getPixelUnchecked(x, y0);
+            const color1 = self.getPixelUnchecked(x, y1);
+            self.setPixelUnchecked(x, y0, color1);
+            self.setPixelUnchecked(x, y1, color0);
+        }
         y0 += 1;
         y1 -= 1;
     }

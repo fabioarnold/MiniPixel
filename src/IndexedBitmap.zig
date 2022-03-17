@@ -220,17 +220,17 @@ pub fn mirrorHorizontally(self: IndexedBitmap) void {
     }
 }
 
-pub fn mirrorVertically(self: IndexedBitmap) !void {
-    var tmp = try self.allocator.alloc(u8, self.width);
-    defer self.allocator.free(tmp);
+pub fn mirrorVertically(self: IndexedBitmap) void {
     var y0: u32 = 0;
     var y1: u32 = self.height - 1;
     while (y0 < y1) {
-        const line0 = self.indices[y0 * self.width .. (y0 + 1) * self.width];
-        const line1 = self.indices[y1 * self.width .. (y1 + 1) * self.width];
-        std.mem.copy(u8, tmp, line0);
-        std.mem.copy(u8, line0, line1);
-        std.mem.copy(u8, line1, tmp);
+        var x: u32 = 0;
+        while (x < self.width) : (x += 1) {
+            const index0 = self.getIndexUnchecked(x, y0);
+            const index1 = self.getIndexUnchecked(x, y1);
+            self.setIndexUnchecked(x, y0, index1);
+            self.setIndexUnchecked(x, y1, index0);
+        }
         y0 += 1;
         y1 -= 1;
     }

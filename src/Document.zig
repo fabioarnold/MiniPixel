@@ -110,11 +110,11 @@ const Bitmap = union(BitmapType) {
         }
     }
 
-    fn mirrorVertically(self: Bitmap) !void {
-        try switch (self) {
+    fn mirrorVertically(self: Bitmap) void {
+        switch (self) {
             .color => |color_bitmap| color_bitmap.mirrorVertically(),
             .indexed => |indexed_bitmap| indexed_bitmap.mirrorVertically(),
-        };
+        }
     }
 
     fn rotate(self: *Bitmap, clockwise: bool) !void {
@@ -853,10 +853,10 @@ pub fn mirrorHorizontally(self: *Self) !void {
 
 pub fn mirrorVertically(self: *Self) !void {
     if (self.selection) |*selection| {
-        try selection.bitmap.mirrorVertically();
+        selection.bitmap.mirrorVertically();
         selection.updateTexture();
     } else {
-        try self.bitmap.mirrorVertically();
+        self.bitmap.mirrorVertically();
         self.last_preview = .full;
         self.clearPreview();
         try self.history.pushFrame(self);
