@@ -267,100 +267,72 @@ pub fn save(self: *Self, file_path: []const u8) !void {
     try image.writeToFile(file_path);
 }
 
+const Snapshot = struct {
+    x: i32,
+    y: i32,
+    bitmap: Bitmap,
+    colormap: []u8,
+    selection: ?struct {
+        rect: Recti,
+        bitmap: Bitmap,
+    },
+};
+
 pub fn serialize(self: Document) ![]u8 {
-    const allocator = self.allocator;
-    var output = ArrayList(u8).init(allocator);
+    var output = ArrayList(u8).init(self.allocator);
 
     var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{});
     defer comp.deinit();
-    var writer = comp.writer();
 
-    try writer.writeIntNative(i32, self.x);
-    try writer.writeIntNative(i32, self.y);
-    try writer.writeIntNative(u32, self.getWidth());
-    try writer.writeIntNative(u32, self.getHeight());
-    try writer.writeIntNative(std.meta.Tag(BitmapType), @enumToInt(self.getBitmapType()));
-    switch (self.bitmap) {
-        .color => |color_bitmap| _ = try writer.write(color_bitmap.pixels),
-        .indexed => |indexed_bitmap| _ = try writer.write(indexed_bitmap.indices),
-    }
-    _ = try writer.write(self.colormap);
-    if (self.selection) |selection| {
-        try writer.writeIntNative(u8, 1);
-        try writer.writeIntNative(i32, selection.rect.x);
-        try writer.writeIntNative(i32, selection.rect.y);
-        try writer.writeIntNative(i32, selection.rect.w);
-        try writer.writeIntNative(i32, selection.rect.h);
-        try writer.writeIntNative(std.meta.Tag(BitmapType), @enumToInt(std.meta.activeTag(selection.bitmap)));
-        switch (selection.bitmap) {
-            .color => |color_bitmap| _ = try writer.write(color_bitmap.pixels),
-            .indexed => |indexed_bitmap| _ = try writer.write(indexed_bitmap.indices),
-        }
-    } else {
-        try writer.writeIntNative(u8, 0);
-    }
+    var snapshot = Snapshot{
+        .x = self.x,
+        .y = self.y,
+        .bitmap = self.bitmap,
+        .colormap = self.colormap,
+        .selection = if (self.selection) |selection| .{
+            .rect = selection.rect,
+            .bitmap = selection.bitmap,
+        } else null,
+    };
+    try s2s.serialize(comp.writer(), Snapshot, snapshot);
+
     try comp.close();
 
     return output.items;
 }
 
-pub fn deserialize(self: *Document, snapshot: []u8) !void {
+pub fn deserialize(self: *Document, data: []u8) !void {
     self.freeSelection();
 
-    var input = std.io.fixedBufferStream(snapshot);
+    var input = std.io.fixedBufferStream(data);
     var decomp = try std.compress.deflate.decompressor(self.allocator, input.reader(), null);
     defer decomp.deinit();
 
-    var reader = decomp.reader();
-    const x = try reader.readIntNative(i32);
-    const y = try reader.readIntNative(i32);
-    const width = try reader.readIntNative(u32);
-    const height = try reader.readIntNative(u32);
-    const bitmap_type = @intToEnum(BitmapType, try reader.readIntNative(std.meta.Tag(BitmapType)));
-    const recreate = self.getWidth() != width or self.getHeight() != height or self.getBitmapType() != bitmap_type;
-    if (recreate) {
-        self.bitmap.deinit(self.allocator);
-        self.bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
-    }
-    switch (self.bitmap) {
-        .color => |color_bitmap| _ = try reader.readAll(color_bitmap.pixels),
-        .indexed => |indexed_bitmap| _ = try reader.readAll(indexed_bitmap.indices),
-    }
-    _ = try reader.readAll(self.colormap);
-    const has_selection = (try reader.readIntNative(u8)) == 1;
-    if (has_selection) {
-        const rect = Recti{
-            .x = try reader.readIntNative(i32),
-            .y = try reader.readIntNative(i32),
-            .w = try reader.readIntNative(i32),
-            .h = try reader.readIntNative(i32),
-        };
-        const selection_bitmap_type = @intToEnum(BitmapType, try reader.readIntNative(std.meta.Tag(BitmapType)));
-        const bitmap = try Bitmap.init(selection_bitmap_type, self.allocator, @intCast(u32, rect.w), @intCast(u32, rect.h));
-        switch (bitmap) {
-            .color => |color_bitmap| _ = try reader.readAll(color_bitmap.pixels),
-            .indexed => |indexed_bitmap| _ = try reader.readAll(indexed_bitmap.indices),
-        }
+    var snapshot = try s2s.deserializeAlloc(decomp.reader(), Snapshot, self.allocator);
+    self.bitmap.deinit(self.allocator);
+    self.bitmap = snapshot.bitmap;
+    self.allocator.free(self.colormap);
+    self.colormap = snapshot.colormap;
+    self.freeSelection();
+    if (snapshot.selection) |selection| {
         self.selection = Selection{
-            .rect = rect,
-            .bitmap = bitmap,
-            .texture = bitmap.createTexture(),
+            .rect = selection.rect,
+            .bitmap = selection.bitmap,
+            .texture = selection.bitmap.createTexture(),
         };
     }
 
     _ = decomp.close();
 
-    if (recreate) {
-        self.preview_bitmap.deinit(self.allocator);
-        self.preview_bitmap = try self.bitmap.clone(self.allocator);
-        self.need_texture_recreation = true;
-    }
+    self.preview_bitmap.deinit(self.allocator);
+    self.preview_bitmap = try self.bitmap.clone(self.allocator);
+    self.need_texture_recreation = true;
 
-    if (self.x != x or self.y != y) {
-        const dx = x - self.x;
-        const dy = y - self.y;
-        self.x = x;
-        self.y = y;
+    if (self.x != snapshot.x or self.y != snapshot.y) {
+        const dx = snapshot.x - self.x;
+        const dy = snapshot.y - self.y;
+        self.x += dx;
+        self.y += dy;
         self.canvas.translateByPixel(dx, dy);
     }
     self.last_preview = .full;
