@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const testing = std.testing;
 
-const ColorBitmap = @import("Bitmap.zig");
+const ColorBitmap = @import("ColorBitmap.zig");
 
 allocator: Allocator,
 
@@ -10,11 +10,10 @@ width: u32,
 height: u32,
 indices: []u8,
 
-const Self = @This();
 const IndexedBitmap = @This();
 
-pub fn init(allocator: Allocator, width: u32, height: u32) !Self {
-    var self = Self{
+pub fn init(allocator: Allocator, width: u32, height: u32) !IndexedBitmap {
+    var self = IndexedBitmap{
         .allocator = allocator,
         .width = width,
         .height = height,
@@ -25,12 +24,12 @@ pub fn init(allocator: Allocator, width: u32, height: u32) !Self {
     return self;
 }
 
-pub fn deinit(self: Self) void {
+pub fn deinit(self: IndexedBitmap) void {
     self.allocator.free(self.indices);
 }
 
-pub fn clone(self: Self) !Self {
-    return Self{
+pub fn clone(self: IndexedBitmap) !IndexedBitmap {
+    return IndexedBitmap{
         .allocator = self.allocator,
         .width = self.width,
         .height = self.height,
@@ -38,7 +37,7 @@ pub fn clone(self: Self) !Self {
     };
 }
 
-pub fn eql(self: Self, bitmap: IndexedBitmap) bool {
+pub fn eql(self: IndexedBitmap, bitmap: IndexedBitmap) bool {
     return self.width == bitmap.width and
         self.width == bitmap.width and
         std.mem.eql(u8, self.indices, bitmap.indices);
@@ -59,7 +58,7 @@ pub fn convertToTruecolor(self: IndexedBitmap, colormap: []const u8) !ColorBitma
     return color_bitmap;
 }
 
-pub fn setIndex(self: Self, x: i32, y: i32, index: u8) bool {
+pub fn setIndex(self: IndexedBitmap, x: i32, y: i32, index: u8) bool {
     if (x >= 0 and y >= 0) {
         const ux = @intCast(u32, x);
         const uy = @intCast(u32, y);
@@ -71,13 +70,13 @@ pub fn setIndex(self: Self, x: i32, y: i32, index: u8) bool {
     return false;
 }
 
-pub fn setIndexUnchecked(self: Self, x: u32, y: u32, index: u8) void {
+pub fn setIndexUnchecked(self: IndexedBitmap, x: u32, y: u32, index: u8) void {
     std.debug.assert(x < self.width);
     const i = y * self.width + x;
     self.indices[i] = index;
 }
 
-pub fn getIndex(self: Self, x: i32, y: i32) ?u8 {
+pub fn getIndex(self: IndexedBitmap, x: i32, y: i32) ?u8 {
     if (x >= 0 and y >= 0) {
         const ux = @intCast(u32, x);
         const uy = @intCast(u32, y);
@@ -88,18 +87,18 @@ pub fn getIndex(self: Self, x: i32, y: i32) ?u8 {
     return null;
 }
 
-pub fn getIndexUnchecked(self: Self, x: u32, y: u32) u8 {
+pub fn getIndexUnchecked(self: IndexedBitmap, x: u32, y: u32) u8 {
     std.debug.assert(x < self.width);
     const i = y * self.width + x;
     return self.indices[i];
 }
 
-pub fn copyIndexUnchecked(self: Self, dst: IndexedBitmap, x: u32, y: u32) void {
+pub fn copyIndexUnchecked(self: IndexedBitmap, dst: IndexedBitmap, x: u32, y: u32) void {
     const src_index = self.getIndexUnchecked(x, y);
     dst.setIndexUnchecked(x, y, src_index);
 }
 
-pub fn drawLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, index: u8, skip_first: bool) void {
+pub fn drawLine(self: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32, index: u8, skip_first: bool) void {
     const dx = std.math.absInt(x1 - x0) catch unreachable;
     const sx: i32 = if (x0 < x1) 1 else -1;
     const dy = -(std.math.absInt(y1 - y0) catch unreachable);
@@ -126,7 +125,7 @@ pub fn drawLine(self: Self, x0: i32, y0: i32, x1: i32, y1: i32, index: u8, skip_
     }
 }
 
-pub fn copyLine(self: Self, dst: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
+pub fn copyLine(self: IndexedBitmap, dst: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
     const dx = std.math.absInt(x1 - x0) catch unreachable;
     const sx: i32 = if (x0 < x1) 1 else -1;
     const dy = -(std.math.absInt(y1 - y0) catch unreachable);
@@ -152,15 +151,15 @@ pub fn copyLine(self: Self, dst: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i
     }
 }
 
-pub fn clear(self: Self) void {
+pub fn clear(self: IndexedBitmap) void {
     std.mem.set(u8, self.indices, 0);
 }
 
-pub fn fill(self: Self, index: u8) void {
+pub fn fill(self: IndexedBitmap, index: u8) void {
     std.mem.set(u8, self.indices, index);
 }
 
-pub fn floodFill(self: *Self, x: i32, y: i32, index: u8) !void {
+pub fn floodFill(self: *IndexedBitmap, x: i32, y: i32, index: u8) !void {
     const old_index = self.getIndex(x, y) orelse return;
     if (old_index == index) return;
 
@@ -205,7 +204,7 @@ pub fn floodFill(self: *Self, x: i32, y: i32, index: u8) !void {
     }
 }
 
-pub fn mirrorHorizontally(self: Self) void {
+pub fn mirrorHorizontally(self: IndexedBitmap) void {
     var y: u32 = 0;
     while (y < self.height) : (y += 1) {
         var x0: u32 = 0;
@@ -221,7 +220,7 @@ pub fn mirrorHorizontally(self: Self) void {
     }
 }
 
-pub fn mirrorVertically(self: Self) !void {
+pub fn mirrorVertically(self: IndexedBitmap) !void {
     var tmp = try self.allocator.alloc(u8, self.width);
     defer self.allocator.free(tmp);
     var y0: u32 = 0;
@@ -237,7 +236,7 @@ pub fn mirrorVertically(self: Self) !void {
     }
 }
 
-pub fn rotate(self: *Self, clockwise: bool) !void {
+pub fn rotate(self: *IndexedBitmap, clockwise: bool) !void {
     const tmp_bitmap = try self.clone();
     defer tmp_bitmap.deinit();
     std.mem.swap(u32, &self.width, &self.height);

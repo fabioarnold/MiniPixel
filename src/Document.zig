@@ -13,7 +13,7 @@ const Rect = geometry.Rect;
 const Recti = Rect(i32);
 
 const CanvasWidget = @import("CanvasWidget.zig");
-const ColorBitmap = @import("Bitmap.zig");
+const ColorBitmap = @import("ColorBitmap.zig");
 const IndexedBitmap = @import("IndexedBitmap.zig");
 const col = @import("color.zig");
 const Color = col.Color;

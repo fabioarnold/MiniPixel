@@ -4,7 +4,6 @@ const ArrayList = std.ArrayList;
 
 const EditorWidget = @import("EditorWidget.zig");
 const Document = @import("Document.zig");
-const Bitmap = @import("Bitmap.zig");
 
 const Snapshot = []u8;
 
