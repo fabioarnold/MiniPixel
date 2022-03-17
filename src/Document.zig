@@ -41,31 +41,29 @@ const Bitmap = union(BitmapType) {
         };
     }
 
-    fn initFromImage(allocator: Allocator, image: Image) Bitmap {
+    fn initFromImage(image: Image) Bitmap {
         return if (image.colormap != null) .{ .indexed = IndexedBitmap{
-            .allocator = allocator,
             .width = image.width,
             .height = image.height,
             .indices = image.pixels,
         } } else .{ .color = ColorBitmap{
-            .allocator = allocator,
             .width = image.width,
             .height = image.height,
             .pixels = image.pixels,
         } };
     }
 
-    fn deinit(self: Bitmap) void {
+    fn deinit(self: Bitmap, allocator: Allocator) void {
         switch (self) {
-            .color => |color_bitmap| color_bitmap.deinit(),
-            .indexed => |indexed_bitmap| indexed_bitmap.deinit(),
+            .color => |color_bitmap| color_bitmap.deinit(allocator),
+            .indexed => |indexed_bitmap| indexed_bitmap.deinit(allocator),
         }
     }
 
-    fn clone(self: Bitmap) !Bitmap {
+    fn clone(self: Bitmap, allocator: Allocator) !Bitmap {
         return switch (self) {
-            .color => |color_bitmap| Bitmap{ .color = try color_bitmap.clone() },
-            .indexed => |indexed_bitmap| Bitmap{ .indexed = try indexed_bitmap.clone() },
+            .color => |color_bitmap| Bitmap{ .color = try color_bitmap.clone(allocator) },
+            .indexed => |indexed_bitmap| Bitmap{ .indexed = try indexed_bitmap.clone(allocator) },
         };
     }
 
@@ -117,10 +115,10 @@ const Bitmap = union(BitmapType) {
         }
     }
 
-    fn rotate(self: *Bitmap, clockwise: bool) !void {
+    fn rotate(self: *Bitmap, allocator: Allocator, clockwise: bool) !void {
         try switch (self.*) {
-            .color => |*color_bitmap| color_bitmap.rotate(clockwise),
-            .indexed => |*indexed_bitmap| indexed_bitmap.rotate(clockwise),
+            .color => |*color_bitmap| color_bitmap.rotate(allocator, clockwise),
+            .indexed => |*indexed_bitmap| indexed_bitmap.rotate(allocator, clockwise),
         };
     }
 };
@@ -203,7 +201,7 @@ pub fn init(allocator: Allocator) !*Self {
     };
 
     self.bitmap.color.fill(self.background_color);
-    self.preview_bitmap = try self.bitmap.clone();
+    self.preview_bitmap = try self.bitmap.clone(self.allocator);
     self.texture = self.bitmap.createTexture();
     self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, self.colormap);
     try self.history.reset(self);
@@ -213,8 +211,8 @@ pub fn init(allocator: Allocator) !*Self {
 
 pub fn deinit(self: *Self) void {
     self.history.deinit();
-    self.bitmap.deinit();
-    self.preview_bitmap.deinit();
+    self.bitmap.deinit(self.allocator);
+    self.preview_bitmap.deinit(self.allocator);
     self.allocator.free(self.colormap);
     nvg.deleteImage(self.texture);
     nvg.deleteImage(self.texture_palette);
@@ -223,8 +221,8 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) !void {
-    self.bitmap.deinit();
-    self.preview_bitmap.deinit();
+    self.bitmap.deinit(self.allocator);
+    self.preview_bitmap.deinit(self.allocator);
     self.freeSelection();
 
     self.bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
@@ -232,7 +230,7 @@ pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) 
         .color => self.bitmap.color.fill(self.background_color),
         .indexed => self.bitmap.indexed.fill(self.background_index),
     }
-    self.preview_bitmap = try self.bitmap.clone();
+    self.preview_bitmap = try self.bitmap.clone(self.allocator);
     self.need_texture_recreation = true;
     self.x = 0;
     self.y = 0;
@@ -248,10 +246,10 @@ pub fn load(self: *Self, file_path: []const u8) !void {
         self.colormap = colormap;
     }
 
-    self.bitmap.deinit();
-    self.bitmap = Bitmap.initFromImage(self.allocator, image);
-    self.preview_bitmap.deinit();
-    self.preview_bitmap = try self.bitmap.clone();
+    self.bitmap.deinit(self.allocator);
+    self.bitmap = Bitmap.initFromImage(image);
+    self.preview_bitmap.deinit(self.allocator);
+    self.preview_bitmap = try self.bitmap.clone(self.allocator);
     self.need_texture_recreation = true;
     self.x = 0;
     self.y = 0;
@@ -321,7 +319,7 @@ pub fn deserialize(self: *Document, snapshot: []u8) !void {
     const bitmap_type = @intToEnum(BitmapType, try reader.readIntNative(std.meta.Tag(BitmapType)));
     const recreate = self.getWidth() != width or self.getHeight() != height or self.getBitmapType() != bitmap_type;
     if (recreate) {
-        self.bitmap.deinit();
+        self.bitmap.deinit(self.allocator);
         self.bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
     }
     switch (self.bitmap) {
@@ -353,8 +351,8 @@ pub fn deserialize(self: *Document, snapshot: []u8) !void {
     _ = decomp.close();
 
     if (recreate) {
-        self.preview_bitmap.deinit();
-        self.preview_bitmap = try self.bitmap.clone();
+        self.preview_bitmap.deinit(self.allocator);
+        self.preview_bitmap = try self.bitmap.clone(self.allocator);
         self.need_texture_recreation = true;
     }
 
@@ -373,17 +371,17 @@ pub fn convertToTruecolor(self: *Self) !void {
     switch (self.bitmap) {
         .color => {},
         .indexed => |indexed_bitmap| {
-            const color_bitmap = try indexed_bitmap.convertToTruecolor(self.colormap);
+            const color_bitmap = try indexed_bitmap.convertToTruecolor(self.allocator, self.colormap);
             if (self.selection) |*selection| {
-                const selection_bitmap = try selection.bitmap.indexed.convertToTruecolor(self.colormap);
-                selection.bitmap.deinit();
+                const selection_bitmap = try selection.bitmap.indexed.convertToTruecolor(self.allocator, self.colormap);
+                selection.bitmap.deinit(self.allocator);
                 selection.bitmap = .{ .color = selection_bitmap };
                 selection.need_texture_recreation = true;
             }
-            self.bitmap.deinit();
+            self.bitmap.deinit(self.allocator);
             self.bitmap = .{ .color = color_bitmap };
-            self.preview_bitmap.deinit();
-            self.preview_bitmap = try self.bitmap.clone();
+            self.preview_bitmap.deinit(self.allocator);
+            self.preview_bitmap = try self.bitmap.clone(self.allocator);
             self.need_texture_recreation = true;
             try self.history.pushFrame(self);
         },
@@ -395,11 +393,11 @@ pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
         .indexed => return true,
         .color => |color_bitmap| {
             if (self.selection) |selection| {
-                if (!try selection.bitmap.color.canLosslesslyConvertToIndexed(self.colormap)) {
+                if (!try selection.bitmap.color.canLosslesslyConvertToIndexed(self.allocator, self.colormap)) {
                     return false;
                 }
             }
-            return try color_bitmap.canLosslesslyConvertToIndexed(self.colormap);
+            return try color_bitmap.canLosslesslyConvertToIndexed(self.allocator, self.colormap);
         },
     }
 }
@@ -407,17 +405,17 @@ pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
 pub fn convertToIndexed(self: *Self) !void {
     switch (self.bitmap) {
         .color => |color_bitmap| {
-            const indexed_bitmap = try color_bitmap.convertToIndexed(self.colormap);
+            const indexed_bitmap = try color_bitmap.convertToIndexed(self.allocator, self.colormap);
             if (self.selection) |*selection| {
-                const selection_bitmap = try selection.bitmap.color.convertToIndexed(self.colormap);
-                selection.bitmap.deinit();
+                const selection_bitmap = try selection.bitmap.color.convertToIndexed(self.allocator, self.colormap);
+                selection.bitmap.deinit(self.allocator);
                 selection.bitmap = .{ .indexed = selection_bitmap };
                 selection.need_texture_recreation = true;
             }
-            self.bitmap.deinit();
+            self.bitmap.deinit(self.allocator);
             self.bitmap = .{ .indexed = indexed_bitmap };
-            self.preview_bitmap.deinit();
-            self.preview_bitmap = try self.bitmap.clone();
+            self.preview_bitmap.deinit(self.allocator);
+            self.preview_bitmap = try self.bitmap.clone(self.allocator);
             self.need_texture_recreation = true;
             try self.history.pushFrame(self);
         },
@@ -550,13 +548,13 @@ pub fn paste(self: *Self) !void {
         selection_rect.y = @intCast(i32, self.getHeight() / 2) - @intCast(i32, image.height / 2);
     }
 
-    var bitmap = Bitmap.initFromImage(self.allocator, image);
+    var bitmap = Bitmap.initFromImage(image);
     if (std.meta.activeTag(bitmap) != self.getBitmapType()) {
         const converted_bitmap: Bitmap = switch (bitmap) {
-            .color => |color_bitmap| .{ .indexed = try color_bitmap.convertToIndexed(self.colormap) },
-            .indexed => |indexed_bitmap| .{ .color = try indexed_bitmap.convertToTruecolor(self.colormap) },
+            .color => |color_bitmap| .{ .indexed = try color_bitmap.convertToIndexed(self.allocator, self.colormap) },
+            .indexed => |indexed_bitmap| .{ .color = try indexed_bitmap.convertToTruecolor(self.allocator, self.colormap) },
         };
-        bitmap.deinit();
+        bitmap.deinit(self.allocator);
         bitmap = converted_bitmap;
     }
 
@@ -614,10 +612,10 @@ pub fn crop(self: *Self, rect: Recti) !void {
         }
     }
 
-    self.bitmap.deinit();
+    self.bitmap.deinit(self.allocator);
     self.bitmap = new_bitmap;
-    self.preview_bitmap.deinit();
-    self.preview_bitmap = try self.bitmap.clone();
+    self.preview_bitmap.deinit(self.allocator);
+    self.preview_bitmap = try self.bitmap.clone(self.allocator);
 
     self.need_texture_recreation = true;
 
@@ -754,7 +752,7 @@ pub fn deleteSelection(self: *Self) !void {
 
 pub fn freeSelection(self: *Self) void {
     if (self.selection) |selection| {
-        selection.bitmap.deinit();
+        selection.bitmap.deinit(self.allocator);
         nvg.deleteImage(selection.texture);
         self.selection = null;
     }
@@ -865,7 +863,7 @@ pub fn mirrorVertically(self: *Self) !void {
 
 pub fn rotate(self: *Self, clockwise: bool) !void {
     if (self.selection) |*selection| {
-        try selection.bitmap.rotate(clockwise);
+        try selection.bitmap.rotate(self.allocator, clockwise);
         std.mem.swap(i32, &selection.rect.w, &selection.rect.h);
         const d = @divTrunc(selection.rect.w - selection.rect.h, 2);
         if (d != 0) {
@@ -877,7 +875,7 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
             selection.updateTexture();
         }
     } else {
-        try self.bitmap.rotate(clockwise);
+        try self.bitmap.rotate(self.allocator, clockwise);
         const d = @divTrunc(@intCast(i32, self.getHeight()) - @intCast(i32, self.getWidth()), 2);
         if (d != 0) {
             self.x -= d;
@@ -967,13 +965,13 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
                 .alpha => {
                     if (color_bitmap.getPixel(x, y)) |dst| {
                         const blended = col.blend(self.foreground_color[0..], dst[0..]);
-                        try color_bitmap.floodFill(x, y, blended);
+                        try color_bitmap.floodFill(self.allocator, x, y, blended);
                     }
                 },
-                .replace => try color_bitmap.floodFill(x, y, self.foreground_color),
+                .replace => try color_bitmap.floodFill(self.allocator, x, y, self.foreground_color),
             }
         },
-        .indexed => |*indexed_bitmap| try indexed_bitmap.floodFill(x, y, self.foreground_index),
+        .indexed => |*indexed_bitmap| try indexed_bitmap.floodFill(self.allocator, x, y, self.foreground_index),
     }
     self.last_preview = .full;
     self.clearPreview();

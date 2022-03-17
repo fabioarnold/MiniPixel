@@ -4,8 +4,6 @@ const testing = std.testing;
 
 const ColorBitmap = @import("ColorBitmap.zig");
 
-allocator: Allocator,
-
 width: u32,
 height: u32,
 indices: []u8,
@@ -14,7 +12,6 @@ const IndexedBitmap = @This();
 
 pub fn init(allocator: Allocator, width: u32, height: u32) !IndexedBitmap {
     var self = IndexedBitmap{
-        .allocator = allocator,
         .width = width,
         .height = height,
         .indices = undefined,
@@ -24,16 +21,15 @@ pub fn init(allocator: Allocator, width: u32, height: u32) !IndexedBitmap {
     return self;
 }
 
-pub fn deinit(self: IndexedBitmap) void {
-    self.allocator.free(self.indices);
+pub fn deinit(self: IndexedBitmap, allocator: Allocator) void {
+    allocator.free(self.indices);
 }
 
-pub fn clone(self: IndexedBitmap) !IndexedBitmap {
+pub fn clone(self: IndexedBitmap, allocator: Allocator) !IndexedBitmap {
     return IndexedBitmap{
-        .allocator = self.allocator,
         .width = self.width,
         .height = self.height,
-        .indices = try self.allocator.dupe(u8, self.indices),
+        .indices = try allocator.dupe(u8, self.indices),
     };
 }
 
@@ -43,8 +39,8 @@ pub fn eql(self: IndexedBitmap, bitmap: IndexedBitmap) bool {
         std.mem.eql(u8, self.indices, bitmap.indices);
 }
 
-pub fn convertToTruecolor(self: IndexedBitmap, colormap: []const u8) !ColorBitmap {
-    const color_bitmap = try ColorBitmap.init(self.allocator, self.width, self.height);
+pub fn convertToTruecolor(self: IndexedBitmap, allocator: Allocator, colormap: []const u8) !ColorBitmap {
+    const color_bitmap = try ColorBitmap.init(allocator, self.width, self.height);
     const pixel_count = color_bitmap.width * color_bitmap.height;
     var i: usize = 0;
     while (i < pixel_count) : (i += 1) {
@@ -159,14 +155,14 @@ pub fn fill(self: IndexedBitmap, index: u8) void {
     std.mem.set(u8, self.indices, index);
 }
 
-pub fn floodFill(self: *IndexedBitmap, x: i32, y: i32, index: u8) !void {
+pub fn floodFill(self: *IndexedBitmap, allocator: Allocator, x: i32, y: i32, index: u8) !void {
     const old_index = self.getIndex(x, y) orelse return;
     if (old_index == index) return;
 
     const start_coords = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) };
     self.setIndexUnchecked(start_coords.x, start_coords.y, index);
 
-    var stack = std.ArrayList(struct { x: u32, y: u32 }).init(self.allocator);
+    var stack = std.ArrayList(struct { x: u32, y: u32 }).init(allocator);
     try stack.ensureTotalCapacity(self.width * self.height / 2);
     defer stack.deinit();
     try stack.append(start_coords);
@@ -236,9 +232,9 @@ pub fn mirrorVertically(self: IndexedBitmap) void {
     }
 }
 
-pub fn rotate(self: *IndexedBitmap, clockwise: bool) !void {
-    const tmp_bitmap = try self.clone();
-    defer tmp_bitmap.deinit();
+pub fn rotate(self: *IndexedBitmap, allocator: Allocator, clockwise: bool) !void {
+    const tmp_bitmap = try self.clone(allocator);
+    defer tmp_bitmap.deinit(allocator);
     std.mem.swap(u32, &self.width, &self.height);
     var y: u32 = 0;
     while (y < self.width) : (y += 1) {

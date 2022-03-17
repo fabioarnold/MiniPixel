@@ -6,8 +6,6 @@ const col = @import("color.zig");
 const Color = col.Color;
 const IndexedBitmap = @import("IndexedBitmap.zig");
 
-allocator: Allocator,
-
 width: u32,
 height: u32,
 pixels: []u8,
@@ -16,7 +14,6 @@ const ColorBitmap = @This();
 
 pub fn init(allocator: Allocator, width: u32, height: u32) !ColorBitmap {
     var self = ColorBitmap{
-        .allocator = allocator,
         .width = width,
         .height = height,
         .pixels = undefined,
@@ -26,16 +23,15 @@ pub fn init(allocator: Allocator, width: u32, height: u32) !ColorBitmap {
     return self;
 }
 
-pub fn deinit(self: ColorBitmap) void {
-    self.allocator.free(self.pixels);
+pub fn deinit(self: ColorBitmap, allocator: Allocator) void {
+    allocator.free(self.pixels);
 }
 
-pub fn clone(self: ColorBitmap) !ColorBitmap {
+pub fn clone(self: ColorBitmap, allocator: Allocator) !ColorBitmap {
     return ColorBitmap{
-        .allocator = self.allocator,
         .width = self.width,
         .height = self.height,
-        .pixels = try self.allocator.dupe(u8, self.pixels),
+        .pixels = try allocator.dupe(u8, self.pixels),
     };
 }
 
@@ -45,9 +41,9 @@ pub fn eql(self: ColorBitmap, bitmap: ColorBitmap) bool {
         std.mem.eql(u8, self.pixels, bitmap.pixels);
 }
 
-pub fn canLosslesslyConvertToIndexed(self: ColorBitmap, colormap: []const u8) !bool {
+pub fn canLosslesslyConvertToIndexed(self: ColorBitmap, allocator: Allocator, colormap: []const u8) !bool {
     var color: [4]u8 = undefined;
-    var color_set = std.AutoHashMap(@TypeOf(color), void).init(self.allocator);
+    var color_set = std.AutoHashMap(@TypeOf(color), void).init(allocator);
     defer color_set.deinit();
     var i: usize = 0;
     while (i < 256) : (i += 1) {
@@ -63,8 +59,8 @@ pub fn canLosslesslyConvertToIndexed(self: ColorBitmap, colormap: []const u8) !b
     return true;
 }
 
-pub fn convertToIndexed(self: ColorBitmap, colormap: []const u8) !IndexedBitmap {
-    const indexed_bitmap = try IndexedBitmap.init(self.allocator, self.width, self.height);
+pub fn convertToIndexed(self: ColorBitmap, allocator: Allocator, colormap: []const u8) !IndexedBitmap {
+    const indexed_bitmap = try IndexedBitmap.init(allocator, self.width, self.height);
     const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
     var i: usize = 0;
     while (i < pixel_count) : (i += 1) {
@@ -212,14 +208,14 @@ pub fn fill(self: ColorBitmap, color: Color) void {
     }
 }
 
-pub fn floodFill(self: *ColorBitmap, x: i32, y: i32, color: Color) !void {
+pub fn floodFill(self: *ColorBitmap, allocator: Allocator, x: i32, y: i32, color: Color) !void {
     const old_color = self.getPixel(x, y) orelse return;
     if (col.eql(old_color, color)) return;
 
     const start_coords = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) };
     self.setPixelUnchecked(start_coords.x, start_coords.y, color);
 
-    var stack = std.ArrayList(struct { x: u32, y: u32 }).init(self.allocator);
+    var stack = std.ArrayList(struct { x: u32, y: u32 }).init(allocator);
     try stack.ensureTotalCapacity(self.width * self.height / 2);
     defer stack.deinit();
     try stack.append(start_coords);
@@ -289,9 +285,9 @@ pub fn mirrorVertically(self: ColorBitmap) void {
     }
 }
 
-pub fn rotate(self: *ColorBitmap, clockwise: bool) !void {
-    const tmp_bitmap = try self.clone();
-    defer tmp_bitmap.deinit();
+pub fn rotate(self: *ColorBitmap, allocator: Allocator, clockwise: bool) !void {
+    const tmp_bitmap = try self.clone(allocator);
+    defer tmp_bitmap.deinit(allocator);
     std.mem.swap(u32, &self.width, &self.height);
     var y: u32 = 0;
     while (y < self.width) : (y += 1) {
@@ -316,7 +312,6 @@ test "rotate" {
             0x21, 0x22, 0x23, 0x24, 0x31, 0x32, 0x33, 0x34,
             0x41, 0x42, 0x43, 0x44, 0x51, 0x52, 0x53, 0x54,
         }),
-        .allocator = testing.allocator,
     };
     defer initial.deinit();
 
@@ -327,15 +322,14 @@ test "rotate" {
             0x41, 0x42, 0x43, 0x44, 0x21, 0x22, 0x23, 0x24, 0x01, 0x02, 0x03, 0x04,
             0x51, 0x52, 0x53, 0x54, 0x31, 0x32, 0x33, 0x34, 0x11, 0x12, 0x13, 0x14,
         }),
-        .allocator = testing.allocator,
     };
     defer rotated.deinit();
 
     var bmp = try initial.clone();
     defer bmp.deinit();
 
-    try bmp.rotate(true);
+    try bmp.rotate(testing.allocator, true);
     try testing.expect(bmp.eql(rotated));
-    try bmp.rotate(false);
+    try bmp.rotate(testing.allocator, false);
     try testing.expect(bmp.eql(initial));
 }
