@@ -1,3 +1,3 @@
 test {
-    _ = @import("Bitmap.zig");
+    _ = @import("ColorBitmap.zig");
 }

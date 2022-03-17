@@ -313,7 +313,7 @@ test "rotate" {
             0x41, 0x42, 0x43, 0x44, 0x51, 0x52, 0x53, 0x54,
         }),
     };
-    defer initial.deinit();
+    defer initial.deinit(testing.allocator);
 
     const rotated = ColorBitmap{
         .width = 3,
@@ -323,10 +323,10 @@ test "rotate" {
             0x51, 0x52, 0x53, 0x54, 0x31, 0x32, 0x33, 0x34, 0x11, 0x12, 0x13, 0x14,
         }),
     };
-    defer rotated.deinit();
+    defer rotated.deinit(testing.allocator);
 
-    var bmp = try initial.clone();
-    defer bmp.deinit();
+    var bmp = try initial.clone(testing.allocator);
+    defer bmp.deinit(testing.allocator);
 
     try bmp.rotate(testing.allocator, true);
     try testing.expect(bmp.eql(rotated));
