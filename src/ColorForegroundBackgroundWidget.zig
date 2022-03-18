@@ -52,6 +52,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     };
 
     self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseUpFn = onMouseUp;
 
     self.widget.drawFn = draw;
 
@@ -113,6 +114,36 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     }
 }
 
+fn onMouseUp(widget: *gui.Widget, event: *const gui.MouseEvent) void {
+    if (event.button == .left) {
+        var self = @fieldParentPtr(Self, "widget", widget);
+        const point = Point(f32).make(event.x, event.y);
+        const swap_rect = Rect(f32).make(10,42,14,14);
+        if (swap_rect.contains(point)) {
+            self.swap();
+        }
+    }
+}
+
+fn drawSwapArrows() void {
+    nvg.beginPath();
+    nvg.moveTo(15, 43);
+    nvg.lineTo(12, 47);
+    nvg.lineTo(14, 47);
+    nvg.lineTo(14, 52);
+    nvg.lineTo(19, 52);
+    nvg.lineTo(19, 54);
+    nvg.lineTo(23, 51);
+    nvg.lineTo(19, 48);
+    nvg.lineTo(19, 50);
+    nvg.lineTo(16, 50);
+    nvg.lineTo(16, 47);
+    nvg.lineTo(18, 47);
+    nvg.closePath();
+    nvg.fillColor(nvg.rgb(66, 66, 66));
+    nvg.fill();
+}
+
 pub fn draw(widget: *gui.Widget) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
@@ -124,6 +155,8 @@ pub fn draw(widget: *gui.Widget) void {
     gui.drawPanel(0, 0, rect.w, rect.h, 1, false, false);
 
     gui.drawPanelInset(pad, pad, 56, 56, 1);
+
+    drawSwapArrows();
 
     var i: usize = self.colors.len;
     while (i > 0) {
