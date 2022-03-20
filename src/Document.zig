@@ -506,6 +506,11 @@ pub fn copy(self: *Self) !void {
 pub fn paste(self: *Self) !void {
     const image = try Clipboard.getImage(self.allocator);
     errdefer self.allocator.free(image.pixels);
+    defer {
+        if (image.colormap) |colormap| {
+            self.allocator.free(colormap);
+        }
+    }
 
     if (self.selection) |_| {
         try self.clearSelection();
@@ -524,7 +529,7 @@ pub fn paste(self: *Self) !void {
     if (std.meta.activeTag(bitmap) != self.getBitmapType()) {
         const converted_bitmap: Bitmap = switch (bitmap) {
             .color => |color_bitmap| .{ .indexed = try color_bitmap.convertToIndexed(self.allocator, self.colormap) },
-            .indexed => |indexed_bitmap| .{ .color = try indexed_bitmap.convertToTruecolor(self.allocator, self.colormap) },
+            .indexed => |indexed_bitmap| .{ .color = try indexed_bitmap.convertToTruecolor(self.allocator, image.colormap.?) },
         };
         bitmap.deinit(self.allocator);
         bitmap = converted_bitmap;
@@ -535,6 +540,8 @@ pub fn paste(self: *Self) !void {
         .bitmap = bitmap,
         .texture = bitmap.createTexture(),
     };
+
+    try self.history.pushFrame(self);
 }
 
 pub fn crop(self: *Self, rect: Recti) !void {
