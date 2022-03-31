@@ -43,7 +43,6 @@ jobs:
       - name: Restore artifacts, or setup vcpkg
         uses: lukka/run-vcpkg@v10
         with:
-          vcpkgGitCommitId: 'b25cb779e5783531cc66562e224079b376055939'
           runVcpkgInstall: true
           runVcpkgFormatString: '[`install`, `--recurse`, `--clean-after-build`, `--x-install-root`, `vcpkg/installed`, `--triplet`, `$[env.VCPKG_DEFAULT_TRIPLET]`]'
 
