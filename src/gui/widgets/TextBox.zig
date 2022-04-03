@@ -396,7 +396,7 @@ pub fn setText(self: *Self, text: []const u8) !void {
     self.selection_end = std.math.min(self.selection_end, codepoint_count);
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
@@ -406,21 +406,21 @@ pub fn draw(widget: *gui.Widget) void {
     const is_focused = widget.isFocused();
 
     // background
-    nvg.beginPath();
-    nvg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
-    nvg.fillColor(if (!enabled) gui.theme_colors.background else self.background_color);
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+    vg.fillColor(if (!enabled) gui.theme_colors.background else self.background_color);
+    vg.fill();
 
     // border
-    nvg.beginPath();
-    nvg.rect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
-    nvg.strokeColor(if (is_focused) gui.theme_colors.focus else gui.theme_colors.border);
-    nvg.stroke();
+    vg.beginPath();
+    vg.rect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
+    vg.strokeColor(if (is_focused) gui.theme_colors.focus else gui.theme_colors.border);
+    vg.stroke();
 
-    nvg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+    vg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
 
-    nvg.fontFace("guifont");
-    nvg.fontSize(12);
+    vg.fontFace("guifont");
+    vg.fontSize(12);
     var text_align = nvg.TextAlign{ .vertical = .middle };
     const padding = 5;
     var x = rect.x;
@@ -438,26 +438,26 @@ pub fn draw(widget: *gui.Widget) void {
             x += rect.w - padding;
         },
     }
-    nvg.textAlign(text_align);
+    vg.textAlign(text_align);
 
     const codepoint_count = std.unicode.utf8CountCodepoints(self.text.items) catch unreachable;
     self.glyph_positions.resize(codepoint_count) catch unreachable;
-    nvg.textGlyphPositions(x, rect.y, self.text.items, self.glyph_positions.items);
+    _ = vg.textGlyphPositions(x, rect.y, self.text.items, self.glyph_positions.items);
     var line_height: f32 = undefined;
     var ascender: f32 = undefined;
     var descender: f32 = undefined;
-    nvg.textMetrics(&ascender, &descender, &line_height);
+    vg.textMetrics(&ascender, &descender, &line_height);
     const cursor_h = line_height + 4;
-    if (is_focused) self.drawSelection(cursor_h);
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    const text_max_x = nvg.text(x, rect.y + 0.5 * rect.h, self.text.items);
+    if (is_focused) self.drawSelection(cursor_h, vg);
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    const text_max_x = vg.text(x, rect.y + 0.5 * rect.h, self.text.items);
 
-    self.drawCursors(cursor_h, text_max_x);
+    self.drawCursors(cursor_h, text_max_x, vg);
 
-    nvg.resetScissor();
+    vg.resetScissor();
 }
 
-fn drawSelection(self: *Self, h: f32) void {
+fn drawSelection(self: *Self, h: f32, vg: nvg) void {
     if (!self.hasSelection()) return;
     const rect = self.widget.relative_rect;
 
@@ -466,13 +466,13 @@ fn drawSelection(self: *Self, h: f32) void {
     const min_x = self.glyph_positions.items[min].minx;
     const max_x = self.glyph_positions.items[max - 1].maxx;
 
-    nvg.beginPath();
-    nvg.rect(min_x, rect.y + 0.5 * (rect.h - h), max_x - min_x, h);
-    nvg.fillColor(gui.theme_colors.select);
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(min_x, rect.y + 0.5 * (rect.h - h), max_x - min_x, h);
+    vg.fillColor(gui.theme_colors.select);
+    vg.fill();
 }
 
-fn drawCursors(self: *Self, cursor_h: f32, text_max_x: f32) void {
+fn drawCursors(self: *Self, cursor_h: f32, text_max_x: f32, vg: nvg) void {
     const rect = self.widget.relative_rect;
 
     if (self.show_cursor_position_preview) {
@@ -480,22 +480,22 @@ fn drawCursors(self: *Self, cursor_h: f32, text_max_x: f32) void {
         var cursor_x = text_max_x;
         if (self.cursor_position_preview < self.glyph_positions.items.len)
             cursor_x = self.glyph_positions.items[self.cursor_position_preview].x;
-        nvg.beginPath();
-        nvg.moveTo(cursor_x + 0.5, rect.y + 0.5 * (rect.h - cursor_h));
-        nvg.lineTo(cursor_x + 0.5, rect.y + 0.5 * (rect.h + cursor_h));
-        nvg.strokeColor(nvg.rgba(0, 0, 0, 0x50));
-        nvg.stroke();
+        vg.beginPath();
+        vg.moveTo(cursor_x + 0.5, rect.y + 0.5 * (rect.h - cursor_h));
+        vg.lineTo(cursor_x + 0.5, rect.y + 0.5 * (rect.h + cursor_h));
+        vg.strokeColor(nvg.rgba(0, 0, 0, 0x50));
+        vg.stroke();
     }
 
     if (self.widget.isFocused() and self.blink) {
         var cursor_x = text_max_x;
         if (self.cursor_position < self.glyph_positions.items.len)
             cursor_x = self.glyph_positions.items[self.cursor_position].x;
-        nvg.beginPath();
-        nvg.moveTo(cursor_x + 0.5, rect.y + 0.5 * (rect.h - cursor_h));
-        nvg.lineTo(cursor_x + 0.5, rect.y + 0.5 * (rect.h + cursor_h));
-        nvg.strokeColor(nvg.rgb(0, 0, 0));
-        nvg.stroke();
+        vg.beginPath();
+        vg.moveTo(cursor_x + 0.5, rect.y + 0.5 * (rect.h - cursor_h));
+        vg.lineTo(cursor_x + 0.5, rect.y + 0.5 * (rect.h + cursor_h));
+        vg.strokeColor(nvg.rgb(0, 0, 0));
+        vg.stroke();
     }
 }
 

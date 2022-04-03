@@ -67,15 +67,17 @@ const Bitmap = union(BitmapType) {
         };
     }
 
-    fn createTexture(self: Bitmap) nvg.Image {
+    fn createTexture(self: Bitmap, vg: nvg) nvg.Image {
         return switch (self) {
-            .color => |color_bitmap| nvg.createImageRgba(
+            .color => |color_bitmap| nvg.createImageRGBA(
+                vg,
                 color_bitmap.width,
                 color_bitmap.height,
                 .{ .nearest = true },
                 color_bitmap.pixels,
             ),
             .indexed => |indexed_bitmap| nvg.createImageAlpha(
+                vg,
                 indexed_bitmap.width,
                 indexed_bitmap.height,
                 .{ .nearest = true },
@@ -126,15 +128,15 @@ const Bitmap = union(BitmapType) {
 pub const Selection = struct {
     rect: Recti,
     bitmap: Bitmap,
-    texture: nvg.Image,
-    need_texture_recreation: bool = false,
+    // texture: nvg.Image,
+    // need_texture_recreation: bool = false,
 
-    fn updateTexture(self: Selection) void {
-        switch (self.bitmap) {
-            .color => |color_bitmap| nvg.updateImage(self.texture, color_bitmap.pixels),
-            .indexed => |indexed_bitmap| nvg.updateImage(self.texture, indexed_bitmap.indices),
-        }
-    }
+    // fn updateTexture(self: Selection) void {
+    //     switch (self.bitmap) {
+    //         .color => |color_bitmap| nvg.updateImage(self.texture, color_bitmap.pixels),
+    //         .indexed => |indexed_bitmap| nvg.updateImage(self.texture, indexed_bitmap.indices),
+    //     }
+    // }
 };
 
 const PrimitiveTag = enum {
@@ -175,6 +177,9 @@ need_texture_recreation: bool = false,
 
 selection: ?Selection = null,
 copy_location: ?Pointi = null, // where the source was copied from
+selection_texture: nvg.Image,
+need_selection_texture_update: bool = false,
+need_selection_texture_recreation: bool = false,
 
 history: *HistoryBuffer,
 
@@ -188,12 +193,13 @@ canvas: *CanvasWidget = undefined,
 
 const Self = @This();
 
-pub fn init(allocator: Allocator) !*Self {
+pub fn init(allocator: Allocator, vg: nvg) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .allocator = allocator,
         .texture = undefined,
         .texture_palette = undefined,
+        .selection_texture = undefined,
         .bitmap = try Bitmap.init(.color, allocator, 32, 32),
         .colormap = try allocator.alloc(u8, 4 * 256),
         .preview_bitmap = undefined,
@@ -202,20 +208,21 @@ pub fn init(allocator: Allocator) !*Self {
 
     self.bitmap.color.fill(self.background_color);
     self.preview_bitmap = try self.bitmap.clone(self.allocator);
-    self.texture = self.bitmap.createTexture();
-    self.texture_palette = nvg.createImageRgba(256, 1, .{ .nearest = true }, self.colormap);
+    self.texture = self.bitmap.createTexture(vg);
+    self.texture_palette = vg.createImageRGBA(256, 1, .{ .nearest = true }, self.colormap);
+    self.selection_texture = vg.createImageRGBA(0, 0, .{}, &.{}); // dummy
     try self.history.reset(self);
 
     return self;
 }
 
-pub fn deinit(self: *Self) void {
+pub fn deinit(self: *Self, vg: nvg) void {
     self.history.deinit();
     self.bitmap.deinit(self.allocator);
     self.preview_bitmap.deinit(self.allocator);
     self.allocator.free(self.colormap);
-    nvg.deleteImage(self.texture);
-    nvg.deleteImage(self.texture_palette);
+    vg.deleteImage(self.texture);
+    vg.deleteImage(self.texture_palette);
     self.freeSelection();
     self.allocator.destroy(self);
 }
@@ -318,8 +325,8 @@ pub fn deserialize(self: *Document, data: []u8) !void {
         self.selection = Selection{
             .rect = selection.rect,
             .bitmap = selection.bitmap,
-            .texture = selection.bitmap.createTexture(),
         };
+        self.need_selection_texture_recreation = true;
     }
 
     _ = decomp.close();
@@ -348,7 +355,7 @@ pub fn convertToTruecolor(self: *Self) !void {
                 const selection_bitmap = try selection.bitmap.indexed.convertToTruecolor(self.allocator, self.colormap);
                 selection.bitmap.deinit(self.allocator);
                 selection.bitmap = .{ .color = selection_bitmap };
-                selection.need_texture_recreation = true;
+                self.need_selection_texture_recreation = true;
             }
             self.bitmap.deinit(self.allocator);
             self.bitmap = .{ .color = color_bitmap };
@@ -382,7 +389,7 @@ pub fn convertToIndexed(self: *Self) !void {
                 const selection_bitmap = try selection.bitmap.color.convertToIndexed(self.allocator, self.colormap);
                 selection.bitmap.deinit(self.allocator);
                 selection.bitmap = .{ .indexed = selection_bitmap };
-                selection.need_texture_recreation = true;
+                self.need_selection_texture_recreation = true;
             }
             self.bitmap.deinit(self.allocator);
             self.bitmap = .{ .indexed = indexed_bitmap };
@@ -538,8 +545,8 @@ pub fn paste(self: *Self) !void {
     self.selection = Selection{
         .rect = selection_rect,
         .bitmap = bitmap,
-        .texture = bitmap.createTexture(),
     };
+    self.need_selection_texture_recreation = true;
 
     try self.history.pushFrame(self);
 }
@@ -708,10 +715,10 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
     var selection = Selection{
         .rect = intersection,
         .bitmap = bitmap,
-        .texture = bitmap.createTexture(),
     };
     self.freeSelection(); // clean up previous selection
     self.selection = selection;
+    self.need_selection_texture_recreation = true;
 
     self.last_preview = .full; // TODO: just a rect?
     self.clearPreview();
@@ -732,7 +739,6 @@ pub fn deleteSelection(self: *Self) !void {
 pub fn freeSelection(self: *Self) void {
     if (self.selection) |selection| {
         selection.bitmap.deinit(self.allocator);
-        nvg.deleteImage(selection.texture);
         self.selection = null;
     }
 }
@@ -804,7 +810,7 @@ pub fn fill(self: *Self, color_layer: ColorLayer) !void {
             .color => |color_bitmap| color_bitmap.fill(color),
             .indexed => |indexed_bitmap| indexed_bitmap.fill(index),
         }
-        selection.updateTexture();
+        self.need_selection_texture_update = true;
     } else {
         switch (self.bitmap) {
             .color => |color_bitmap| color_bitmap.fill(color),
@@ -819,7 +825,7 @@ pub fn fill(self: *Self, color_layer: ColorLayer) !void {
 pub fn mirrorHorizontally(self: *Self) !void {
     if (self.selection) |*selection| {
         selection.bitmap.mirrorHorizontally();
-        selection.updateTexture();
+        self.need_selection_texture_update = true;
     } else {
         self.bitmap.mirrorHorizontally();
         self.last_preview = .full;
@@ -831,7 +837,7 @@ pub fn mirrorHorizontally(self: *Self) !void {
 pub fn mirrorVertically(self: *Self) !void {
     if (self.selection) |*selection| {
         selection.bitmap.mirrorVertically();
-        selection.updateTexture();
+        self.need_selection_texture_update = true;
     } else {
         self.bitmap.mirrorVertically();
         self.last_preview = .full;
@@ -848,10 +854,9 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
         if (d != 0) {
             selection.rect.x -= d;
             selection.rect.y += d;
-            nvg.deleteImage(selection.texture);
-            selection.texture = selection.bitmap.createTexture();
+            self.need_selection_texture_recreation = true;
         } else {
-            selection.updateTexture();
+            self.need_selection_texture_update = true;
         }
     } else {
         try self.bitmap.rotate(self.allocator, clockwise);
@@ -957,43 +962,50 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
     try self.history.pushFrame(self);
 }
 
-pub fn draw(self: *Self) void {
+pub fn draw(self: *Self, vg: nvg) void {
     if (self.need_texture_recreation) {
-        nvg.deleteImage(self.texture);
-        self.texture = self.bitmap.createTexture();
+        vg.deleteImage(self.texture);
+        self.texture = self.bitmap.createTexture(vg);
         self.need_texture_recreation = false;
-        nvg.updateImage(self.texture_palette, self.colormap);
+        vg.updateImage(self.texture_palette, self.colormap);
         self.need_texture_update = false;
     } else if (self.need_texture_update) {
         switch (self.preview_bitmap) {
             .color => |color_preview_bitmap| {
-                nvg.updateImage(self.texture, color_preview_bitmap.pixels);
+                vg.updateImage(self.texture, color_preview_bitmap.pixels);
             },
             .indexed => |indexed_preview_bitmap| {
-                nvg.updateImage(self.texture, indexed_preview_bitmap.indices);
-                nvg.updateImage(self.texture_palette, self.colormap);
+                vg.updateImage(self.texture, indexed_preview_bitmap.indices);
+                vg.updateImage(self.texture_palette, self.colormap);
             },
         }
         self.need_texture_update = false;
     }
     const width = @intToFloat(f32, self.getWidth());
     const height = @intToFloat(f32, self.getHeight());
-    nvg.beginPath();
-    nvg.rect(0, 0, width, height);
+    vg.beginPath();
+    vg.rect(0, 0, width, height);
     const pattern = switch (self.bitmap) {
-        .color => nvg.imagePattern(0, 0, width, height, 0, self.texture, 1),
-        .indexed => nvg.indexedImagePattern(0, 0, width, height, 0, self.texture, self.texture_palette, 1),
+        .color => vg.imagePattern(0, 0, width, height, 0, self.texture, 1),
+        .indexed => vg.indexedImagePattern(0, 0, width, height, 0, self.texture, self.texture_palette, 1),
     };
-    nvg.fillPaint(pattern);
-    nvg.fill();
+    vg.fillPaint(pattern);
+    vg.fill();
 }
 
-pub fn drawSelection(self: *Self) void {
+pub fn drawSelection(self: *Self, vg: nvg) void {
     if (self.selection) |*selection| {
-        if (selection.need_texture_recreation) {
-            nvg.deleteImage(selection.texture);
-            selection.texture = selection.bitmap.createTexture();
-            selection.need_texture_recreation = false;
+        if (self.need_selection_texture_recreation) {
+            vg.deleteImage(self.selection_texture);
+            self.selection_texture = selection.bitmap.createTexture(vg);
+            self.need_selection_texture_recreation = false;
+            self.need_selection_texture_update = false;
+        } else if (self.need_selection_texture_update) {
+            switch (selection.bitmap) {
+                .color => |color_bitmap| vg.updateImage(self.selection_texture, color_bitmap.pixels),
+                .indexed => |indexed_bitmap| vg.updateImage(self.selection_texture, indexed_bitmap.indices),
+            }
+            self.need_selection_texture_update = false;
         }
         const rect = Rect(f32).make(
             @intToFloat(f32, selection.rect.x),
@@ -1001,13 +1013,13 @@ pub fn drawSelection(self: *Self) void {
             @intToFloat(f32, selection.rect.w),
             @intToFloat(f32, selection.rect.h),
         );
-        nvg.beginPath();
-        nvg.rect(rect.x, rect.y, rect.w, rect.h);
+        vg.beginPath();
+        vg.rect(rect.x, rect.y, rect.w, rect.h);
         const pattern = switch (self.bitmap) {
-            .color => nvg.imagePattern(rect.x, rect.y, rect.w, rect.h, 0, selection.texture, 1),
-            .indexed => nvg.indexedImagePattern(rect.x, rect.y, rect.w, rect.h, 0, selection.texture, self.texture_palette, 1),
+            .color => vg.imagePattern(rect.x, rect.y, rect.w, rect.h, 0, self.selection_texture, 1),
+            .indexed => vg.indexedImagePattern(rect.x, rect.y, rect.w, rect.h, 0, self.selection_texture, self.texture_palette, 1),
         };
-        nvg.fillPaint(pattern);
-        nvg.fill();
+        vg.fillPaint(pattern);
+        vg.fill();
     }
 }

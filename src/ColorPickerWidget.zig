@@ -107,7 +107,7 @@ fn SpinnerChangedFn(comptime color_index: comptime_int) type {
 
 fn SliderDrawFn(comptime color_index: u2) type {
     return struct {
-        fn draw(widget: *gui.Widget) void {
+        fn draw(widget: *gui.Widget, vg: nvg) void {
             if (widget.parent) |parent| {
                 const picker = @fieldParentPtr(Self, "widget", parent);
 
@@ -127,31 +127,31 @@ fn SliderDrawFn(comptime color_index: u2) type {
                     3 => nvg.rgb(0xff, 0xff, 0xff),
                 };
 
-                nvg.beginPath();
-                nvg.rect(rect.x, rect.y + 4, rect.w, rect.h - 4);
-                const gradient = nvg.linearGradient(rect.x, 0, rect.x + rect.w, 0, icol, ocol);
-                nvg.fillPaint(gradient);
-                nvg.fill();
+                vg.beginPath();
+                vg.rect(rect.x, rect.y + 4, rect.w, rect.h - 4);
+                const gradient = vg.linearGradient(rect.x, 0, rect.x + rect.w, 0, icol, ocol);
+                vg.fillPaint(gradient);
+                vg.fill();
                 const x = @intToFloat(f32, picker.color[color_index]) / 255.0;
-                drawColorPickerIndicator(rect.x + x * rect.w, rect.y + 4);
+                drawColorPickerIndicator(vg, rect.x + x * rect.w, rect.y + 4);
             }
         }
     };
 }
 
-fn drawColorPickerIndicator(x: f32, y: f32) void {
-    nvg.beginPath();
-    nvg.moveTo(x, y);
-    nvg.lineTo(x + 4, y - 4);
-    nvg.lineTo(x - 4, y - 4);
-    nvg.closePath();
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.fill();
+fn drawColorPickerIndicator(vg: nvg, x: f32, y: f32) void {
+    vg.beginPath();
+    vg.moveTo(x, y);
+    vg.lineTo(x + 4, y - 4);
+    vg.lineTo(x - 4, y - 4);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.fill();
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const rect = widget.relative_rect;
-    gui.drawPanel(rect.x, rect.y, rect.w, rect.h, 1, false, false);
+    gui.drawPanel(vg, rect.x, rect.y, rect.w, rect.h, 1, false, false);
 
-    widget.drawChildren();
+    widget.drawChildren(vg);
 }

@@ -145,11 +145,11 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     }
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
-    gui.drawPanel(rect.x, rect.y, rect.w, rect.h, 1, false, false);
+    gui.drawPanel(vg, rect.x, rect.y, rect.w, rect.h, 1, false, false);
 
     const pad: f32 = 2;
     const tile_w = (rect.w - pad - (pad - 1)) / 16;
@@ -159,23 +159,23 @@ pub fn draw(widget: *gui.Widget) void {
     while (i < 256) : (i += 1) {
         const x = @intToFloat(f32, i % 16);
         const y = @intToFloat(f32, i / 16);
-        nvg.beginPath();
-        nvg.rect(rect.x + pad + x * tile_w, rect.y + pad + y * tile_h, tile_w - 1, tile_h - 1);
+        vg.beginPath();
+        vg.rect(rect.x + pad + x * tile_w, rect.y + pad + y * tile_h, tile_w - 1, tile_h - 1);
         const color = self.colors[i * 4 ..][0..4];
-        nvg.fillColor(nvg.rgb(color[0], color[1], color[2]));
-        nvg.fill();
+        vg.fillColor(nvg.rgb(color[0], color[1], color[2]));
+        vg.fill();
     }
 
     if (self.selected) |selected| {
         const x = @intToFloat(f32, selected % 16);
         const y = @intToFloat(f32, selected / 16);
-        nvg.beginPath();
-        nvg.rect(rect.x + pad + x * tile_w - 0.5, rect.y + pad + y * tile_h - 0.5, tile_w, tile_h);
-        nvg.strokeColor(nvg.rgbf(1, 1, 1));
-        nvg.stroke();
-        nvg.beginPath();
-        nvg.rect(rect.x + pad + x * tile_w - 1.5, rect.y + pad + y * tile_h - 1.5, tile_w + 2, tile_h + 2);
-        nvg.strokeColor(nvg.rgbf(0, 0, 0));
-        nvg.stroke();
+        vg.beginPath();
+        vg.rect(rect.x + pad + x * tile_w - 0.5, rect.y + pad + y * tile_h - 0.5, tile_w, tile_h);
+        vg.strokeColor(nvg.rgbf(1, 1, 1));
+        vg.stroke();
+        vg.beginPath();
+        vg.rect(rect.x + pad + x * tile_w - 1.5, rect.y + pad + y * tile_h - 1.5, tile_w + 2, tile_h + 2);
+        vg.strokeColor(nvg.rgbf(0, 0, 0));
+        vg.stroke();
     }
 }

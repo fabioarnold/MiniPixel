@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
+const nvg = @import("nanovg");
 const gui = @import("../gui.zig");
 const Rect = @import("../geometry.zig").Rect;
 
@@ -27,9 +28,9 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-fn draw(widget: *gui.Widget) void {
+fn draw(widget: *gui.Widget, vg: nvg) void {
     const rect = widget.relative_rect;
-    gui.drawPanel(rect.x, rect.y, rect.w, rect.h, 1, false, false);
+    gui.drawPanel(vg, rect.x, rect.y, rect.w, rect.h, 1, false, false);
 
-    widget.drawChildren();
+    widget.drawChildren(vg);
 }

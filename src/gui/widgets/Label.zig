@@ -31,21 +31,21 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
 
     if (self.draw_border) {
-        gui.drawPanelInset(rect.x, rect.y, rect.w, rect.h, 1);
-        nvg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+        gui.drawPanelInset(vg, rect.x, rect.y, rect.w, rect.h, 1);
+        vg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
     } else {
-        nvg.scissor(rect.x, rect.y, rect.w, rect.h);
+        vg.scissor(rect.x, rect.y, rect.w, rect.h);
     }
-    defer nvg.resetScissor();
+    defer vg.resetScissor();
 
-    nvg.fontFace("guifont");
-    nvg.fontSize(12);
+    vg.fontFace("guifont");
+    vg.fontSize(12);
     var text_align = nvg.TextAlign{ .vertical = .middle };
     var x = rect.x;
     var y = rect.y + 0.5 * rect.h;
@@ -63,19 +63,19 @@ pub fn draw(widget: *gui.Widget) void {
             x += rect.w - self.padding;
         },
     }
-    nvg.fillColor(nvg.rgb(0, 0, 0));
+    vg.fillColor(nvg.rgb(0, 0, 0));
     const has_newline = std.mem.indexOfScalar(u8, self.text, '\n') != null;
     if (rect.w == 0 or !has_newline) {
-        nvg.textAlign(text_align);
-        _ = nvg.text(x, rect.y + 0.5 * rect.h, self.text);
+        vg.textAlign(text_align);
+        _ = vg.text(x, rect.y + 0.5 * rect.h, self.text);
     } else {
         // NanoVG only vertically aligns the first line. So we have to do our own vertical centering.
         text_align.vertical = .top;
-        nvg.textAlign(text_align);
-        nvg.textLineHeight(14.0 / 12.0);
+        vg.textAlign(text_align);
+        vg.textLineHeight(14.0 / 12.0);
         var bounds: [4]f32 = undefined;
-        nvg.textBoxBounds(x, y, rect.w, self.text, &bounds);
+        vg.textBoxBounds(x, y, rect.w, self.text, &bounds);
         y -= 0.5 * (bounds[3] - bounds[1]);
-        nvg.textBox(x, y, rect.w, self.text);
+        vg.textBox(x, y, rect.w, self.text);
     }
 }

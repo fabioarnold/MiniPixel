@@ -109,70 +109,70 @@ fn close(self: *Self) void {
     }
 }
 
-pub fn draw(widget: *gui.Widget) void {
-    nvg.save();
-    defer nvg.restore();
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
+    vg.save();
+    defer vg.restore();
 
-    nvg.beginPath();
-    nvg.rect(0, 0, dialog_rect.w, dialog_rect.h - 45);
-    nvg.fillColor(nvg.rgbf(1, 1, 1));
-    nvg.fill();
-    nvg.beginPath();
-    nvg.rect(0, dialog_rect.h - 45, dialog_rect.w, 45);
-    nvg.fillColor(gui.theme_colors.background);
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(0, 0, dialog_rect.w, dialog_rect.h - 45);
+    vg.fillColor(nvg.rgbf(1, 1, 1));
+    vg.fill();
+    vg.beginPath();
+    vg.rect(0, dialog_rect.h - 45, dialog_rect.w, 45);
+    vg.fillColor(gui.theme_colors.background);
+    vg.fill();
 
     var bounds: [4]f32 = undefined;
-    _ = nvg.textBounds(0, 0, info.link_itchio, &bounds);
+    _ = vg.textBounds(0, 0, info.link_itchio, &bounds);
     const link_color = nvg.rgb(0x1A, 0x6F, 0xA1);
 
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.textAlign(.{ .horizontal = .center });
-    nvg.fontFace("guifontbold");
-    nvg.fontSize(14);
-    _ = nvg.text(dialog_rect.w / 2, 35, info.app_name);
-    nvg.fontFace("guifont");
-    nvg.fontSize(11);
-    _ = nvg.text(dialog_rect.w / 2, 50, "Version " ++ info.version);
-    nvg.fontSize(12);
-    nvg.textAlign(.{});
-    var w = nvg.textWidth("Visit " ++ info.link_itchio);
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.textAlign(.{ .horizontal = .center });
+    vg.fontFace("guifontbold");
+    vg.fontSize(14);
+    _ = vg.text(dialog_rect.w / 2, 35, info.app_name);
+    vg.fontFace("guifont");
+    vg.fontSize(11);
+    _ = vg.text(dialog_rect.w / 2, 50, "Version " ++ info.version);
+    vg.fontSize(12);
+    vg.textAlign(.{});
+    var w = vg.textBounds(0, 0, "Visit " ++ info.link_itchio, null);
     var x = (dialog_rect.w - w) / 2;
-    x = nvg.text(x, 80, "Visit ");
-    nvg.fillColor(link_color);
-    var x1 = nvg.text(x, 80, info.link_itchio);
-    _ = nvg.textBounds(x, 80, info.link_itchio, &link_itchio_bounds);
+    x = vg.text(x, 80, "Visit ");
+    vg.fillColor(link_color);
+    var x1 = vg.text(x, 80, info.link_itchio);
+    _ = vg.textBounds(x, 80, info.link_itchio, &link_itchio_bounds);
     if (link_itchio_hover) {
-        nvg.beginPath();
-        nvg.moveTo(x, 81);
-        nvg.lineTo(x1, 81);
-        nvg.strokeColor(link_color);
-        nvg.stroke();
+        vg.beginPath();
+        vg.moveTo(x, 81);
+        vg.lineTo(x1, 81);
+        vg.strokeColor(link_color);
+        vg.stroke();
     }
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.textAlign(.{ .horizontal = .center });
-    _ = nvg.text(dialog_rect.w / 2, 80 + 1 * 15, "for more information and updates.");
-    _ = nvg.text(dialog_rect.w / 2, 80 + 2 * 15, "To report a bug or to suggest a new feature");
-    nvg.textAlign(.{});
-    w = nvg.textWidth("visit " ++ info.link_github ++ ".");
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.textAlign(.{ .horizontal = .center });
+    _ = vg.text(dialog_rect.w / 2, 80 + 1 * 15, "for more information and updates.");
+    _ = vg.text(dialog_rect.w / 2, 80 + 2 * 15, "To report a bug or to suggest a new feature");
+    vg.textAlign(.{});
+    w = vg.textBounds(0, 0, "visit " ++ info.link_github ++ ".", null);
     x = (dialog_rect.w - w) / 2;
-    x = nvg.text(x, 80 + 3 * 15, "visit ");
-    nvg.fillColor(link_color);
-    x1 = nvg.text(x, 80 + 3 * 15, info.link_github);
-    _ = nvg.textBounds(x, 80 + 3 * 15, info.link_github, &link_github_bounds);
+    x = vg.text(x, 80 + 3 * 15, "visit ");
+    vg.fillColor(link_color);
+    x1 = vg.text(x, 80 + 3 * 15, info.link_github);
+    _ = vg.textBounds(x, 80 + 3 * 15, info.link_github, &link_github_bounds);
     if (link_github_hover) {
-        nvg.beginPath();
-        nvg.moveTo(x, 81 + 3 * 15);
-        nvg.lineTo(x1, 81 + 3 * 15);
-        nvg.strokeColor(link_color);
-        nvg.stroke();
+        vg.beginPath();
+        vg.moveTo(x, 81 + 3 * 15);
+        vg.lineTo(x1, 81 + 3 * 15);
+        vg.strokeColor(link_color);
+        vg.stroke();
     }
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.textAlign(.{ .horizontal = .center });
-    _ = nvg.text(x1 + 1, 80 + 3 * 15, ".");
-    nvg.fontSize(11);
-    _ = nvg.text(dialog_rect.w / 2, 160, "Copyright © 2021-2022 Fabio Arnold.");
-    _ = nvg.text(dialog_rect.w / 2, 173, "All rights reserved.");
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.textAlign(.{ .horizontal = .center });
+    _ = vg.text(x1 + 1, 80 + 3 * 15, ".");
+    vg.fontSize(11);
+    _ = vg.text(dialog_rect.w / 2, 160, "Copyright © 2021-2022 Fabio Arnold.");
+    _ = vg.text(dialog_rect.w / 2, 173, "All rights reserved.");
 
-    widget.drawChildren();
+    widget.drawChildren(vg);
 }

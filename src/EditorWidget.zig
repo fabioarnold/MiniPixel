@@ -94,13 +94,13 @@ panel_right: *gui.Panel,
 
 const Self = @This();
 
-pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),
         .allocator = allocator,
 
-        .document = try Document.init(allocator),
+        .document = try Document.init(allocator, vg),
 
         .menu_bar = try gui.Toolbar.init(allocator, rect),
         .new_button = try gui.Button.init(allocator, rect, ""),
@@ -138,7 +138,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .message_box_widget = try MessageBoxWidget.init(allocator, ""),
         .new_document_widget = try NewDocumentWidget.init(allocator, self),
         .about_dialog_widget = try AboutDialogWidget.init(allocator),
-        .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document),
+        .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document, vg),
         .palette_bar = try gui.Toolbar.init(allocator, Rect(f32).make(0, 0, 163, 24)),
         .palette_open_button = try gui.Button.init(allocator, rect, ""),
         .palette_save_button = try gui.Button.init(allocator, rect, ""),
@@ -147,9 +147,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .palette_toggle_button = try gui.Button.init(allocator, rect, ""),
         .color_palette = try ColorPaletteWidget.init(allocator, Rect(f32).make(0, 0, 163, 163)),
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
-        .color_foreground_background = try ColorForegroundBackgroundWidget.init(allocator, Rect(f32).make(0, 0, 66, 66)),
-        .blend_mode = try BlendModeWidget.init(allocator, Rect(f32).make(66, 0, 163 - 66, 66)),
-        .preview = try PreviewWidget.init(allocator, Rect(f32).make(0, 0, 163, 120), self.document),
+        .color_foreground_background = try ColorForegroundBackgroundWidget.init(allocator, Rect(f32).make(0, 0, 66, 66), vg),
+        .blend_mode = try BlendModeWidget.init(allocator, Rect(f32).make(66, 0, 163 - 66, 66), vg),
+        .preview = try PreviewWidget.init(allocator, Rect(f32).make(0, 0, 163, 120), self.document, vg),
         .panel_right = try gui.Panel.init(allocator, Rect(f32).make(0, 0, 163, 200)),
     };
     self.widget.onResizeFn = onResize;
@@ -329,7 +329,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
 fn configureToolbarButton(
     button: *gui.Button,
-    icon: fn () void,
+    icon: fn (nvg) void,
     comptime onEditorClick: fn (*Self) void,
     comptime help_text: []const u8,
 ) void {
@@ -462,8 +462,8 @@ fn initMenubar(self: *Self) !void {
     try self.menu_bar.addButton(self.about_button);
 }
 
-pub fn deinit(self: *Self) void {
-    self.document.deinit();
+pub fn deinit(self: *Self, vg: nvg) void {
+    self.document.deinit(vg);
     if (self.document_file_path) |document_file_path| {
         self.allocator.free(document_file_path);
     }
@@ -504,7 +504,7 @@ pub fn deinit(self: *Self) void {
     self.message_box_widget.deinit();
     self.new_document_widget.deinit();
     self.about_dialog_widget.deinit();
-    self.canvas.deinit();
+    self.canvas.deinit(vg);
     self.palette_bar.deinit();
     self.palette_open_button.deinit();
     self.palette_save_button.deinit();
@@ -513,9 +513,9 @@ pub fn deinit(self: *Self) void {
     self.palette_toggle_button.deinit();
     self.color_palette.deinit();
     self.color_picker.deinit();
-    self.color_foreground_background.deinit();
-    self.blend_mode.deinit();
-    self.preview.deinit();
+    self.color_foreground_background.deinit(vg);
+    self.blend_mode.deinit(vg);
+    self.preview.deinit(vg);
     self.panel_right.deinit();
 
     self.widget.deinit();

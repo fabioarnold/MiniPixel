@@ -206,22 +206,22 @@ fn onMouseUp(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     _ = event;
 }
 
-fn draw(widget: *gui.Widget) void {
+fn draw(widget: *gui.Widget, vg: nvg) void {
     //const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
 
     // background
-    nvg.beginPath();
-    nvg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
-    nvg.fillColor(gui.theme_colors.shadow);
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+    vg.fillColor(gui.theme_colors.shadow);
+    vg.fill();
 
     // border
-    nvg.beginPath();
-    nvg.rect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
-    nvg.strokeColor(gui.theme_colors.border);
-    nvg.stroke();
+    vg.beginPath();
+    vg.rect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
+    vg.strokeColor(gui.theme_colors.border);
+    vg.stroke();
 
-    widget.drawChildren();
+    widget.drawChildren(vg);
 }

@@ -76,24 +76,24 @@ pub fn Slider(comptime T: type) type {
             self.value = std.math.clamp(value, self.min_value, self.max_value);
         }
 
-        fn draw(widget: *gui.Widget) void {
+        fn draw(widget: *gui.Widget, vg: nvg) void {
             const self = @fieldParentPtr(Self, "widget", widget);
 
             const rect = widget.relative_rect;
-            gui.drawPanelInset(rect.x, rect.y + 0.5 * rect.h - 1, rect.w, 2, 1);
+            gui.drawPanelInset(vg, rect.x, rect.y + 0.5 * rect.h - 1, rect.w, 2, 1);
 
             const x = (self.value - self.min_value) / (self.max_value - self.min_value);
-            drawIndicator(rect.x + x * rect.w, rect.y + 0.5 * rect.h - 1);
+            drawIndicator(vg, rect.x + x * rect.w, rect.y + 0.5 * rect.h - 1);
         }
     };
 }
 
-fn drawIndicator(x: f32, y: f32) void {
-    nvg.beginPath();
-    nvg.moveTo(x, y);
-    nvg.lineTo(x + 4, y - 4);
-    nvg.lineTo(x - 4, y - 4);
-    nvg.closePath();
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.fill();
+fn drawIndicator(vg: nvg, x: f32, y: f32) void {
+    vg.beginPath();
+    vg.moveTo(x, y);
+    vg.lineTo(x + 4, y - 4);
+    vg.lineTo(x - 4, y - 4);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.fill();
 }

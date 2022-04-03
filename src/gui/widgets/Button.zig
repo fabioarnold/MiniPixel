@@ -17,7 +17,7 @@ widget: gui.Widget,
 allocator: Allocator,
 text: [:0]const u8,
 font_size: f32 = 12,
-iconFn: ?fn () void = null,
+iconFn: ?fn (vg: nvg) void = null,
 icon_x: f32 = 2,
 icon_y: f32 = 2,
 style: ButtonStyle = .default,
@@ -151,7 +151,7 @@ fn onAutoRepeatTimerElapsed(context: usize) void {
     }
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
@@ -160,48 +160,48 @@ pub fn draw(widget: *gui.Widget) void {
 
     switch (self.style) {
         .default => {
-            gui.drawPanel(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 1, enabled and self.hovered, (enabled and self.pressed) or self.checked);
+            gui.drawPanel(vg, rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 1, enabled and self.hovered, (enabled and self.pressed) or self.checked);
 
             // border
-            nvg.beginPath();
+            vg.beginPath();
             if (self.focused) {
-                nvg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
-                nvg.strokeWidth(2);
+                vg.rect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+                vg.strokeWidth(2);
             } else {
-                nvg.rect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
+                vg.rect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
             }
-            nvg.strokeColor(gui.theme_colors.border);
-            nvg.stroke();
-            nvg.strokeWidth(1);
+            vg.strokeColor(gui.theme_colors.border);
+            vg.stroke();
+            vg.strokeWidth(1);
         },
         .toolbar => {
             if ((enabled and self.hovered) or self.checked) {
                 const depth: f32 = 1;
-                gui.drawPanel(rect.x, rect.y, rect.w, rect.h, depth, false, (enabled and self.pressed) or self.checked);
+                gui.drawPanel(vg, rect.x, rect.y, rect.w, rect.h, depth, false, (enabled and self.pressed) or self.checked);
             }
         },
     }
-    // nvg.beginPath();
-    // nvg.roundedRect(rect.x + 1.5, rect.y + 1.5, rect.w - 3, rect.h - 3, 1);
-    // nvg.fillColor(gui.theme_colors.background);
-    // nvg.fill();
-    // nvg.strokeColor(gui.theme_colors.light);
-    // nvg.stroke();
-    // nvg.beginPath();
-    // nvg.roundedRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1, 2);
-    // nvg.strokeColor(gui.theme_colors.border);
-    // nvg.stroke();
+    // vg.beginPath();
+    // vg.roundedRect(rect.x + 1.5, rect.y + 1.5, rect.w - 3, rect.h - 3, 1);
+    // vg.fillColor(gui.theme_colors.background);
+    // vg.fill();
+    // vg.strokeColor(gui.theme_colors.light);
+    // vg.stroke();
+    // vg.beginPath();
+    // vg.roundedRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1, 2);
+    // vg.strokeColor(gui.theme_colors.border);
+    // vg.stroke();
 
-    nvg.fontFace("guifont");
-    nvg.fontSize(self.font_size);
-    nvg.textAlign(.{ .horizontal = .center, .vertical = .middle });
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    _ = nvg.text(rect.x + 0.5 * rect.w, rect.y + 0.5 * rect.h, self.text);
+    vg.fontFace("guifont");
+    vg.fontSize(self.font_size);
+    vg.textAlign(.{ .horizontal = .center, .vertical = .middle });
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    _ = vg.text(rect.x + 0.5 * rect.w, rect.y + 0.5 * rect.h, self.text);
 
     if (self.iconFn) |iconFn| {
-        nvg.save();
-        nvg.translate(rect.x + self.icon_x, rect.y + self.icon_y);
-        iconFn();
-        nvg.restore();
+        vg.save();
+        vg.translate(rect.x + self.icon_x, rect.y + self.icon_y);
+        iconFn(vg);
+        vg.restore();
     }
 }

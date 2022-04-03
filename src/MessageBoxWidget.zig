@@ -32,7 +32,7 @@ const MessageBoxWidget = @This();
 
 widget: gui.Widget,
 allocator: Allocator,
-drawIconFn: fn (f32, f32) void,
+drawIconFn: fn (nvg, f32, f32) void,
 message_label: *gui.Label,
 ok_button: *gui.Button,
 cancel_button: *gui.Button,
@@ -177,88 +177,89 @@ fn setResult(self: *MessageBoxWidget, result: Result) void {
     }
 }
 
-fn drawNoIcon(x: f32, y: f32) void {
+fn drawNoIcon(vg: nvg, x: f32, y: f32) void {
+    _ = vg;
     _ = x;
     _ = y;
 }
 
-fn drawErrorIcon(x: f32, y: f32) void {
-    nvg.save();
-    defer nvg.restore();
-    nvg.translate(x, y);
-    nvg.beginPath();
-    nvg.circle(16, 16, 15.5);
-    nvg.fillColor(nvg.rgb(250, 10, 0));
-    nvg.fill();
-    nvg.strokeColor(nvg.rgb(0, 0, 0));
-    nvg.stroke();
-    nvg.beginPath();
-    nvg.moveTo(9, 9);
-    nvg.lineTo(23, 23);
-    nvg.moveTo(23, 9);
-    nvg.lineTo(9, 23);
-    nvg.strokeColor(nvg.rgbf(1, 1, 1));
-    nvg.strokeWidth(3);
-    nvg.stroke();
+fn drawErrorIcon(vg: nvg, x: f32, y: f32) void {
+    vg.save();
+    defer vg.restore();
+    vg.translate(x, y);
+    vg.beginPath();
+    vg.circle(16, 16, 15.5);
+    vg.fillColor(nvg.rgb(250, 10, 0));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(0, 0, 0));
+    vg.stroke();
+    vg.beginPath();
+    vg.moveTo(9, 9);
+    vg.lineTo(23, 23);
+    vg.moveTo(23, 9);
+    vg.lineTo(9, 23);
+    vg.strokeColor(nvg.rgbf(1, 1, 1));
+    vg.strokeWidth(3);
+    vg.stroke();
 }
 
-fn drawWarningIcon(x: f32, y: f32) void {
-    nvg.save();
-    defer nvg.restore();
-    nvg.translate(x, y);
-    nvg.beginPath();
-    nvg.moveTo(16, 31.5);
-    nvg.arcTo(31.5, 31.5, 16, 0.5, 2);
-    nvg.arcTo(16, 0.5, 0.5, 31.5, 2);
-    nvg.arcTo(0.5, 31.5, 16, 31.5, 2);
-    nvg.closePath();
-    nvg.fillColor(nvg.rgb(247, 226,107));
-    nvg.fill();
-    nvg.strokeColor(nvg.rgb(164, 100, 34));
-    nvg.stroke();
-    nvg.beginPath();
-    nvg.moveTo(16, 12);
-    nvg.arcTo(14, 12, 15, 23, 1);
-    nvg.arcTo(15, 23, 17, 23, 1);
-    nvg.arcTo(17, 23, 18, 12, 1);
-    nvg.arcTo(18, 12, 16, 12, 1);
-    nvg.closePath();
-    nvg.ellipse(16, 26, 2, 2);
-    nvg.fillColor(nvg.rgb(66, 66, 66));
-    nvg.fill();
+fn drawWarningIcon(vg: nvg, x: f32, y: f32) void {
+    vg.save();
+    defer vg.restore();
+    vg.translate(x, y);
+    vg.beginPath();
+    vg.moveTo(16, 31.5);
+    vg.arcTo(31.5, 31.5, 16, 0.5, 2);
+    vg.arcTo(16, 0.5, 0.5, 31.5, 2);
+    vg.arcTo(0.5, 31.5, 16, 31.5, 2);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(247, 226,107));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(164, 100, 34));
+    vg.stroke();
+    vg.beginPath();
+    vg.moveTo(16, 12);
+    vg.arcTo(14, 12, 15, 23, 1);
+    vg.arcTo(15, 23, 17, 23, 1);
+    vg.arcTo(17, 23, 18, 12, 1);
+    vg.arcTo(18, 12, 16, 12, 1);
+    vg.closePath();
+    vg.ellipse(16, 26, 2, 2);
+    vg.fillColor(nvg.rgb(66, 66, 66));
+    vg.fill();
 }
 
-fn drawQuestionIcon(x: f32, y: f32) void {
-    nvg.save();
-    defer nvg.restore();
-    nvg.translate(x, y);
-    nvg.beginPath();
-    nvg.circle(16, 16, 15.5);
-    nvg.fillColor(nvg.rgbf(1, 1, 1));
-    nvg.fill();
-    nvg.strokeColor(nvg.rgb(0, 0, 0));
-    nvg.stroke();
-    nvg.fillColor(nvg.rgb(10, 32, 231));
-    nvg.fontFace("guifontbold");
-    nvg.fontSize(22);
-    nvg.textAlign(.{ .horizontal = .center, .vertical = .middle });
-    _ = nvg.text(16, 16 + 2, "?");
+fn drawQuestionIcon(vg: nvg, x: f32, y: f32) void {
+    vg.save();
+    defer vg.restore();
+    vg.translate(x, y);
+    vg.beginPath();
+    vg.circle(16, 16, 15.5);
+    vg.fillColor(nvg.rgbf(1, 1, 1));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(0, 0, 0));
+    vg.stroke();
+    vg.fillColor(nvg.rgb(10, 32, 231));
+    vg.fontFace("guifontbold");
+    vg.fontSize(22);
+    vg.textAlign(.{ .horizontal = .center, .vertical = .middle });
+    _ = vg.text(16, 16 + 2, "?");
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     var self = @fieldParentPtr(MessageBoxWidget, "widget", widget);
     const rect = widget.relative_rect;
 
-    nvg.beginPath();
-    nvg.rect(0, 0, rect.w, rect.h - 45);
-    nvg.fillColor(nvg.rgbf(1, 1, 1));
-    nvg.fill();
-    nvg.beginPath();
-    nvg.rect(0, rect.h - 45, rect.w, 45);
-    nvg.fillColor(gui.theme_colors.background);
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(0, 0, rect.w, rect.h - 45);
+    vg.fillColor(nvg.rgbf(1, 1, 1));
+    vg.fill();
+    vg.beginPath();
+    vg.rect(0, rect.h - 45, rect.w, 45);
+    vg.fillColor(gui.theme_colors.background);
+    vg.fill();
 
-    self.drawIconFn(10, 13);
+    self.drawIconFn(vg, 10, 13);
 
-    widget.drawChildren();
+    widget.drawChildren(vg);
 }

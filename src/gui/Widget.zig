@@ -25,7 +25,7 @@ focus_policy: event.FocusPolicy = event.FocusPolicy{},
 enabled: bool = true,
 visible: bool = true,
 
-drawFn: fn (*Widget) void = drawChildren,
+drawFn: fn (*Widget, vg: nvg) void = drawChildren,
 
 onResizeFn: fn (*Widget, *event.ResizeEvent) void = onResize,
 onMouseMoveFn: fn (*Widget, *event.MouseEvent) void = onMouseMove,
@@ -129,28 +129,28 @@ pub fn setSize(self: *Self, width: f32, height: f32) void {
     }
 }
 
-pub fn drawChildren(self: *Self) void {
-    nvg.save();
-    defer nvg.restore();
+pub fn drawChildren(self: *Self, vg: nvg) void {
+    vg.save();
+    defer vg.restore();
     const offset = self.relative_rect.getPosition();
-    nvg.translate(offset.x, offset.y);
+    vg.translate(offset.x, offset.y);
     for (self.children.items) |child| {
-        child.draw();
+        child.draw(vg);
     }
 }
 
-pub fn draw(self: *Self) void {
+pub fn draw(self: *Self, vg: nvg) void {
     if (!self.visible) return;
 
-    self.drawFn(self);
+    self.drawFn(self, vg);
 
     if (debug_focus) {
         if (self.isFocused()) {
-            nvg.beginPath();
+            vg.beginPath();
             const r = self.relative_rect;
-            nvg.rect(r.x, r.y, r.w - 1, r.h - 1);
-            nvg.strokeColor(nvg.rgbf(1, 0, 0));
-            nvg.stroke();
+            vg.rect(r.x, r.y, r.w - 1, r.h - 1);
+            vg.strokeColor(nvg.rgbf(1, 0, 0));
+            vg.stroke();
         }
     }
 }

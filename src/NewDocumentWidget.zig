@@ -147,9 +147,9 @@ fn cancel(self: *Self) void {
     }
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const rect = widget.relative_rect;
-    gui.drawPanel(rect.x, rect.y, rect.w, rect.h, 1, false, false);
+    gui.drawPanel(vg, rect.x, rect.y, rect.w, rect.h, 1, false, false);
 
-    widget.drawChildren();
+    widget.drawChildren(vg);
 }

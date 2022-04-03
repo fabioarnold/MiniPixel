@@ -90,52 +90,52 @@ pub fn addWidget(self: *Self, widget: *gui.Widget) !void {
     self.updateLayout();
 }
 
-fn drawSeparator(widget: *gui.Widget) void {
+fn drawSeparator(widget: *gui.Widget, vg: nvg) void {
     const rect = widget.relative_rect;
 
-    nvg.beginPath();
-    nvg.rect(rect.x + 1, rect.y + 1, 1, rect.h - 2);
-    nvg.fillColor(gui.theme_colors.shadow);
-    nvg.fill();
-    nvg.beginPath();
-    nvg.rect(rect.x + 2, rect.y + 1, 1, rect.h - 2);
-    nvg.fillColor(gui.theme_colors.light);
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(rect.x + 1, rect.y + 1, 1, rect.h - 2);
+    vg.fillColor(gui.theme_colors.shadow);
+    vg.fill();
+    vg.beginPath();
+    vg.rect(rect.x + 2, rect.y + 1, 1, rect.h - 2);
+    vg.fillColor(gui.theme_colors.light);
+    vg.fill();
 }
 
-fn draw(widget: *gui.Widget) void {
+fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
-    gui.drawPanel(rect.x, rect.y, rect.w, rect.h, 1, false, false);
+    gui.drawPanel(vg, rect.x, rect.y, rect.w, rect.h, 1, false, false);
 
     if (self.has_grip) {
-        drawGrip(rect.x + rect.w - 16, rect.y + rect.h - 16);
+        drawGrip(vg, rect.x + rect.w - 16, rect.y + rect.h - 16);
     }
 
-    widget.drawChildren();
+    widget.drawChildren(vg);
 }
 
-fn drawGrip(x: f32, y: f32) void {
-    nvg.scissor(x, y, 14, 14);
-    defer nvg.resetScissor();
+fn drawGrip(vg: nvg, x: f32, y: f32) void {
+    vg.scissor(x, y, 14, 14);
+    defer vg.resetScissor();
 
-    nvg.beginPath();
-    nvg.moveTo(x, y + 16);
-    nvg.lineTo(x + 16, y);
-    nvg.moveTo(x + 4, y + 16);
-    nvg.lineTo(x + 4 + 16, y);
-    nvg.moveTo(x + 8, y + 16);
-    nvg.lineTo(x + 8 + 16, y);
-    nvg.strokeColor(gui.theme_colors.light);
-    nvg.stroke();
-    nvg.beginPath();
-    nvg.moveTo(x + 1, y + 16);
-    nvg.lineTo(x + 1 + 16, y);
-    nvg.moveTo(x + 5, y + 16);
-    nvg.lineTo(x + 5 + 16, y);
-    nvg.moveTo(x + 9, y + 16);
-    nvg.lineTo(x + 9 + 16, y);
-    nvg.strokeColor(gui.theme_colors.shadow);
-    nvg.stroke();
+    vg.beginPath();
+    vg.moveTo(x, y + 16);
+    vg.lineTo(x + 16, y);
+    vg.moveTo(x + 4, y + 16);
+    vg.lineTo(x + 4 + 16, y);
+    vg.moveTo(x + 8, y + 16);
+    vg.lineTo(x + 8 + 16, y);
+    vg.strokeColor(gui.theme_colors.light);
+    vg.stroke();
+    vg.beginPath();
+    vg.moveTo(x + 1, y + 16);
+    vg.lineTo(x + 1 + 16, y);
+    vg.moveTo(x + 5, y + 16);
+    vg.lineTo(x + 5 + 16, y);
+    vg.moveTo(x + 9, y + 16);
+    vg.lineTo(x + 9 + 16, y);
+    vg.strokeColor(gui.theme_colors.shadow);
+    vg.stroke();
 }

@@ -20,13 +20,13 @@ background_image: nvg.Image,
 
 const Self = @This();
 
-pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document, vg: nvg) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),
         .allocator = allocator,
         .document = document,
-        .background_image = nvg.createImageRgba(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
+        .background_image = vg.createImageRGBA(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
             0x66, 0x66, 0x66, 0xFF, 0x99, 0x99, 0x99, 0xFF,
             0x99, 0x99, 0x99, 0xFF, 0x66, 0x66, 0x66, 0xFF,
         }),
@@ -41,8 +41,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     return self;
 }
 
-pub fn deinit(self: *Self) void {
-    nvg.deleteImage(self.background_image);
+pub fn deinit(self: *Self, vg: nvg) void {
+    vg.deleteImage(self.background_image);
     self.widget.deinit();
     self.allocator.destroy(self);
 }
@@ -65,47 +65,47 @@ fn onMouseUp(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     self.drag_offset = null;
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     var self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
-    nvg.save();
-    defer nvg.restore();
-    nvg.translate(rect.x, rect.y);
+    vg.save();
+    defer vg.restore();
+    vg.translate(rect.x, rect.y);
 
-    gui.drawPanel(0, 0, rect.w, rect.h, 1, false, false);
-    nvg.beginPath();
-    nvg.rect(5.5, 5.5, rect.w - 11, rect.h - 11);
-    nvg.strokeColor(nvg.rgb(66, 66, 66));
-    nvg.stroke();
+    gui.drawPanel(vg, 0, 0, rect.w, rect.h, 1, false, false);
+    vg.beginPath();
+    vg.rect(5.5, 5.5, rect.w - 11, rect.h - 11);
+    vg.strokeColor(nvg.rgb(66, 66, 66));
+    vg.stroke();
 
     const client_w = rect.w - 12;
     const client_h = rect.h - 12;
-    nvg.scissor(6, 6, client_w, client_h);
-    nvg.translate(6, 6);
+    vg.scissor(6, 6, client_w, client_h);
+    vg.translate(6, 6);
     const client_rect = Rect(f32).make(0, 0, client_w, client_h);
-    self.drawBackground(client_rect);
+    self.drawBackground(client_rect, vg);
 
     const d_x = client_w - @intToFloat(f32, self.document.getWidth());
     const d_y = client_h - @intToFloat(f32, self.document.getHeight());
     self.translation.x = std.math.clamp(self.translation.x, std.math.min(0, d_x), std.math.max(0, d_x));
     self.translation.y = std.math.clamp(self.translation.y, std.math.min(0, d_y), std.math.max(0, d_y));
-    nvg.translate(self.translation.x, self.translation.y);
-    self.document.draw();
+    vg.translate(self.translation.x, self.translation.y);
+    self.document.draw(vg);
 
     if (self.document.selection) |selection| {
-        self.drawSelection(selection, client_rect.translated(self.translation.scaled(-1)));
+        self.drawSelection(selection, client_rect.translated(self.translation.scaled(-1)), vg);
     }
 }
 
-fn drawBackground(self: Self, rect: Rect(f32)) void {
-    nvg.beginPath();
-    nvg.rect(rect.x, rect.y, rect.w, rect.h);
-    nvg.fillPaint(nvg.imagePattern(0, 0, 8, 8, 0, self.background_image, 1));
-    nvg.fill();
+fn drawBackground(self: Self, rect: Rect(f32), vg: nvg) void {
+    vg.beginPath();
+    vg.rect(rect.x, rect.y, rect.w, rect.h);
+    vg.fillPaint(vg.imagePattern(0, 0, 8, 8, 0, self.background_image, 1));
+    vg.fill();
 }
 
-fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) void {
+fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32), vg: nvg) void {
     const document_rect = Rect(f32).make(0, 0, @intToFloat(f32, self.document.getWidth()), @intToFloat(f32, self.document.getHeight()));
     const selection_rect = Rect(f32).make(
         @intToFloat(f32, selection.rect.x),
@@ -114,9 +114,9 @@ fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) voi
         @intToFloat(f32, selection.rect.h),
     );
     const intersection = rect.intersection(document_rect.intersection(selection_rect));
-    nvg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);
+    vg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);
     if (self.document.blend_mode == .replace) {
-        self.drawBackground(selection_rect);
+        self.drawBackground(selection_rect, vg);
     }
-    self.document.drawSelection();
+    self.document.drawSelection(vg);
 }
