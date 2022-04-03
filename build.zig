@@ -80,7 +80,24 @@ pub fn build(b: *Builder) !void {
         exe.linkSystemLibrary("libpng16");
     }
     if (exe.target.isDarwin()) {
-        exe.linkFramework("OpenGL");
+        const frameworks = .{
+            "AppKit",
+            "AudioToolbox",
+            "Carbon",
+            "Cocoa",
+            "CoreAudio",
+            "CoreHaptics",
+            "ForceFeedback",
+            "GameController",
+            "IOKit",
+            "Metal",
+            "OpenGL",
+            "QuartzCore",
+        };
+        inline for (frameworks) |framework| {
+            exe.linkFramework(framework);
+        }
+        exe.linkSystemLibrary("iconv");
     } else if (exe.target.isWindows()) {
         exe.linkSystemLibrary("opengl32");
     } else if (exe.target.isLinux()) {
