@@ -123,8 +123,8 @@ fn onMouseMove(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     const self = @fieldParentPtr(Self, "widget", widget);
     if (event.isButtonPressed(.left) and self.selected != null) {
         const rect = widget.relative_rect;
-        const ix = std.math.clamp(@floatToInt(u8, 16 * event.x / rect.w), 0, 15);
-        const iy = std.math.clamp(@floatToInt(u8, 16 * event.y / rect.h), 0, 15);
+        const ix = @floatToInt(u8, std.math.clamp(16 * event.x / rect.w, 0, 15));
+        const iy = @floatToInt(u8, std.math.clamp(16 * event.y / rect.h, 0, 15));
         const i = 16 * iy + ix;
         self.setSelection(i);
     }
