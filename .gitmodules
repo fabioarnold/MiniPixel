@@ -7,3 +7,6 @@
 [submodule "deps/s2s"]
 	path = deps/s2s
 	url = https://github.com/ziglibs/s2s
+[submodule "deps/nanovg-zig"]
+	path = deps/nanovg-zig
+	url = https://github.com/fabioarnold/nanovg-zig

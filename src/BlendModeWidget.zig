@@ -25,7 +25,7 @@ const pad = 5;
 
 const Self = @This();
 
-pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),
@@ -34,8 +34,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
             Rect(f32).make(pad + 1, 33 - 27, rect.w - 2 * pad - 2, 27),
             Rect(f32).make(pad + 1, 33, rect.w - 2 * pad - 2, 27),
         },
-        .image_alpha = nvg.createImageMem(image_alpha_data, .{ .nearest = true }),
-        .image_replace = nvg.createImageMem(image_replace_data, .{ .nearest = true }),
+        .image_alpha = vg.createImageMem(image_alpha_data, .{ .nearest = true }),
+        .image_replace = vg.createImageMem(image_replace_data, .{ .nearest = true }),
     };
 
     self.widget.onMouseDownFn = onMouseDown;
@@ -45,9 +45,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     return self;
 }
 
-pub fn deinit(self: *Self) void {
-    nvg.deleteImage(self.image_alpha);
-    nvg.deleteImage(self.image_replace);
+pub fn deinit(self: *Self, vg: nvg) void {
+    vg.deleteImage(self.image_alpha);
+    vg.deleteImage(self.image_replace);
     self.widget.deinit();
     self.allocator.destroy(self);
 }
@@ -73,30 +73,30 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     }
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
-    nvg.save();
-    defer nvg.restore();
-    nvg.translate(rect.x, rect.y);
+    vg.save();
+    defer vg.restore();
+    vg.translate(rect.x, rect.y);
 
-    gui.drawPanel(0, 0, rect.w, rect.h, 1, false, false);
-    gui.drawPanelInset(pad, pad, rect.w - 2 * pad, rect.h - 2 * pad, 1);
+    gui.drawPanel(vg, 0, 0, rect.w, rect.h, 1, false, false);
+    gui.drawPanelInset(vg, pad, pad, rect.w - 2 * pad, rect.h - 2 * pad, 1);
 
     const active_rect = self.rects[@enumToInt(self.active)];
-    nvg.beginPath();
-    nvg.rect(active_rect.x, active_rect.y, active_rect.w, active_rect.h);
-    nvg.fillColor(if (widget.enabled) gui.theme_colors.focus else gui.theme_colors.shadow);
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(active_rect.x, active_rect.y, active_rect.w, active_rect.h);
+    vg.fillColor(if (widget.enabled) gui.theme_colors.focus else gui.theme_colors.shadow);
+    vg.fill();
 
     const alpha: f32 = if (widget.enabled) 1 else 0.5;
-    nvg.beginPath();
-    nvg.rect(32, 33 - 25, 32, 24);
-    nvg.fillPaint(nvg.imagePattern(32, 33 - 25, 32, 24, 0, self.image_alpha, alpha));
-    nvg.fill();
-    nvg.beginPath();
-    nvg.rect(32, 33 + 1, 32, 24);
-    nvg.fillPaint(nvg.imagePattern(32, 33 + 1, 32, 24, 0, self.image_replace, alpha));
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(32, 33 - 25, 32, 24);
+    vg.fillPaint(vg.imagePattern(32, 33 - 25, 32, 24, 0, self.image_alpha, alpha));
+    vg.fill();
+    vg.beginPath();
+    vg.rect(32, 33 + 1, 32, 24);
+    vg.fillPaint(vg.imagePattern(32, 33 + 1, 32, 24, 0, self.image_replace, alpha));
+    vg.fill();
 }

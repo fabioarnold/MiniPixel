@@ -222,17 +222,17 @@ const CropTool = struct {
         self.edit_point = Pointi.make(ftoi(@round(point.x)), ftoi(@round(point.y)));
     }
 
-    fn drawPreview(self: CropTool, canvas: *CanvasWidget) void {
+    fn drawPreview(self: CropTool, canvas: *CanvasWidget, vg: nvg) void {
         if (self.crop_rect) |rect| {
             const gui_rect = canvas.rectFromDocumentSpace(ritof(rect), true);
             const canvas_rect = canvas.widget.relative_rect;
             // draw vignette
-            nvg.beginPath();
-            nvg.rect(0, 0, canvas_rect.w, canvas_rect.h);
-            nvg.pathWinding(.cw);
-            nvg.rect(gui_rect.x, gui_rect.y, gui_rect.w, gui_rect.h);
-            nvg.fillColor(nvg.rgbaf(0, 0, 0, 0.5));
-            nvg.fill();
+            vg.beginPath();
+            vg.rect(0, 0, canvas_rect.w, canvas_rect.h);
+            vg.pathWinding(.cw);
+            vg.rect(gui_rect.x, gui_rect.y, gui_rect.w, gui_rect.h);
+            vg.fillColor(nvg.rgbaf(0, 0, 0, 0.5));
+            vg.fill();
 
             // zones
             var draw_zone: ?Rectf = null;
@@ -249,36 +249,36 @@ const CropTool = struct {
                 }
             }
             {
-                nvg.translate(0.5, 0.5);
-                defer nvg.translate(-0.5, -0.5);
+                vg.translate(0.5, 0.5);
+                defer vg.translate(-0.5, -0.5);
                 if (draw_zone) |hz| {
-                    nvg.beginPath();
-                    nvg.rect(gui_rect.x, gui_rect.y, gui_rect.w, gui_rect.h);
-                    nvg.rect(hz.x, hz.y, hz.w, hz.h);
+                    vg.beginPath();
+                    vg.rect(gui_rect.x, gui_rect.y, gui_rect.w, gui_rect.h);
+                    vg.rect(hz.x, hz.y, hz.w, hz.h);
                 } else {
-                    nvg.beginPath();
+                    vg.beginPath();
                     const gr = gui_rect;
                     const zs = zone_size;
-                    nvg.moveTo(gr.x - zs, gr.y - zs);
-                    nvg.lineTo(gr.x - zs, gr.y);
-                    nvg.lineTo(gr.x + gr.w + zs, gr.y);
-                    nvg.lineTo(gr.x + gr.w + zs, gr.y - zs);
-                    nvg.lineTo(gr.x + gr.w, gr.y - zs);
-                    nvg.lineTo(gr.x + gr.w, gr.y + gr.h + zs);
-                    nvg.lineTo(gr.x + gr.w + zs, gr.y + gr.h + zs);
-                    nvg.lineTo(gr.x + gr.w + zs, gr.y + gr.h);
-                    nvg.lineTo(gr.x - zs, gr.y + gr.h);
-                    nvg.lineTo(gr.x - zs, gr.y + gr.h + zs);
-                    nvg.lineTo(gr.x, gr.y + gr.h + zs);
-                    nvg.lineTo(gr.x, gr.y - zs);
-                    nvg.closePath();
+                    vg.moveTo(gr.x - zs, gr.y - zs);
+                    vg.lineTo(gr.x - zs, gr.y);
+                    vg.lineTo(gr.x + gr.w + zs, gr.y);
+                    vg.lineTo(gr.x + gr.w + zs, gr.y - zs);
+                    vg.lineTo(gr.x + gr.w, gr.y - zs);
+                    vg.lineTo(gr.x + gr.w, gr.y + gr.h + zs);
+                    vg.lineTo(gr.x + gr.w + zs, gr.y + gr.h + zs);
+                    vg.lineTo(gr.x + gr.w + zs, gr.y + gr.h);
+                    vg.lineTo(gr.x - zs, gr.y + gr.h);
+                    vg.lineTo(gr.x - zs, gr.y + gr.h + zs);
+                    vg.lineTo(gr.x, gr.y + gr.h + zs);
+                    vg.lineTo(gr.x, gr.y - zs);
+                    vg.closePath();
                 }
-                nvg.strokeColor(nvg.rgbaf(0, 0, 0, 0.5));
-                nvg.strokeWidth(3);
-                nvg.stroke();
-                nvg.strokeWidth(1);
-                nvg.strokeColor(nvg.rgbf(1, 1, 1));
-                nvg.stroke();
+                vg.strokeColor(nvg.rgbaf(0, 0, 0, 0.5));
+                vg.strokeWidth(3);
+                vg.stroke();
+                vg.strokeWidth(1);
+                vg.strokeColor(nvg.rgbf(1, 1, 1));
+                vg.stroke();
             }
         } else {
             if (!canvas.hovered) return;
@@ -289,25 +289,25 @@ const CropTool = struct {
                 @intToFloat(f32, edit_point.y),
             );
 
-            nvg.beginPath();
-            nvg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
-            nvg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
+            vg.beginPath();
+            vg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
+            vg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
 
             if (self.begin_point) |begin_point| {
                 center = canvas.fromDocumentSpace(
                     @intToFloat(f32, begin_point.x),
                     @intToFloat(f32, begin_point.y),
                 );
-                nvg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
-                nvg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
+                vg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
+                vg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
             }
 
-            nvg.fillPaint(nvg.imagePattern(0, 0, 4, 4, 0, canvas.grid_image, 1));
-            nvg.fill();
+            vg.fillPaint(vg.imagePattern(0, 0, 4, 4, 0, canvas.grid_image, 1));
+            vg.fill();
         }
     }
 
-    fn getCursor(self: CropTool) fn () void {
+    fn getCursor(self: CropTool) fn (nvg) void {
         if (self.crop_rect) |rect| {
             if (self.drag_offset != null) return icons.cursorMove; // TODO: grab cursor?
             if (self.edit_point) |edit_point| {
@@ -457,7 +457,7 @@ const SelectTool = struct {
         self.edit_point = Pointi.make(ftoi(@round(point.x)), ftoi(@round(point.y)));
     }
 
-    fn drawPreview(self: SelectTool, canvas: *CanvasWidget) void {
+    fn drawPreview(self: SelectTool, canvas: *CanvasWidget, vg: nvg) void {
         if (canvas.document.selection != null) return;
         if (!canvas.hovered) return;
         const edit_point = self.edit_point orelse return;
@@ -467,24 +467,24 @@ const SelectTool = struct {
             @intToFloat(f32, edit_point.y),
         );
 
-        nvg.beginPath();
-        nvg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
-        nvg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
+        vg.beginPath();
+        vg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
+        vg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
 
         if (self.begin_point) |begin_point| {
             center = canvas.fromDocumentSpace(
                 @intToFloat(f32, begin_point.x),
                 @intToFloat(f32, begin_point.y),
             );
-            nvg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
-            nvg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
+            vg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
+            vg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
         }
 
-        nvg.fillPaint(nvg.imagePattern(0, 0, 4, 4, 0, canvas.grid_image, 1));
-        nvg.fill();
+        vg.fillPaint(vg.imagePattern(0, 0, 4, 4, 0, canvas.grid_image, 1));
+        vg.fill();
     }
 
-    fn getCursor(self: SelectTool, canvas: *CanvasWidget) fn () void {
+    fn getCursor(self: SelectTool, canvas: *CanvasWidget) fn (nvg) void {
         if (canvas.document.selection) |selection| {
             if (self.drag_offset != null) return icons.cursorMove; // TODO: grab cursor?
             if (self.edit_point) |edit_point| {
@@ -661,7 +661,7 @@ const DrawTool = struct {
         canvas.document.previewBrush(self.edit_point.x, self.edit_point.y);
     }
 
-    fn getCursor(self: DrawTool) fn () void {
+    fn getCursor(self: DrawTool) fn (nvg) void {
         return if (self.picking) icons.cursorPipette else icons.cursorPen;
     }
 
@@ -717,7 +717,7 @@ const FillTool = struct {
         }
     }
 
-    fn getCursor(self: FillTool) fn () void {
+    fn getCursor(self: FillTool) fn (nvg) void {
         return if (self.picking) icons.cursorPipette else icons.cursorBucket;
     }
 
@@ -783,7 +783,7 @@ pub const max_scale = 64.0;
 
 const Self = @This();
 
-pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
+pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document, vg: nvg) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),
@@ -792,15 +792,15 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         .document = document,
         .horizontal_scrollbar = try gui.Scrollbar.init(allocator, Rect(f32).make(0, 160, 160, 16), .horizontal),
         .vertical_scrollbar = try gui.Scrollbar.init(allocator, Rect(f32).make(160, 0, 16, 160), .vertical),
-        .document_background_image = nvg.createImageRgba(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
+        .document_background_image = vg.createImageRGBA(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
             0x66, 0x66, 0x66, 0xFF, 0x99, 0x99, 0x99, 0xFF,
             0x99, 0x99, 0x99, 0xFF, 0x66, 0x66, 0x66, 0xFF,
         }),
-        .grid_image = nvg.createImageRgba(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
+        .grid_image = vg.createImageRGBA(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
             0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
             0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0xFF,
         }),
-        .blue_grid_image = nvg.createImageRgba(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
+        .blue_grid_image = vg.createImageRGBA(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
             0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF,
             0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF,
         }),
@@ -847,10 +847,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     return self;
 }
 
-pub fn deinit(self: *Self) void {
-    nvg.deleteImage(self.document_background_image);
-    nvg.deleteImage(self.grid_image);
-    nvg.deleteImage(self.blue_grid_image);
+pub fn deinit(self: *Self, vg: nvg) void {
+    vg.deleteImage(self.document_background_image);
+    vg.deleteImage(self.grid_image);
+    vg.deleteImage(self.blue_grid_image);
     self.horizontal_scrollbar.deinit();
     self.vertical_scrollbar.deinit();
     self.widget.deinit();
@@ -1149,46 +1149,46 @@ fn notifyColorPicked(self: *Self) void {
     }
 }
 
-fn draw(widget: *gui.Widget) void {
+fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
     const rect = widget.relative_rect;
 
     {
-        nvg.save();
-        defer nvg.restore();
-        nvg.translate(rect.x, rect.y);
-        nvg.scissor(0, 0, rect.w, rect.h);
+        vg.save();
+        defer vg.restore();
+        vg.translate(rect.x, rect.y);
+        vg.scissor(0, 0, rect.w, rect.h);
         const client_rect = Rectf.make(0, 0, rect.w, rect.h);
 
         {
-            nvg.save();
-            defer nvg.restore();
-            nvg.translate(self.translation.x, self.translation.y);
+            vg.save();
+            defer vg.restore();
+            vg.translate(self.translation.x, self.translation.y);
 
             self.drawDocumentBackground(Rectf.make(
                 0,
                 0,
                 self.scale * @intToFloat(f32, self.document.getWidth()),
                 self.scale * @intToFloat(f32, self.document.getHeight()),
-            ));
+            ), vg);
             {
                 // draw document
-                nvg.save();
-                defer nvg.restore();
-                nvg.scale(self.scale, self.scale);
-                self.document.draw();
+                vg.save();
+                defer vg.restore();
+                vg.scale(self.scale, self.scale);
+                self.document.draw(vg);
             }
 
             if (self.document.selection) |selection| {
-                self.drawSelection(selection, client_rect.translated(self.translation.scaled(-1)));
+                self.drawSelection(selection, client_rect.translated(self.translation.scaled(-1)), vg);
             } else {
-                self.drawGrids();
+                self.drawGrids(vg);
             }
         }
 
         switch (self.tool) {
-            .crop => self.crop_tool.drawPreview(self),
-            .select => self.select_tool.drawPreview(self),
+            .crop => self.crop_tool.drawPreview(self, vg),
+            .select => self.select_tool.drawPreview(self, vg),
             else => {},
         }
 
@@ -1207,59 +1207,59 @@ fn draw(widget: *gui.Widget) void {
         }
     }
 
-    nvg.beginPath();
-    nvg.rect(rect.x + rect.w - 15, rect.y + rect.h - 15, 15, 15);
-    nvg.fillColor(gui.theme_colors.background);
-    nvg.fill();
-    self.widget.drawChildren();
+    vg.beginPath();
+    vg.rect(rect.x + rect.w - 15, rect.y + rect.h - 15, 15, 15);
+    vg.fillColor(gui.theme_colors.background);
+    vg.fill();
+    self.widget.drawChildren(vg);
 }
 
-fn drawDocumentBackground(self: Self, rect: Rectf) void {
-    nvg.beginPath();
-    nvg.rect(rect.x, rect.y, rect.w, rect.h);
-    nvg.fillPaint(nvg.imagePattern(0, 0, 8, 8, 0, self.document_background_image, 1));
-    nvg.fill();
+fn drawDocumentBackground(self: Self, rect: Rectf, vg: nvg) void {
+    vg.beginPath();
+    vg.rect(rect.x, rect.y, rect.w, rect.h);
+    vg.fillPaint(vg.imagePattern(0, 0, 8, 8, 0, self.document_background_image, 1));
+    vg.fill();
 }
 
-fn drawGrids(self: Self) void {
+fn drawGrids(self: Self, vg: nvg) void {
     if (self.pixel_grid_enabled and self.scale > 3) {
-        nvg.beginPath();
+        vg.beginPath();
         var x: u32 = 0;
         while (x <= self.document.getWidth()) : (x += 1) {
             const fx = @trunc(@intToFloat(f32, x) * self.scale);
-            nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.getHeight()) * self.scale);
+            vg.rect(fx, 0, 1, @intToFloat(f32, self.document.getHeight()) * self.scale);
         }
         var y: u32 = 0;
         while (y <= self.document.getHeight()) : (y += 1) {
             const fy = @trunc(@intToFloat(f32, y) * self.scale);
-            nvg.rect(0, fy, @intToFloat(f32, self.document.getWidth()) * self.scale, 1);
+            vg.rect(0, fy, @intToFloat(f32, self.document.getWidth()) * self.scale, 1);
         }
-        nvg.fillPaint(nvg.imagePattern(0, 0, 2, 2, 0, self.grid_image, 0.5));
-        nvg.fill();
+        vg.fillPaint(vg.imagePattern(0, 0, 2, 2, 0, self.grid_image, 0.5));
+        vg.fill();
     }
 
     if (self.custom_grid_enabled) {
-        nvg.beginPath();
+        vg.beginPath();
         if (self.scale * @intToFloat(f32, self.custom_grid_spacing_x) > 3) {
             var x: u32 = 0;
             while (x <= self.document.getWidth()) : (x += self.custom_grid_spacing_x) {
                 const fx = @trunc(@intToFloat(f32, x) * self.scale);
-                nvg.rect(fx, 0, 1, @intToFloat(f32, self.document.getHeight()) * self.scale);
+                vg.rect(fx, 0, 1, @intToFloat(f32, self.document.getHeight()) * self.scale);
             }
         }
         if (self.scale * @intToFloat(f32, self.custom_grid_spacing_y) > 3) {
             var y: u32 = 0;
             while (y <= self.document.getHeight()) : (y += self.custom_grid_spacing_y) {
                 const fy = @trunc(@intToFloat(f32, y) * self.scale);
-                nvg.rect(0, fy, @intToFloat(f32, self.document.getWidth()) * self.scale, 1);
+                vg.rect(0, fy, @intToFloat(f32, self.document.getWidth()) * self.scale, 1);
             }
         }
-        nvg.fillPaint(nvg.imagePattern(0, 0, 2, 2, 0, self.blue_grid_image, 0.5));
-        nvg.fill();
+        vg.fillPaint(vg.imagePattern(0, 0, 2, 2, 0, self.blue_grid_image, 0.5));
+        vg.fill();
     }
 }
 
-fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) void {
+fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32), vg: nvg) void {
     const document_rect = Rectf.make(0, 0, @intToFloat(f32, self.document.getWidth()), @intToFloat(f32, self.document.getHeight()));
     const selection_rect = Rectf.make(
         @intToFloat(f32, selection.rect.x),
@@ -1273,29 +1273,29 @@ fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32)) voi
     const x1 = @trunc((selection_rect.x + selection_rect.w) * s);
     const y1 = @trunc((selection_rect.y + selection_rect.h) * s);
     {
-        nvg.save();
-        defer nvg.restore();
+        vg.save();
+        defer vg.restore();
         if (self.document.blend_mode == .replace) {
             const intersection = rect.intersection(document_rect.intersection(selection_rect).scaled(s));
-            nvg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);
-            self.drawDocumentBackground(selection_rect.scaled(s));
+            vg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);
+            self.drawDocumentBackground(selection_rect.scaled(s), vg);
         }
-        nvg.scale(s, s);
+        vg.scale(s, s);
         const intersection = rect.scaled(1 / s).intersection(document_rect.intersection(selection_rect));
-        nvg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);
-        self.document.drawSelection();
+        vg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);
+        self.document.drawSelection(vg);
     }
 
-    self.drawGrids();
+    self.drawGrids(vg);
 
     // draw selection border on top of grid
-    nvg.beginPath();
-    nvg.rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
-    nvg.pathWinding(.cw);
-    nvg.rect(x0 + 1, y0 + 1, x1 - x0 - 1, y1 - y0 - 1);
-    nvg.pathWinding(.ccw);
-    nvg.fillPaint(nvg.imagePattern(0, 0, 4, 4, 0, self.grid_image, 1));
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+    vg.pathWinding(.cw);
+    vg.rect(x0 + 1, y0 + 1, x1 - x0 - 1, y1 - y0 - 1);
+    vg.pathWinding(.ccw);
+    vg.fillPaint(vg.imagePattern(0, 0, 4, 4, 0, self.grid_image, 1));
+    vg.fill();
 }
 
 fn updateStatusBar(self: Self) void {

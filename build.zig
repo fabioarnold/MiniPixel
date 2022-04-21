@@ -5,9 +5,11 @@ const Builder = std.build.Builder;
 const FileSource = std.build.FileSource;
 const Pkg = std.build.Pkg;
 
+const nanovg_build = @import("deps/nanovg-zig/build.zig");
+
 const win32 = Pkg{ .name = "win32", .path = FileSource.relative("deps/zigwin32/win32.zig") };
 const nfd = Pkg{ .name = "nfd", .path = FileSource.relative("deps/nfd-zig/src/lib.zig") };
-const nanovg = Pkg{ .name = "nanovg", .path = FileSource.relative("deps/nanovg/src/nanovg.zig") };
+const nanovg = Pkg{ .name = "nanovg", .path = FileSource.relative("deps/nanovg-zig/src/nanovg.zig") };
 const s2s = Pkg{ .name = "s2s", .path = FileSource.relative("deps/s2s/s2s.zig") };
 const gui = Pkg{ .name = "gui", .path = FileSource.relative("src/gui/gui.zig"), .dependencies = &.{nanovg} };
 
@@ -35,7 +37,7 @@ pub fn build(b: *Builder) !void {
     const exe = b.addExecutable("minipixel", "src/main.zig");
     exe.setBuildMode(mode);
     exe.setTarget(target);
-    exe.addIncludeDir("lib/nanovg/src");
+    // exe.addIncludeDir("lib/nanovg/src");
     exe.addIncludeDir("lib/gl2/include");
     if (exe.target.isWindows()) {
         exe.addVcpkgPaths(.dynamic) catch @panic("vcpkg not installed");
@@ -63,11 +65,12 @@ pub fn build(b: *Builder) !void {
         &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS" };
     exe.addCSourceFile("src/c/png_image.c", &.{"-std=c99"});
     exe.addCSourceFile("lib/gl2/src/glad.c", c_flags);
-    exe.addCSourceFile("lib/nanovg/src/nanovg.c", c_flags);
-    exe.addCSourceFile("deps/nanovg/src/c/nanovg_gl2_impl.c", c_flags);
+    // exe.addCSourceFile("lib/nanovg/src/nanovg.c", c_flags);
+    // exe.addCSourceFile("deps/nanovg/src/c/nanovg_gl2_impl.c", c_flags);
     exe.addPackage(win32);
     exe.addPackage(nfd);
-    exe.addPackage(nanovg);
+    // exe.addPackage(nanovg);
+    nanovg_build.addNanoVGPackage(exe);
     exe.addPackage(s2s);
     exe.addPackage(gui);
     const nfd_lib = try @import("deps/nfd-zig/build.zig").makeLib(b, mode, target, "deps/nfd-zig/");

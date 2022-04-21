@@ -24,6 +24,8 @@ extern fn enableAppleMomentumScroll() callconv(.C) void;
 //     return 0;
 // }
 
+var vg: nvg = undefined;
+
 var window_config_file_path: ?[]u8 = null;
 var has_touch_mouse: bool = false;
 var touch_window_id: c_uint = 0;
@@ -243,9 +245,9 @@ const SdlWindow = struct {
         c.glClearColor(0.5, 0.5, 0.5, 1);
         c.glClear(c.GL_COLOR_BUFFER_BIT | c.GL_STENCIL_BUFFER_BIT);
 
-        nvg.beginFrame(self.video_width, self.video_height, self.video_scale);
-        self.window.draw();
-        nvg.endFrame();
+        vg.beginFrame(self.video_width, self.video_height, self.video_scale);
+        self.window.draw(vg);
+        vg.endFrame();
 
         c.glFlush();
         if (c.SDL_GetWindowFlags(self.handle) & c.SDL_WINDOW_HIDDEN != 0) {
@@ -811,20 +813,20 @@ pub fn main() !void {
     c.SDL_AddEventWatch(sdlEventWatch, null);
     _ = c.SDL_EventState(c.SDL_DROPFILE, c.SDL_ENABLE); // allow drop events
 
-    try nvg.init();
-    defer nvg.quit();
+    vg = try nvg.gl.init(allocator, .{});
+    defer vg.deinit();
 
-    gui.init();
-    defer gui.deinit();
+    gui.init(vg);
+    defer gui.deinit(vg);
 
     const roboto_regular = @embedFile("../data/fonts/Roboto-Regular.ttf");
     const roboto_bold = @embedFile("../data/fonts/Roboto-Bold.ttf");
-    _ = nvg.createFontMem("guifont", roboto_regular);
-    _ = nvg.createFontMem("guifontbold", roboto_bold);
+    _ = vg.createFontMem("guifont", roboto_regular);
+    _ = vg.createFontMem("guifontbold", roboto_bold);
 
     const rect = Rect(f32).make(0, 0, main_window.width, main_window.height);
-    editor_widget = try EditorWidget.init(allocator, rect);
-    defer editor_widget.deinit();
+    editor_widget = try EditorWidget.init(allocator, rect, vg);
+    defer editor_widget.deinit(vg);
     main_window.setMainWidget(&editor_widget.widget);
     main_window.close_request_context = @ptrToInt(main_window);
     main_window.onCloseRequestFn = onMainWindowCloseRequest;

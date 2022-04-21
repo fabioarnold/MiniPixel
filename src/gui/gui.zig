@@ -43,24 +43,24 @@ fn defaultColorTheme() ThemeColors {
     };
 }
 
-pub fn init() void {
+pub fn init(vg: nvg) void {
     theme_colors = defaultColorTheme();
 
-    grid_image = nvg.createImageRgba(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
+    grid_image = vg.createImageRGBA(2, 2, .{ .repeat_x = true, .repeat_y = true, .nearest = true }, &.{
         0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF,
     });
 }
 
-pub fn deinit() void {
-    nvg.deleteImage(grid_image);
+pub fn deinit(vg: nvg) void {
+    vg.deleteImage(grid_image);
 }
 
 pub fn pixelsToPoints(pixel_size: f32) f32 {
     return pixel_size * 96.0 / 72.0;
 }
 
-pub fn drawPanel(x: f32, y: f32, w: f32, h: f32, depth: f32, hovered: bool, pressed: bool) void {
+pub fn drawPanel(vg: nvg, x: f32, y: f32, w: f32, h: f32, depth: f32, hovered: bool, pressed: bool) void {
     if (w <= 0 or h <= 0) return;
 
     var color_bg = theme_colors.background;
@@ -76,105 +76,105 @@ pub fn drawPanel(x: f32, y: f32, w: f32, h: f32, depth: f32, hovered: bool, pres
     }
 
     // background
-    nvg.beginPath();
-    nvg.rect(x, y, w, h);
-    nvg.fillColor(color_bg);
-    nvg.fill();
+    vg.beginPath();
+    vg.rect(x, y, w, h);
+    vg.fillColor(color_bg);
+    vg.fill();
 
     // shadow
-    nvg.beginPath();
-    nvg.moveTo(x, y + h);
-    nvg.lineTo(x + w, y + h);
-    nvg.lineTo(x + w, y);
-    nvg.lineTo(x + w - depth, y + depth);
-    nvg.lineTo(x + w - depth, y + h - depth);
-    nvg.lineTo(x + depth, y + h - depth);
-    nvg.closePath();
-    nvg.fillColor(color_shadow);
-    nvg.fill();
+    vg.beginPath();
+    vg.moveTo(x, y + h);
+    vg.lineTo(x + w, y + h);
+    vg.lineTo(x + w, y);
+    vg.lineTo(x + w - depth, y + depth);
+    vg.lineTo(x + w - depth, y + h - depth);
+    vg.lineTo(x + depth, y + h - depth);
+    vg.closePath();
+    vg.fillColor(color_shadow);
+    vg.fill();
 
     // light
-    nvg.beginPath();
-    nvg.moveTo(x + w, y);
-    nvg.lineTo(x, y);
-    nvg.lineTo(x, y + h);
-    nvg.lineTo(x + depth, y + h - depth);
-    nvg.lineTo(x + depth, y + depth);
-    nvg.lineTo(x + w - depth, y + depth);
-    nvg.closePath();
-    nvg.fillColor(color_light);
-    nvg.fill();
+    vg.beginPath();
+    vg.moveTo(x + w, y);
+    vg.lineTo(x, y);
+    vg.lineTo(x, y + h);
+    vg.lineTo(x + depth, y + h - depth);
+    vg.lineTo(x + depth, y + depth);
+    vg.lineTo(x + w - depth, y + depth);
+    vg.closePath();
+    vg.fillColor(color_light);
+    vg.fill();
 }
 
-pub fn drawPanelInset(x: f32, y: f32, w: f32, h: f32, depth: f32) void {
+pub fn drawPanelInset(vg: nvg, x: f32, y: f32, w: f32, h: f32, depth: f32) void {
     if (w <= 0 or h <= 0) return;
 
     var color_shadow = theme_colors.shadow;
     var color_light = theme_colors.light;
 
     // light
-    nvg.beginPath();
-    nvg.moveTo(x, y + h);
-    nvg.lineTo(x + w, y + h);
-    nvg.lineTo(x + w, y);
-    nvg.lineTo(x + w - depth, y + depth);
-    nvg.lineTo(x + w - depth, y + h - depth);
-    nvg.lineTo(x + depth, y + h - depth);
-    nvg.closePath();
-    nvg.fillColor(color_light);
-    nvg.fill();
+    vg.beginPath();
+    vg.moveTo(x, y + h);
+    vg.lineTo(x + w, y + h);
+    vg.lineTo(x + w, y);
+    vg.lineTo(x + w - depth, y + depth);
+    vg.lineTo(x + w - depth, y + h - depth);
+    vg.lineTo(x + depth, y + h - depth);
+    vg.closePath();
+    vg.fillColor(color_light);
+    vg.fill();
 
     // shadow
-    nvg.beginPath();
-    nvg.moveTo(x + w, y);
-    nvg.lineTo(x, y);
-    nvg.lineTo(x, y + h);
-    nvg.lineTo(x + depth, y + h - depth);
-    nvg.lineTo(x + depth, y + depth);
-    nvg.lineTo(x + w - depth, y + depth);
-    nvg.closePath();
-    nvg.fillColor(color_shadow);
-    nvg.fill();
+    vg.beginPath();
+    vg.moveTo(x + w, y);
+    vg.lineTo(x, y);
+    vg.lineTo(x, y + h);
+    vg.lineTo(x + depth, y + h - depth);
+    vg.lineTo(x + depth, y + depth);
+    vg.lineTo(x + w - depth, y + depth);
+    vg.closePath();
+    vg.fillColor(color_shadow);
+    vg.fill();
 }
 
-pub fn drawSmallArrowUp() void { // size: 6x6
-    nvg.beginPath();
-    nvg.moveTo(3, 1);
-    nvg.lineTo(0, 4);
-    nvg.lineTo(6, 4);
-    nvg.closePath();
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.fill();
+pub fn drawSmallArrowUp(vg: nvg) void { // size: 6x6
+    vg.beginPath();
+    vg.moveTo(3, 1);
+    vg.lineTo(0, 4);
+    vg.lineTo(6, 4);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.fill();
 }
 
-pub fn drawSmallArrowDown() void { // size: 6x6
-    nvg.beginPath();
-    nvg.moveTo(3, 5);
-    nvg.lineTo(0, 2);
-    nvg.lineTo(6, 2);
-    nvg.closePath();
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.fill();
+pub fn drawSmallArrowDown(vg: nvg) void { // size: 6x6
+    vg.beginPath();
+    vg.moveTo(3, 5);
+    vg.lineTo(0, 2);
+    vg.lineTo(6, 2);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.fill();
 }
 
-pub fn drawSmallArrowLeft() void {
-    nvg.beginPath();
-    nvg.moveTo(1, 3);
-    nvg.lineTo(4, 0);
-    nvg.lineTo(4, 6);
-    nvg.closePath();
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.fill();
+pub fn drawSmallArrowLeft(vg: nvg) void {
+    vg.beginPath();
+    vg.moveTo(1, 3);
+    vg.lineTo(4, 0);
+    vg.lineTo(4, 6);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.fill();
 }
 
-pub fn drawSmallArrowRight() void {
-    nvg.beginPath();
-    nvg.moveTo(5, 3);
-    nvg.lineTo(2, 0);
-    nvg.lineTo(2, 6);
-    nvg.closePath();
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    nvg.fill();
+pub fn drawSmallArrowRight(vg: nvg) void {
+    vg.beginPath();
+    vg.moveTo(5, 3);
+    vg.lineTo(2, 0);
+    vg.lineTo(2, 6);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    vg.fill();
 }
 
 pub const Orientation = enum(u1) {

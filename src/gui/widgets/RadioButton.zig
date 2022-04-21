@@ -100,7 +100,7 @@ fn onLeave(widget: *gui.Widget) void {
     self.hovered = false;
 }
 
-pub fn draw(widget: *gui.Widget) void {
+pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(RadioButton, "widget", widget);
 
     const rect = widget.relative_rect;
@@ -110,38 +110,38 @@ pub fn draw(widget: *gui.Widget) void {
     const cx = rect.x + 6;
     const cy = rect.y + 0.5 * rect.h;
 
-    nvg.beginPath();
-    nvg.arc(cx, cy, 5.5, -0.25 * std.math.pi, -1.25 * std.math.pi, .ccw);
-    nvg.strokeColor(gui.theme_colors.shadow);
-    nvg.stroke();
-    nvg.beginPath();
-    nvg.arc(cx, cy, 5.5, 0.75 * std.math.pi, -0.25 * std.math.pi, .ccw);
-    nvg.strokeColor(gui.theme_colors.light);
-    nvg.stroke();
-    nvg.beginPath();
-    nvg.ellipse(cx, cy, 4.5, 4.5);
-    nvg.fillColor(nvg.rgbf(1, 1, 1));
-    nvg.fill();
-    nvg.strokeColor(gui.theme_colors.border);
-    nvg.stroke();
+    vg.beginPath();
+    vg.arc(cx, cy, 5.5, -0.25 * std.math.pi, -1.25 * std.math.pi, .ccw);
+    vg.strokeColor(gui.theme_colors.shadow);
+    vg.stroke();
+    vg.beginPath();
+    vg.arc(cx, cy, 5.5, 0.75 * std.math.pi, -0.25 * std.math.pi, .ccw);
+    vg.strokeColor(gui.theme_colors.light);
+    vg.stroke();
+    vg.beginPath();
+    vg.ellipse(cx, cy, 4.5, 4.5);
+    vg.fillColor(nvg.rgbf(1, 1, 1));
+    vg.fill();
+    vg.strokeColor(gui.theme_colors.border);
+    vg.stroke();
     if (self.checked or self.hovered) {
-        nvg.beginPath();
-        nvg.ellipse(cx, cy, 2, 2);
-        nvg.fillColor(if (self.checked) nvg.rgb(0, 0, 0) else gui.theme_colors.shadow);
-        nvg.fill();
+        vg.beginPath();
+        vg.ellipse(cx, cy, 2, 2);
+        vg.fillColor(if (self.checked) nvg.rgb(0, 0, 0) else gui.theme_colors.shadow);
+        vg.fill();
     }
 
-    nvg.fontFace("guifont");
-    nvg.fontSize(12);
-    nvg.textAlign(nvg.TextAlign{ .vertical = .middle });
-    nvg.fillColor(nvg.rgb(0, 0, 0));
-    _ = nvg.text(rect.x + 16, cy, self.text);
+    vg.fontFace("guifont");
+    vg.fontSize(12);
+    vg.textAlign(nvg.TextAlign{ .vertical = .middle });
+    vg.fillColor(nvg.rgb(0, 0, 0));
+    _ = vg.text(rect.x + 16, cy, self.text);
     if (self.focused) {
         var bounds: [4]f32 = undefined;
-        _ = nvg.textBounds(rect.x + 16, cy, self.text, &bounds);
-        nvg.beginPath();
-        nvg.rect(@round(bounds[0]) - 1.5, @round(bounds[1]) - 1.5, @round(bounds[2] - bounds[0]) + 3, @round(bounds[3] - bounds[1]) + 3);
-        nvg.strokePaint(nvg.imagePattern(0, 0, 2, 2, 0, gui.grid_image, 1));
-        nvg.stroke();
+        _ = vg.textBounds(rect.x + 16, cy, self.text, &bounds);
+        vg.beginPath();
+        vg.rect(@round(bounds[0]) - 1.5, @round(bounds[1]) - 1.5, @round(bounds[2] - bounds[0]) + 3, @round(bounds[3] - bounds[1]) + 3);
+        vg.strokePaint(vg.imagePattern(0, 0, 2, 2, 0, gui.grid_image, 1));
+        vg.stroke();
     }
 }
