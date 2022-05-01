@@ -638,7 +638,7 @@ fn sdlProcessClipboardUpdate() void {
 
 fn sdlProcessMultiGesture(gesture_event: c.SDL_MultiGestureEvent) void {
     if (gesture_event.numFingers != 2 or is_touch_panning) return;
-    if (std.math.absFloat(gesture_event.dDist) > 0.004) {
+    if (@fabs(gesture_event.dDist) > 0.004) {
         is_touch_zooming = true;
     }
     if (!is_touch_zooming) return;

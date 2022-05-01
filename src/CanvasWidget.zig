@@ -1115,8 +1115,8 @@ fn snap(self: Self, x: *f32, y: *f32) void {
     if (self.custom_grid_enabled and self.grid_snapping_enabled) {
         const fx = @intToFloat(f32, self.custom_grid_spacing_x);
         const fy = @intToFloat(f32, self.custom_grid_spacing_y);
-        x.* = std.math.round(x.* / fx) * fx;
-        y.* = std.math.round(y.* / fy) * fy;
+        x.* = @round(x.* / fx) * fx;
+        y.* = @round(y.* / fy) * fy;
     }
 }
 

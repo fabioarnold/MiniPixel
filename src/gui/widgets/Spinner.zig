@@ -171,11 +171,11 @@ pub fn Spinner(comptime T: type) type {
             self.down_button.widget.relative_rect.y = 0.5 * rect.h - 0.5;
             self.text_box.widget.setSize(rect.w + 1 - button_width, rect.h);
             self.up_button.widget.setSize(button_width, 0.5 * rect.h + 0.5);
-            self.up_button.icon_x = std.math.floor((self.up_button.widget.relative_rect.w - 6) / 2);
-            self.up_button.icon_y = std.math.floor((self.up_button.widget.relative_rect.h - 6) / 2);
+            self.up_button.icon_x = @floor((self.up_button.widget.relative_rect.w - 6) / 2);
+            self.up_button.icon_y = @floor((self.up_button.widget.relative_rect.h - 6) / 2);
             self.down_button.widget.setSize(button_width, 0.5 * rect.h + 0.5);
-            self.down_button.icon_x = std.math.floor((self.down_button.widget.relative_rect.w - 6) / 2);
-            self.down_button.icon_y = std.math.floor((self.down_button.widget.relative_rect.h - 6) / 2);
+            self.down_button.icon_x = @floor((self.down_button.widget.relative_rect.w - 6) / 2);
+            self.down_button.icon_y = @floor((self.down_button.widget.relative_rect.h - 6) / 2);
         }
 
         pub fn setFocus(self: *Self, focus: bool, source: gui.FocusSource) void {
