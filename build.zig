@@ -7,11 +7,11 @@ const Pkg = std.build.Pkg;
 
 const nanovg_build = @import("deps/nanovg-zig/build.zig");
 
-const win32 = Pkg{ .name = "win32", .path = FileSource.relative("deps/zigwin32/win32.zig") };
-const nfd = Pkg{ .name = "nfd", .path = FileSource.relative("deps/nfd-zig/src/lib.zig") };
-const nanovg = Pkg{ .name = "nanovg", .path = FileSource.relative("deps/nanovg-zig/src/nanovg.zig") };
-const s2s = Pkg{ .name = "s2s", .path = FileSource.relative("deps/s2s/s2s.zig") };
-const gui = Pkg{ .name = "gui", .path = FileSource.relative("src/gui/gui.zig"), .dependencies = &.{nanovg} };
+const win32 = Pkg{ .name = "win32", .source = FileSource.relative("deps/zigwin32/win32.zig") };
+const nfd = Pkg{ .name = "nfd", .source = FileSource.relative("deps/nfd-zig/src/lib.zig") };
+const nanovg = Pkg{ .name = "nanovg", .source = FileSource.relative("deps/nanovg-zig/src/nanovg.zig") };
+const s2s = Pkg{ .name = "s2s", .source = FileSource.relative("deps/s2s/s2s.zig") };
+const gui = Pkg{ .name = "gui", .source = FileSource.relative("src/gui/gui.zig"), .dependencies = &.{nanovg} };
 
 fn printError(str: []const u8) void {
     var stderr = std.io.getStdErr();
