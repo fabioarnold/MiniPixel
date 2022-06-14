@@ -743,10 +743,12 @@ pub fn main() !void {
         .enable_memory_limit = true,
     }){};
     defer {
-        const leaked = gpa.deinit();
-        if (leaked) @panic("Memory leak :(");
+        if (builtin.mode == .Debug) {
+            const leaked = gpa.deinit();
+            if (leaked) @panic("Memory leak :(");
+        }
     }
-    const allocator = gpa.allocator();
+    const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.c_allocator;
 
     defer Clipboard.deinit();
 
