@@ -302,7 +302,7 @@ pub fn serialize(self: Document) ![]u8 {
     var output = ArrayList(u8).init(self.allocator);
 
     if (snapshot_compression_enabled) {
-        var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{});
+        var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{ .level = .best_speed });
         defer comp.deinit();
         try s2s.serialize(comp.writer(), Snapshot, snapshot);
         try comp.close();
