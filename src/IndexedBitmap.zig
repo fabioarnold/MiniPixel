@@ -84,6 +84,7 @@ pub fn getIndex(self: IndexedBitmap, x: i32, y: i32) ?u8 {
 }
 
 pub fn getIndexUnchecked(self: IndexedBitmap, x: u32, y: u32) u8 {
+    @setRuntimeSafety(false);
     std.debug.assert(x < self.width);
     const i = y * self.width + x;
     return self.indices[i];

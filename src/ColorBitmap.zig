@@ -107,6 +107,7 @@ pub fn getPixel(self: ColorBitmap, x: i32, y: i32) ?Color {
 }
 
 pub fn getPixelUnchecked(self: ColorBitmap, x: u32, y: u32) Color {
+    @setRuntimeSafety(false);
     std.debug.assert(x < self.width);
     const c = self.pixels[4 * (y * self.width + x) ..];
     return Color{ c[0], c[1], c[2], c[3] };
