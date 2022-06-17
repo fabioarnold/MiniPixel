@@ -1,3 +1,5 @@
+const snapshot_compression_enabled = true;
+
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -286,11 +288,6 @@ const Snapshot = struct {
 };
 
 pub fn serialize(self: Document) ![]u8 {
-    var output = ArrayList(u8).init(self.allocator);
-
-    var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{});
-    defer comp.deinit();
-
     var snapshot = Snapshot{
         .x = self.x,
         .y = self.y,
@@ -301,21 +298,35 @@ pub fn serialize(self: Document) ![]u8 {
             .bitmap = selection.bitmap,
         } else null,
     };
-    try s2s.serialize(comp.writer(), Snapshot, snapshot);
 
-    try comp.close();
+    var output = ArrayList(u8).init(self.allocator);
+
+    if (snapshot_compression_enabled) {
+        var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{});
+        defer comp.deinit();
+        try s2s.serialize(comp.writer(), Snapshot, snapshot);
+        try comp.close();
+    } else {
+        try s2s.serialize(output.writer(), Snapshot, snapshot);
+    }
 
     return output.items;
 }
 
 pub fn deserialize(self: *Document, data: []u8) !void {
-    self.freeSelection();
-
+    var snapshot: Snapshot = undefined;
     var input = std.io.fixedBufferStream(data);
-    var decomp = try std.compress.deflate.decompressor(self.allocator, input.reader(), null);
-    defer decomp.deinit();
 
-    var snapshot = try s2s.deserializeAlloc(decomp.reader(), Snapshot, self.allocator);
+    if (snapshot_compression_enabled) {
+        var decomp = try std.compress.deflate.decompressor(self.allocator, input.reader(), null);
+        defer decomp.deinit();
+        snapshot = try s2s.deserializeAlloc(decomp.reader(), Snapshot, self.allocator);
+        _ = decomp.close();
+    } else {
+        snapshot = try s2s.deserializeAlloc(input.reader(), Snapshot, self.allocator);
+    }
+
+    self.freeSelection();
     self.bitmap.deinit(self.allocator);
     self.bitmap = snapshot.bitmap;
     self.allocator.free(self.colormap);
@@ -328,8 +339,6 @@ pub fn deserialize(self: *Document, data: []u8) !void {
         };
         self.need_selection_texture_recreation = true;
     }
-
-    _ = decomp.close();
 
     self.preview_bitmap.deinit(self.allocator);
     self.preview_bitmap = try self.bitmap.clone(self.allocator);
