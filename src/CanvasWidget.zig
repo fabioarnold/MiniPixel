@@ -548,10 +548,14 @@ const DrawTool = struct {
         self.last_point = null;
     }
 
-    fn onMouseMove(self: *DrawTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
-        const point = canvas.toDocumentSpace(event.x, event.y);
+    fn updateEditPoint(self: *DrawTool, canvas: *CanvasWidget, event_x: f32, event_y: f32) void {
+        const point = canvas.toDocumentSpace(event_x, event_y);
         self.edit_point.x = @floatToInt(i32, @floor(point.x));
         self.edit_point.y = @floatToInt(i32, @floor(point.y));
+    }
+
+    fn onMouseMove(self: *DrawTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
+        self.updateEditPoint(canvas, event.x, event.y);
 
         if (event.isButtonPressed(.left) and self.drawing) {
             if (self.last_point) |last_point| {
@@ -580,6 +584,8 @@ const DrawTool = struct {
     }
 
     fn onMouseDown(self: *DrawTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
+        self.updateEditPoint(canvas, event.x, event.y);
+
         if (event.button == .left) {
             if (event.isModifierPressed(.shift) and self.last_point != null) {
                 if (self.last_point) |last_point| {
@@ -602,6 +608,8 @@ const DrawTool = struct {
     }
 
     fn onMouseUp(self: *DrawTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
+        self.updateEditPoint(canvas, event.x, event.y);
+
         if (event.button == .left) {
             canvas.document.endStroke() catch {}; // TODO: show error message
             self.drawing = false;
@@ -655,9 +663,7 @@ const DrawTool = struct {
     }
 
     fn updateMousePreview(self: *DrawTool, canvas: *CanvasWidget, mouse_x: f32, mouse_y: f32) void {
-        const point = canvas.toDocumentSpace(mouse_x, mouse_y);
-        self.edit_point.x = @floatToInt(i32, @floor(point.x));
-        self.edit_point.y = @floatToInt(i32, @floor(point.y));
+        self.updateEditPoint(canvas, mouse_x, mouse_y);
         canvas.document.previewBrush(self.edit_point.x, self.edit_point.y);
     }
 

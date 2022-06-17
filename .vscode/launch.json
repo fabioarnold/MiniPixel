@@ -38,6 +38,14 @@
 			"console": "internalConsole",
 			"internalConsoleOptions": "neverOpen",
 			"preLaunchTask": "build"
+		},
+		{
+			"name": "(Windows) Launch automated test",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceRoot}/zig-out/bin/minipixel.exe",
+			"cwd": "${workspaceFolder}",
+			"preLaunchTask": "build automated test"
 		}
 	]
 }

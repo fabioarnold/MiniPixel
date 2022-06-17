@@ -33,10 +33,16 @@ fn installPalFiles(b: *Builder) void {
 pub fn build(b: *Builder) !void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
+    const automated_testing = b.option(bool, "automated-testing", "Enable automated testing") orelse false;
 
     const exe = b.addExecutable("minipixel", "src/main.zig");
     exe.setBuildMode(mode);
     exe.setTarget(target);
+
+    const exe_options = b.addOptions();
+    exe.addOptions("build_options", exe_options);
+    exe_options.addOption(bool, "automated_testing", automated_testing);
+
     // exe.addIncludeDir("lib/nanovg/src");
     exe.addIncludeDir("lib/gl2/include");
     if (exe.target.isWindows()) {

@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const build_options = @import("build_options");
 const win32 = @import("win32");
 const foundation = win32.foundation;
 const windows = win32.ui.windows_and_messaging;
@@ -14,6 +15,7 @@ const Clipboard = @import("Clipboard.zig");
 const EditorWidget = @import("EditorWidget.zig");
 const MessageBoxWidget = @import("MessageBoxWidget.zig");
 const info = @import("info.zig");
+const automated_testing = @import("automated_testing.zig");
 
 extern fn gladLoadGL() callconv(.C) c_int; // init OpenGL function pointers on Windows and Linux
 extern fn SetProcessDPIAware() callconv(.C) c_int;
@@ -733,15 +735,16 @@ fn sdlHandleEvent(sdl_event: c.SDL_Event) void {
 }
 
 const MainloopType = enum {
-    waitEvent, // updates only when an event occurs
-    regularInterval, // runs at monitor refresh rate
+    wait_event, // updates only when an event occurs
+    regular_interval, // runs at monitor refresh rate
 };
-var mainloop_type: MainloopType = .waitEvent;
+var mainloop_type: MainloopType = .wait_event;
+
+var gpa = std.heap.GeneralPurposeAllocator(.{
+    .enable_memory_limit = true,
+}){};
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{
-        .enable_memory_limit = true,
-    }){};
     defer {
         if (builtin.mode == .Debug) {
             const leaked = gpa.deinit();
@@ -806,7 +809,7 @@ pub fn main() !void {
     // }
 
     if (builtin.os.tag == .linux or builtin.os.tag == .macos or true) {
-        mainloop_type = .regularInterval;
+        mainloop_type = .regular_interval;
         _ = c.SDL_GL_SetSwapInterval(0); // disable VSync
     }
 
@@ -844,24 +847,40 @@ pub fn main() !void {
     }
     std.process.argsFree(allocator, args);
 
+    if (build_options.automated_testing) {
+        main_window.onCloseRequestFn = null;
+        try automated_testing.runTests(main_window);
+        main_window.close();
+        return;
+    }
+
     // quit app when there are no more windows open
     while (app.windows.items.len > 0) {
         var sdl_event: c.SDL_Event = undefined;
         switch (mainloop_type) {
-            .waitEvent => if (c.SDL_WaitEvent(&sdl_event) == 0) {
+            .wait_event => if (c.SDL_WaitEvent(&sdl_event) == 0) {
                 c.SDL_Log("SDL_WaitEvent failed: %s", c.SDL_GetError());
             } else {
                 sdlHandleEvent(sdl_event);
             },
-            .regularInterval => while (c.SDL_PollEvent(&sdl_event) != 0) {
+            .regular_interval => while (c.SDL_PollEvent(&sdl_event) != 0) {
                 sdlHandleEvent(sdl_event);
             },
         }
 
         editor_widget.setMemoryUsageInfo(gpa.total_requested_bytes);
         for (sdl_windows.items) |*sdl_window| {
-            if (sdl_window.dirty) sdl_window.draw();
+            if (sdl_window.dirty or mainloop_type == .regular_interval) sdl_window.draw();
         }
+    }
+}
+
+pub fn automatedTestLoopIteration() void {
+    var sdl_event: c.SDL_Event = undefined;
+    while (c.SDL_PollEvent(&sdl_event) != 0) {}
+    editor_widget.setMemoryUsageInfo(gpa.total_requested_bytes);
+    for (sdl_windows.items) |*sdl_window| {
+        sdl_window.draw();
     }
 }
 
