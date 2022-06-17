@@ -29,7 +29,7 @@
 			"label": "build automated test",
 			"type": "shell",
 			"command": "zig",
-			"args": ["build", "-Dautomated-testing=true", "-Drelease-fast=true"],
+			"args": ["build", "-Dautomated-testing=true"],
 			"group": "build"
 		}
 	]
