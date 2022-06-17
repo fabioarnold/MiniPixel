@@ -848,10 +848,10 @@ pub fn main() !void {
     std.process.argsFree(allocator, args);
 
     if (build_options.automated_testing) {
+        main_window.setSize(800, 600);
         main_window.onCloseRequestFn = null;
+        defer main_window.close();
         try automated_testing.runTests(main_window);
-        main_window.close();
-        return;
     }
 
     // quit app when there are no more windows open
