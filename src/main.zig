@@ -671,7 +671,11 @@ fn sdlProcessMultiGesture(gesture_event: c.SDL_MultiGestureEvent) void {
 }
 
 fn sdlShowCursor(enable: bool) void {
-    _ = c.SDL_ShowCursor(if (enable) c.SDL_ENABLE else c.SDL_DISABLE);
+    // macOS crashes when trying to hide the cursor
+    // https://github.com/ziglang/zig/issues/11151#issuecomment-1140441417
+    if (builtin.os.tag != .macos) {
+        _ = c.SDL_ShowCursor(if (enable) c.SDL_ENABLE else c.SDL_DISABLE);
+    }
 }
 
 fn sdlCreateWindow(title: [:0]const u8, width: u32, height: u32, options: gui.Window.CreateOptions, window: *gui.Window) !u32 {
