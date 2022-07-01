@@ -67,6 +67,13 @@ const CropTool = struct {
             7 => Rectf.make(rect.x + rect.w, rect.y + rect.h, zs, zs),
         };
     }
+    fn getZoneCursor(i: u3) fn (nvg) void {
+        return switch (i) {
+            1, 6 => icons.cursorMoveVertically,
+            3, 4 => icons.cursorMoveHorizontally,
+            else => icons.cursorMove,
+        };
+    }
 
     fn onStart(self: *CropTool) void {
         self.mouse_point = null;
@@ -85,6 +92,7 @@ const CropTool = struct {
         canvas.snap(&fx, &fy);
         self.edit_point = Pointi.make(ftoi(fx), ftoi(fy));
         if (self.crop_rect) |*rect| {
+            self.edit_point = Pointi.make(ftoi(@floor(point.x)), ftoi(@floor(point.y)));
             if (self.drag_offset) |drag_offset| { // drag
                 fx = @round(point.x - drag_offset.x);
                 fy = @round(point.y - drag_offset.y);
@@ -226,7 +234,7 @@ const CropTool = struct {
         if (self.crop_rect) |rect| {
             const gui_rect = canvas.rectFromDocumentSpace(ritof(rect), true);
             const canvas_rect = canvas.widget.relative_rect;
-            // draw vignette
+            // draw cut out
             vg.beginPath();
             vg.rect(0, 0, canvas_rect.w, canvas_rect.h);
             vg.pathWinding(.cw);
@@ -307,11 +315,25 @@ const CropTool = struct {
         }
     }
 
-    fn getCursor(self: CropTool) fn (nvg) void {
+    fn getCursor(self: CropTool, canvas: *CanvasWidget) fn (nvg) void {
         if (self.crop_rect) |rect| {
-            if (self.drag_offset != null) return icons.cursorMove; // TODO: grab cursor?
-            if (self.edit_point) |edit_point| {
-                if (rect.contains(edit_point)) return icons.cursorMove;
+            if (self.drag_zone) |drag_zone| {
+                return getZoneCursor(drag_zone);
+            } else if (self.drag_offset != null) {
+                return icons.cursorMove; // TODO: grab cursor?
+            } else if (self.edit_point) |edit_point| {
+                if (rect.contains(edit_point)) {
+                    return icons.cursorMove;
+                } else {
+                    if (self.mouse_point) |mouse_point| {
+                        const gui_rect = canvas.rectFromDocumentSpace(ritof(rect), true);
+                        for (makeZones(gui_rect)) |zone, i| {
+                            if (zone.contains(mouse_point)) {
+                                return getZoneCursor(@intCast(u3, i));
+                            }
+                        }
+                    }
+                }
             }
         }
         return icons.cursorCrosshair;
@@ -378,6 +400,7 @@ const SelectTool = struct {
         canvas.snap(&fx, &fy);
         self.edit_point = Pointi.make(ftoi(fx), ftoi(fy));
         if (canvas.document.selection) |*selection| {
+            self.edit_point = Pointi.make(ftoi(@floor(point.x)), ftoi(@floor(point.y)));
             if (self.drag_offset) |drag_offset| {
                 fx = @round(point.x - drag_offset.x);
                 fy = @round(point.y - drag_offset.y);
@@ -1202,7 +1225,7 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
         if (widget.getWindow()) |window| {
             if (self.hovered) { // based on tool
                 switch (self.tool) {
-                    .crop => window.setCursor(self.crop_tool.getCursor()),
+                    .crop => window.setCursor(self.crop_tool.getCursor(self)),
                     .select => window.setCursor(self.select_tool.getCursor(self)),
                     .draw => window.setCursor(self.draw_tool.getCursor()),
                     .fill => window.setCursor(self.fill_tool.getCursor()),

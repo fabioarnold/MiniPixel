@@ -1206,3 +1206,53 @@ pub fn cursorMove(vg: nvg) void {
     vg.strokeColor(nvg.rgb(0, 0, 0));
     vg.stroke();
 }
+
+pub fn cursorMoveHorizontally(vg: nvg) void {
+    vg.beginPath();
+    vg.moveTo(4.5, -0.5);
+    vg.lineTo(4.5, -1.5);
+    vg.lineTo(5, -1.5);
+    vg.lineTo(7.5, 0);
+    vg.lineTo(7.5, 1);
+    vg.lineTo(5, 2.5);
+    vg.lineTo(4.5, 2.5);
+    vg.lineTo(4.5, 1.5);
+    vg.lineTo(-3.5, 1.5);
+    vg.lineTo(-3.5, 2.5);
+    vg.lineTo(-4, 2.5);
+    vg.lineTo(-6.5, 1);
+    vg.lineTo(-6.5, 0);
+    vg.lineTo(-4, -1.5);
+    vg.lineTo(-3.5, -1.5);
+    vg.lineTo(-3.5, -0.5);
+    vg.closePath();
+    vg.fillColor(nvg.rgbf(1, 1, 1));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(0, 0, 0));
+    vg.stroke();
+}
+
+pub fn cursorMoveVertically(vg: nvg) void {
+    vg.beginPath();
+    vg.moveTo(-0.5, -3.5);
+    vg.lineTo(-1.5, -3.5);
+    vg.lineTo(-1.5, -4);
+    vg.lineTo(0, -6.5);
+    vg.lineTo(1, -6.5);
+    vg.lineTo(2.5, -4);
+    vg.lineTo(2.5, -3.5);
+    vg.lineTo(1.5, -3.5);
+    vg.lineTo(1.5, 4.5);
+    vg.lineTo(2.5, 4.5);
+    vg.lineTo(2.5, 5);
+    vg.lineTo(1, 7.5);
+    vg.lineTo(0, 7.5);
+    vg.lineTo(-1.5, 5);
+    vg.lineTo(-1.5, 4.5);
+    vg.lineTo(-0.5, 4.5);
+    vg.closePath();
+    vg.fillColor(nvg.rgbf(1, 1, 1));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(0, 0, 0));
+    vg.stroke();
+}
