@@ -35,6 +35,7 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
+    if (rect.w <= 0 or rect.h <= 0) return;
 
     if (self.draw_border) {
         gui.drawPanelInset(vg, rect.x, rect.y, rect.w, rect.h, 1);
