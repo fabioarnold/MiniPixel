@@ -35,15 +35,14 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
-    if (rect.w <= 0 or rect.h <= 0) return;
-
+    vg.save();
     if (self.draw_border) {
         gui.drawPanelInset(vg, rect.x, rect.y, rect.w, rect.h, 1);
-        vg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+        vg.intersectScissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
     } else {
-        vg.scissor(rect.x, rect.y, rect.w, rect.h);
+        vg.intersectScissor(rect.x, rect.y, rect.w, rect.h);
     }
-    defer vg.resetScissor();
+    defer vg.restore();
 
     vg.fontFace("guifont");
     vg.fontSize(12);

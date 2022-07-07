@@ -117,8 +117,9 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
 }
 
 fn drawGrip(vg: nvg, x: f32, y: f32) void {
-    vg.scissor(x, y, 14, 14);
-    defer vg.resetScissor();
+    vg.save();
+    vg.intersectScissor(x, y, 14, 14);
+    defer vg.restore();
 
     vg.beginPath();
     vg.moveTo(x, y + 16);

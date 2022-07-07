@@ -132,6 +132,12 @@ fn updateThumbSize(self: *Self) void {
         self.widget.relative_rect.w;
     const content = view + self.max_value;
     const track = view - 2 * button_size + 2;
+    if (track < button_size) {
+        self.thumb_button.widget.visible = false;
+        return;
+    } else {
+        self.thumb_button.widget.visible = true;
+    }
     const thumb = track * view / content;
     if (self.orientation == .vertical) {
         self.thumb_button.widget.setSize(button_size, thumb);
@@ -175,12 +181,28 @@ fn onResize(widget: *gui.Widget, event: *const gui.ResizeEvent) void {
 
 fn updateLayout(self: *Self) void {
     const rect = self.widget.relative_rect;
+    var button_size0: f32 = button_size;
+    var button_size1: f32 = button_size;
     if (self.orientation == .vertical) {
-        self.increment_button.widget.relative_rect.y = rect.h - button_size;
-        self.thumb_button.widget.relative_rect.y = std.math.max(button_size - 1, self.thumb_button.widget.relative_rect.y);
+        if (rect.h < 2 * button_size - 1) {
+            button_size0 = @floor((rect.h + 1) / 2);
+            button_size1 = rect.h + 1 - button_size0;
+        }
+        self.decrement_button.widget.relative_rect.h = button_size0;
+        self.decrement_button.icon_y = @floor((button_size0 - 6 + 1) / 2);
+        self.increment_button.widget.relative_rect.h = button_size1;
+        self.increment_button.icon_y = @floor((button_size1 - 6 + 1) / 2);
+        self.increment_button.widget.relative_rect.y = rect.h - button_size1;
     } else {
-        self.increment_button.widget.relative_rect.x = rect.w - button_size;
-        self.thumb_button.widget.relative_rect.x = std.math.max(button_size - 1, self.thumb_button.widget.relative_rect.x);
+        if (rect.w < 2 * button_size - 1) {
+            button_size0 = @floor((rect.w + 1) / 2);
+            button_size1 = rect.w + 1 - button_size0;
+        }
+        self.decrement_button.widget.relative_rect.w = button_size0;
+        self.decrement_button.icon_x = @floor((button_size0 - 6 + 1) / 2);
+        self.increment_button.widget.relative_rect.w = button_size1;
+        self.increment_button.icon_x = @floor((button_size1 - 6 + 1) / 2);
+        self.increment_button.widget.relative_rect.x = rect.w - button_size1;
     }
     self.updateThumbSize();
     self.updateThumbPosition();

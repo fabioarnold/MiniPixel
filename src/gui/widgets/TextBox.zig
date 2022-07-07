@@ -417,7 +417,9 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     vg.strokeColor(if (is_focused) gui.theme_colors.focus else gui.theme_colors.border);
     vg.stroke();
 
-    vg.scissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+    vg.save();
+    vg.intersectScissor(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+    defer vg.restore();
 
     vg.fontFace("guifont");
     vg.fontSize(12);
@@ -453,8 +455,6 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const text_max_x = vg.text(x, rect.y + 0.5 * rect.h, self.text.items);
 
     self.drawCursors(cursor_h, text_max_x, vg);
-
-    vg.resetScissor();
 }
 
 fn drawSelection(self: *Self, h: f32, vg: nvg) void {

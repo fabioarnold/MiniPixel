@@ -155,6 +155,10 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
 
     const rect = widget.relative_rect;
+    vg.save();
+    vg.intersectScissor(rect.x, rect.y, rect.w, rect.h);
+    defer vg.restore();
+
     const enabled = widget.isEnabled();
     if (!widget.isFocused()) self.focused = false;
 

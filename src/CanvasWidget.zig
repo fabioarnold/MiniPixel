@@ -1181,12 +1181,14 @@ fn notifyColorPicked(self: *Self) void {
 fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
     const rect = widget.relative_rect;
+    vg.save();
+    vg.scissor(rect.x, rect.y, rect.w, rect.h);
+    defer vg.restore();
 
     {
         vg.save();
         defer vg.restore();
         vg.translate(rect.x, rect.y);
-        vg.scissor(0, 0, rect.w, rect.h);
         const client_rect = Rectf.make(0, 0, rect.w, rect.h);
 
         {

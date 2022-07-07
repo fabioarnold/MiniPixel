@@ -141,6 +141,7 @@ pub fn drawChildren(self: *Self, vg: nvg) void {
 
 pub fn draw(self: *Self, vg: nvg) void {
     if (!self.visible) return;
+    if (self.relative_rect.w <= 0 or self.relative_rect.h <= 0) return;
 
     self.drawFn(self, vg);
 
