@@ -167,6 +167,9 @@ allocator: Allocator,
 // For tracking offset after cropping operation
 x: i32 = 0,
 y: i32 = 0,
+frame_count: u32 = 10,
+selected_frame: u32 = 0,
+onion_skinning: bool = false,
 
 texture: nvg.Image, // image for display using nvg
 texture_palette: nvg.Image,
@@ -463,6 +466,38 @@ pub fn getColorDepth(self: Self) u32 {
         .color => 32,
         .indexed => 8,
     };
+}
+
+pub fn play(self: *Self) void {
+    _ = self;
+}
+
+pub fn pause(self: *Self) void {
+    _ = self;
+}
+
+pub fn gotoNextFrame(self: *Self) void {
+    if (self.selected_frame < self.frame_count - 1) {
+        self.selected_frame += 1;
+    }
+}
+
+pub fn gotoPrevFrame(self: *Self) void {
+    if (self.selected_frame > 0) {
+        self.selected_frame -= 1;
+    }
+}
+
+pub fn gotoFirstFrame(self: *Self) void {
+    self.selected_frame = 0;
+}
+
+pub fn gotoLastFrame(self: *Self) void {
+    self.selected_frame = self.frame_count - 1;
+}
+
+pub fn gotoFrame(self: *Self, frame: u32) void {
+    self.selected_frame = frame;
 }
 
 pub fn canUndo(self: Self) bool {

@@ -24,6 +24,7 @@ const ColorPickerWidget = @import("ColorPickerWidget.zig");
 const ColorForegroundBackgroundWidget = @import("ColorForegroundBackgroundWidget.zig");
 const BlendModeWidget = @import("BlendModeWidget.zig");
 const PreviewWidget = @import("PreviewWidget.zig");
+const TimelineWidget = @import("TimelineWidget.zig");
 
 pub const EditorWidget = @This();
 
@@ -91,6 +92,7 @@ color_foreground_background: *ColorForegroundBackgroundWidget,
 blend_mode: *BlendModeWidget,
 preview: *PreviewWidget,
 panel_right: *gui.Panel,
+timeline: *TimelineWidget,
 
 const Self = @This();
 
@@ -102,7 +104,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
 
         .document = try Document.init(allocator, vg),
 
-        .menu_bar = try gui.Toolbar.init(allocator, rect),
+        .menu_bar = try gui.Toolbar.init(allocator, Rect(f32).make(0, 0, 100, 24)),
         .new_button = try gui.Button.init(allocator, rect, ""),
         .open_button = try gui.Button.init(allocator, rect, ""),
         .save_button = try gui.Button.init(allocator, rect, ""),
@@ -129,7 +131,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         .zoom_spinner = try gui.Spinner(f32).init(allocator, Rect(f32).make(0, 0, 55, 20)),
         .about_button = try gui.Button.init(allocator, rect, ""),
 
-        .status_bar = try gui.Toolbar.init(allocator, rect),
+        .status_bar = try gui.Toolbar.init(allocator, Rect(f32).make(0, 0, 100, 24)),
         .help_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 450, 20), ""),
         .tool_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 205, 20), ""),
         .image_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 100, 20), ""),
@@ -151,6 +153,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         .blend_mode = try BlendModeWidget.init(allocator, Rect(f32).make(66, 0, 163 - 66, 66), vg),
         .preview = try PreviewWidget.init(allocator, Rect(f32).make(0, 0, 163, 120), self.document, vg),
         .panel_right = try gui.Panel.init(allocator, Rect(f32).make(0, 0, 163, 200)),
+        .timeline = try TimelineWidget.init(allocator, Rect(f32).make(0, 0, 100, 140), self.document),
     };
     self.widget.onResizeFn = onResize;
     self.widget.onKeyDownFn = onKeyDown;
@@ -193,6 +196,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
     try self.widget.addChild(&self.blend_mode.widget);
     try self.widget.addChild(&self.preview.widget);
     try self.widget.addChild(&self.panel_right.widget);
+    try self.widget.addChild(&self.timeline.widget);
     try self.widget.addChild(&self.status_bar.widget);
 
     configureToolbarButton(self.palette_open_button, icons.iconOpen, tryOpenPalette, "Open Palette");
@@ -517,6 +521,7 @@ pub fn deinit(self: *Self, vg: nvg) void {
     self.blend_mode.deinit(vg);
     self.preview.deinit(vg);
     self.panel_right.deinit();
+    self.timeline.deinit();
 
     self.widget.deinit();
     self.allocator.destroy(self);
@@ -610,10 +615,12 @@ fn checkClipboard(self: *Self) void {
 
 fn updateLayout(self: *Self) void {
     const rect = self.widget.relative_rect;
-    const menu_bar_h = 24;
+    const menu_bar_h = self.menu_bar.widget.relative_rect.h;
+    const timeline_h = self.timeline.widget.relative_rect.h;
+    const status_bar_h = self.status_bar.widget.relative_rect.h;
     const right_col_w = self.color_picker.widget.relative_rect.w;
     const canvas_w = rect.w - right_col_w;
-    const canvas_h = rect.h - menu_bar_h - menu_bar_h;
+    const canvas_h = rect.h - menu_bar_h - timeline_h - status_bar_h;
 
     self.canvas.widget.relative_rect.x = 0;
     self.palette_bar.widget.relative_rect.x = canvas_w;
@@ -639,11 +646,13 @@ fn updateLayout(self: *Self) void {
     self.preview.widget.relative_rect.y = y;
     y += self.preview.widget.relative_rect.h;
     self.panel_right.widget.relative_rect.y = y;
-    self.status_bar.widget.relative_rect.y = rect.h - menu_bar_h;
+    self.timeline.widget.relative_rect.y = rect.h - timeline_h - status_bar_h;
+    self.status_bar.widget.relative_rect.y = rect.h - status_bar_h;
 
     self.menu_bar.widget.setSize(rect.w, menu_bar_h);
-    self.panel_right.widget.setSize(right_col_w, std.math.max(0, menu_bar_h + canvas_h - self.panel_right.widget.relative_rect.y));
+    self.panel_right.widget.setSize(right_col_w, std.math.max(0, rect.h - self.panel_right.widget.relative_rect.y - status_bar_h));
     self.canvas.widget.setSize(canvas_w, canvas_h);
+    self.timeline.widget.setSize(canvas_w, timeline_h);
     self.status_bar.widget.setSize(rect.w, menu_bar_h);
 }
 
