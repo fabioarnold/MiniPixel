@@ -23,3 +23,11 @@
 * Add 8-bit indexed color mode
 * Add loading and saving of color palettes
 * Add copy and paste for colors
+
+## Changes since v0.2.1
+
+* Fix memory leak when pasting an indexed image
+* Use faster memory allocator for releases
+* Use zip compression for undo steps
+* Fix weirdness with crop and select tool cursors
+* Fix visual issues when controls get super tiny
