@@ -770,7 +770,7 @@ pub fn main() !void {
 
     if (c.SDL_GetPrefPath(info.org_name, info.app_name)) |sdl_pref_path| {
         defer c.SDL_free(sdl_pref_path);
-        const user_pref_path = std.mem.sliceTo(sdl_pref_path, 0);
+        const user_pref_path = std.mem.sliceTo(@ptrCast([*:0]const u8, sdl_pref_path), 0);
         window_config_file_path = try std.fs.path.join(allocator, &.{ user_pref_path, "window.json" });
     }
     defer {

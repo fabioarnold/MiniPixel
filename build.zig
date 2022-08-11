@@ -14,13 +14,12 @@ const s2s = Pkg{ .name = "s2s", .source = FileSource.relative("deps/s2s/s2s.zig"
 const gui = Pkg{ .name = "gui", .source = FileSource.relative("src/gui/gui.zig"), .dependencies = &.{nanovg} };
 
 fn printError(str: []const u8) void {
-    var stderr = std.io.getStdErr();
-    var stderr_writer = stderr.writer();
+    var stderr = std.io.getStdErr().writer();
     var tty_config = std.debug.detectTTYConfig();
-    tty_config.setColor(stderr_writer, .Red);
-    _ = stderr_writer.write("ERROR: ") catch {};
-    tty_config.setColor(stderr_writer, .Reset);
-    _ = stderr_writer.write(str) catch {};
+    tty_config.setColor(stderr, .Red);
+    _ = stderr.write("ERROR: ") catch {};
+    tty_config.setColor(stderr, .Reset);
+    _ = stderr.write(str) catch {};
 }
 
 fn installPalFiles(b: *Builder) void {
@@ -43,7 +42,6 @@ pub fn build(b: *Builder) !void {
     exe.addOptions("build_options", exe_options);
     exe_options.addOption(bool, "automated_testing", automated_testing);
 
-    // exe.addIncludeDir("lib/nanovg/src");
     exe.addIncludeDir("lib/gl2/include");
     if (exe.target.isWindows()) {
         exe.addVcpkgPaths(.dynamic) catch @panic("vcpkg not installed");
@@ -71,11 +69,8 @@ pub fn build(b: *Builder) !void {
         &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS" };
     exe.addCSourceFile("src/c/png_image.c", &.{"-std=c99"});
     exe.addCSourceFile("lib/gl2/src/glad.c", c_flags);
-    // exe.addCSourceFile("lib/nanovg/src/nanovg.c", c_flags);
-    // exe.addCSourceFile("deps/nanovg/src/c/nanovg_gl2_impl.c", c_flags);
     exe.addPackage(win32);
     exe.addPackage(nfd);
-    // exe.addPackage(nanovg);
     nanovg_build.addNanoVGPackage(exe);
     exe.addPackage(s2s);
     exe.addPackage(gui);
