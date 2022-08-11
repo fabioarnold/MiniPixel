@@ -51,7 +51,7 @@ pub fn createWindow(self: *Self, title: [:0]const u8, width: f32, height: f32, o
     var window = try gui.Window.init(self.allocator, self);
     errdefer self.allocator.destroy(window);
 
-    const system_window_id = try system.createWindow.*(
+    const system_window_id = try system.createWindow(
         title,
         @floatToInt(u32, width),
         @floatToInt(u32, height),
@@ -69,17 +69,17 @@ pub fn createWindow(self: *Self, title: [:0]const u8, width: f32, height: f32, o
 }
 
 pub fn setWindowTitle(window_id: u32, title: [:0]const u8) void {
-    system.setWindowTitle.*(window_id, title);
+    system.setWindowTitle(window_id, title);
 }
 
 pub fn requestWindowClose(self: *Self, window: *gui.Window) void {
     if (window.isBlockedByModal()) return;
 
     if (window.onCloseRequestFn) |onCloseRequest| {
-        if (!onCloseRequest.*(window.close_request_context)) return; // request denied
+        if (!onCloseRequest(window.close_request_context)) return; // request denied
     }
 
-    system.destroyWindow.*(window.id);
+    system.destroyWindow(window.id);
 
     // remove reference from parent
     if (window.parent) |parent| {
@@ -89,7 +89,7 @@ pub fn requestWindowClose(self: *Self, window: *gui.Window) void {
     // NOTE: isBlockedByModal is updated at this point
 
     if (window.onClosedFn) |onClosed| {
-        onClosed.*(window.closed_context);
+        onClosed(window.closed_context);
     }
 
     if (std.mem.indexOfScalar(*gui.Window, self.windows.items, window)) |i| {
@@ -101,40 +101,40 @@ pub fn requestWindowClose(self: *Self, window: *gui.Window) void {
 
 pub fn showCursor(show: bool) void {
     if (system.showCursor) |systemShowCursor| {
-        systemShowCursor.*(show);
+        systemShowCursor(show);
     }
 }
 
 pub fn hasClipboardText() bool {
     if (system.hasClipboardText) |systemHasClipboardText| {
-        return systemHasClipboardText.*();
+        return systemHasClipboardText();
     }
     return false;
 }
 
 pub fn setClipboardText(allocator: std.mem.Allocator, text: []const u8) !void {
     if (system.setClipboardText) |systemSetClipboardText| {
-        try systemSetClipboardText.*(allocator, text);
+        try systemSetClipboardText(allocator, text);
     }
 }
 
 pub fn getClipboardText(allocator: std.mem.Allocator) !?[]const u8 {
     if (system.getClipboardText) |systemGetClipboardText| {
-        return try systemGetClipboardText.*(allocator);
+        return try systemGetClipboardText(allocator);
     }
     return null;
 }
 
 pub fn startTimer(timer: *gui.Timer, interval: u32) u32 {
     if (system.startTimer) |systemStartTimer| {
-        return systemStartTimer.*(timer, interval);
+        return systemStartTimer(timer, interval);
     }
     return 0;
 }
 
 pub fn cancelTimer(id: u32) void {
     if (system.cancelTimer) |systemCancelTimer| {
-        systemCancelTimer.*(id);
+        systemCancelTimer(id);
     }
 }
 

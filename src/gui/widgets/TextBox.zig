@@ -13,7 +13,7 @@ text: std.ArrayList(u8),
 text_alignment: gui.TextAlignment = .left,
 background_color: nvg.Color,
 
-onChangedFn: ?fn (*Self) void = null,
+onChangedFn: ?*const fn (*Self) void = null,
 
 hovered: bool = false,
 
@@ -44,7 +44,7 @@ pub fn init(allocator: std.mem.Allocator, rect: Rect(f32)) !*Self {
         .background_color = gui.theme_colors.light,
         .base_key_down_fn = widget.onKeyDownFn,
         .blink_timer = gui.Timer{
-            .on_elapsed_fn = onBlinkTimerElapsed,
+            .on_elapsed_fn = &onBlinkTimerElapsed,
             .ctx = @ptrToInt(self),
         },
     };
@@ -160,7 +160,7 @@ fn onBlur(widget: *gui.Widget, event: *gui.FocusEvent) void {
 
 fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
     var self = @fieldParentPtr(Self, "widget", widget);
-    self.base_key_down_fn.*(widget, event);
+    self.base_key_down_fn(widget, event);
     if (event.event.is_accepted) return;
     event.event.accept();
 

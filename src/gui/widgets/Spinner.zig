@@ -86,7 +86,7 @@ pub fn Spinner(comptime T: type) type {
                         const spinner = @fieldParentPtr(Spinner(T), "widget", parent);
                         spinner.up_button.pressed = false;
                         spinner.down_button.pressed = false;
-                        spinner.baseTextBoxBlurFn.*(widget, event);
+                        spinner.baseTextBoxBlurFn(widget, event);
                         spinner.updateTextBox();
                         spinner.text_box.background_color = gui.theme_colors.light;
                     }
@@ -224,7 +224,7 @@ pub fn Spinner(comptime T: type) type {
         }
 
         fn notifyChanged(self: *Self) void {
-            if (self.onChangedFn) |onChangedFn| onChangedFn.*(self);
+            if (self.onChangedFn) |onChangedFn| onChangedFn(self);
         }
     };
 }

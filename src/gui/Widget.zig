@@ -143,7 +143,7 @@ pub fn draw(self: *Self, vg: nvg) void {
     if (!self.visible) return;
     if (self.relative_rect.w <= 0 or self.relative_rect.h <= 0) return;
 
-    self.drawFn.*(self, vg);
+    self.drawFn(self, vg);
 
     if (debug_focus) {
         if (self.isFocused()) {
@@ -271,26 +271,26 @@ pub fn handleEvent(self: *Self, e: *event.Event) void {
     const focus_event = @fieldParentPtr(event.FocusEvent, "event", e);
 
     switch (e.type) {
-        .Resize => self.onResizeFn.*(self, resize_event),
-        .MouseMove => self.onMouseMoveFn.*(self, mouse_event),
+        .Resize => self.onResizeFn(self, resize_event),
+        .MouseMove => self.onMouseMoveFn(self, mouse_event),
         .MouseDown => {
             if (self.acceptsFocus(.mouse)) {
                 self.setFocus(true, .mouse);
             }
-            self.onMouseDownFn.*(self, mouse_event);
+            self.onMouseDownFn(self, mouse_event);
         },
-        .MouseUp => self.onMouseUpFn.*(self, mouse_event),
-        .MouseWheel => self.onMouseWheelFn.*(self, mouse_event),
-        .TouchPan => self.onTouchPanFn.*(self, touch_event),
-        .TouchZoom => self.onTouchZoomFn.*(self, touch_event),
-        .KeyDown => self.onKeyDownFn.*(self, key_event),
-        .KeyUp => self.onKeyUpFn.*(self, key_event),
-        .TextInput => self.onTextInputFn.*(self, text_input_event),
-        .Focus => self.onFocusFn.*(self, focus_event),
-        .Blur => self.onBlurFn.*(self, focus_event),
-        .Enter => self.onEnterFn.*(self),
-        .Leave => self.onLeaveFn.*(self),
-        .ClipboardUpdate => self.onClipboardUpdateFn.*(self),
+        .MouseUp => self.onMouseUpFn(self, mouse_event),
+        .MouseWheel => self.onMouseWheelFn(self, mouse_event),
+        .TouchPan => self.onTouchPanFn(self, touch_event),
+        .TouchZoom => self.onTouchZoomFn(self, touch_event),
+        .KeyDown => self.onKeyDownFn(self, key_event),
+        .KeyUp => self.onKeyUpFn(self, key_event),
+        .TextInput => self.onTextInputFn(self, text_input_event),
+        .Focus => self.onFocusFn(self, focus_event),
+        .Blur => self.onBlurFn(self, focus_event),
+        .Enter => self.onEnterFn(self),
+        .Leave => self.onLeaveFn(self),
+        .ClipboardUpdate => self.onClipboardUpdateFn(self),
     }
 }
 

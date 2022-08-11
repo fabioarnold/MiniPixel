@@ -48,7 +48,7 @@ pub fn deinit(self: *RadioButton) void {
 fn click(self: *RadioButton) void {
     if (!self.widget.isEnabled()) return;
     if (self.onClickFn) |clickFn| {
-        clickFn.*(self);
+        clickFn(self);
     }
 }
 

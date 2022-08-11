@@ -55,7 +55,7 @@ pub fn deinit(self: *Self, vg: nvg) void {
 fn setActive(self: *Self, active: BlendMode) void {
     if (self.active != active) {
         self.active = active;
-        if (self.onChangedFn) |onChanged| onChanged.*(self);
+        if (self.onChangedFn) |onChanged| onChanged(self);
     }
 }
 

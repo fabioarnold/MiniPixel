@@ -83,7 +83,7 @@ fn SliderChangedFn(comptime color_index: comptime_int) type {
                 if (picker.color[color_index] != value) {
                     picker.color[color_index] = value;
                     picker.spinners[color_index].setValue(value);
-                    if (picker.onChangedFn) |onChanged| onChanged.*(picker);
+                    if (picker.onChangedFn) |onChanged| onChanged(picker);
                 }
             }
         }
@@ -98,7 +98,7 @@ fn SpinnerChangedFn(comptime color_index: comptime_int) type {
                 if (picker.color[color_index] != spinner.value) {
                     picker.color[color_index] = @intCast(u8, spinner.value);
                     picker.sliders[color_index].setValue(@intToFloat(f32, spinner.value) / 255.0);
-                    if (picker.onChangedFn) |onChanged| onChanged.*(picker);
+                    if (picker.onChangedFn) |onChanged| onChanged(picker);
                 }
             }
         }

@@ -243,7 +243,7 @@ pub fn draw(self: Self, vg: nvg) void {
     if (self.cursorFn) |cursor| {
         vg.save();
         vg.translate(self.mouse_pos.x, self.mouse_pos.y);
-        cursor.*(vg);
+        cursor(vg);
         vg.restore();
     }
 }

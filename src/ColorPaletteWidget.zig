@@ -46,7 +46,7 @@ pub fn setSelection(self: *Self, selected: ?usize) void {
     if (self.selection_locked and selected == null) return;
     if (!std.meta.eql(self.selected, selected)) {
         self.selected = selected;
-        if (self.onSelectionChangedFn) |onSelectionChanged| onSelectionChanged.*(self);
+        if (self.onSelectionChangedFn) |onSelectionChanged| onSelectionChanged(self);
     }
 }
 

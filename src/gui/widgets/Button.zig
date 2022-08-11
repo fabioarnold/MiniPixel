@@ -43,7 +43,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*Self {
         .allocator = allocator,
         .text = text,
         .auto_repeat_timer = gui.Timer{
-            .on_elapsed_fn = onAutoRepeatTimerElapsed,
+            .on_elapsed_fn = &onAutoRepeatTimerElapsed,
             .ctx = @ptrToInt(self),
         },
     };
@@ -72,7 +72,7 @@ pub fn deinit(self: *Self) void {
 fn click(self: *Self) void {
     if (!self.widget.isEnabled()) return;
     if (self.onClickFn) |clickFn| {
-        clickFn.*(self);
+        clickFn(self);
     }
 }
 
@@ -135,19 +135,19 @@ fn onBlur(widget: *gui.Widget, _: *gui.FocusEvent) void {
 fn onEnter(widget: *gui.Widget) void {
     const self = @fieldParentPtr(Self, "widget", widget);
     self.hovered = true;
-    if (self.onEnterFn) |enterFn| enterFn.*(self);
+    if (self.onEnterFn) |enterFn| enterFn(self);
 }
 
 fn onLeave(widget: *gui.Widget) void {
     const self = @fieldParentPtr(Self, "widget", widget);
     self.hovered = false;
-    if (self.onLeaveFn) |leaveFn| leaveFn.*(self);
+    if (self.onLeaveFn) |leaveFn| leaveFn(self);
 }
 
 fn onAutoRepeatTimerElapsed(context: usize) void {
     var button = @intToPtr(*Button, context);
     if (button.onClickFn) |onClickFn| {
-        onClickFn.*(button);
+        onClickFn(button);
     }
 }
 
@@ -205,7 +205,7 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     if (self.iconFn) |iconFn| {
         vg.save();
         vg.translate(rect.x + self.icon_x, rect.y + self.icon_y);
-        iconFn.*(vg);
+        iconFn(vg);
         vg.restore();
     }
 }

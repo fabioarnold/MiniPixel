@@ -259,7 +259,7 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     vg.fillColor(gui.theme_colors.background);
     vg.fill();
 
-    self.drawIconFn.*(vg, 10, 13);
+    self.drawIconFn(vg, 10, 13);
 
     widget.drawChildren(vg);
 }

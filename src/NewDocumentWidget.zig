@@ -24,7 +24,7 @@ truecolor_radio: *gui.RadioButton,
 ok_button: *gui.Button,
 cancel_button: *gui.Button,
 
-onSelectedFn: ?fn (*Self) void = null,
+onSelectedFn: ?*const fn (*Self) void = null,
 
 const Self = @This();
 

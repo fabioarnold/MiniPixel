@@ -1068,7 +1068,7 @@ fn onTouchZoom(widget: *gui.Widget, event: *const gui.TouchEvent) void {
 
 fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
     var self = @fieldParentPtr(Self, "widget", widget);
-    self.baseOnKeyDownFn.*(widget, event);
+    self.baseOnKeyDownFn(widget, event);
     if (event.event.is_accepted) return;
     switch (self.tool) {
         .crop => self.crop_tool.onKeyDown(self, event),
@@ -1168,13 +1168,13 @@ fn rectFromDocumentSpace(self: Self, rect: Rectf, snap_to_pixel: bool) Rectf {
 
 fn notifyScaleChanged(self: *Self) void {
     if (self.onScaleChangedFn) |onScaleChanged| {
-        onScaleChanged.*(self, self.scale);
+        onScaleChanged(self, self.scale);
     }
 }
 
 fn notifyColorPicked(self: *Self) void {
     if (self.onColorPickedFn) |onColorPicked| {
-        onColorPicked.*(self);
+        onColorPicked(self);
     }
 }
 

@@ -89,7 +89,7 @@ pub fn setValue(self: *Self, value: f32) void {
     if (clamped_value != self.value) {
         self.value = clamped_value;
         self.updateThumbPosition();
-        if (self.onChangedFn) |onChanged| onChanged.*(self);
+        if (self.onChangedFn) |onChanged| onChanged(self);
     }
 }
 

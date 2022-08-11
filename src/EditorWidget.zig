@@ -686,7 +686,7 @@ fn showMessageBox(self: *Self, title: [:0]const u8) void {
 fn onMessageBoxClosed(context: usize) void {
     const editor = @intToPtr(*EditorWidget, context);
     if (editor.onMessageBoxResultFn) |onMessageBoxResult| {
-        onMessageBoxResult.*(editor.message_box_result_context, editor.message_box_widget.result);
+        onMessageBoxResult(editor.message_box_result_context, editor.message_box_widget.result);
     }
 }
 

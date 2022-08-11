@@ -49,7 +49,7 @@ pub fn Slider(comptime T: type) type {
                 const rect = widget.getRect();
                 const x = std.math.clamp(event.x, 0, rect.w - 1) / (rect.w - 1);
                 self.value = self.min_value + x * (self.max_value - self.min_value);
-                self.onChangedFn.*(self);
+                self.onChangedFn(self);
             }
         }
 
@@ -61,7 +61,7 @@ pub fn Slider(comptime T: type) type {
                 const rect = widget.getRect();
                 const x = std.math.clamp(event.x, 0, rect.w - 1) / (rect.w - 1);
                 self.value = self.min_value + x * (self.max_value - self.min_value);
-                self.onChangedFn.*(self);
+                self.onChangedFn(self);
             }
         }
 

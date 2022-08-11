@@ -66,7 +66,7 @@ pub fn deinit(self: *Self, vg: nvg) void {
 }
 
 fn notifyChanged(self: *Self, change_type: ChangeType) void {
-    if (self.onChangedFn) |onChanged| onChanged.*(self, change_type);
+    if (self.onChangedFn) |onChanged| onChanged(self, change_type);
 }
 
 fn setActive(self: *Self, active: ColorLayer) void {
