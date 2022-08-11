@@ -4,7 +4,7 @@ const nvg = @import("nanovg");
 pub const geometry = @import("geometry.zig");
 const Rect = geometry.Rect;
 const Point = geometry.Point;
-usingnamespace @import("event.zig");
+pub usingnamespace @import("event.zig");
 pub const Timer = @import("Timer.zig");
 pub const Application = @import("Application.zig");
 pub const Window = @import("Window.zig");

@@ -14,7 +14,7 @@ sliders: [5]*gui.Slider(f32) = undefined,
 
 color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 
-onChangedFn: ?fn (*ColorPickerWidget) void = null,
+onChangedFn: ?*const fn (*ColorPickerWidget) void = null,
 
 const Self = @This();
 
@@ -24,20 +24,20 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .widget = gui.Widget.init(allocator, rect),
         .allocator = allocator,
     };
-    self.widget.drawFn = draw;
+    self.widget.drawFn = &draw;
 
     const pad = 5;
     inline for ([_]u2{ 0, 1, 2, 3 }) |i| {
         const y = @intToFloat(f32, i) * 28;
         self.sliders[i] = try gui.Slider(f32).init(allocator, Rect(f32).make(pad, y + pad, rect.w - 50 - 2 * pad, 23));
         self.sliders[i].max_value = 1;
-        self.sliders[i].onChangedFn = SliderChangedFn(i).changed;
-        self.sliders[i].widget.drawFn = SliderDrawFn(i).draw;
+        self.sliders[i].onChangedFn = &SliderChangedFn(i).changed;
+        self.sliders[i].widget.drawFn = &SliderDrawFn(i).draw;
         try self.widget.addChild(&self.sliders[i].widget);
 
         self.spinners[i] = try gui.Spinner(i32).init(allocator, Rect(f32).make(rect.w - 50, y + pad, 45, 23));
         self.spinners[i].max_value = 255;
-        self.spinners[i].onChangedFn = SpinnerChangedFn(i).changed;
+        self.spinners[i].onChangedFn = &SpinnerChangedFn(i).changed;
         try self.widget.addChild(&self.spinners[i].widget);
     }
 
@@ -83,7 +83,7 @@ fn SliderChangedFn(comptime color_index: comptime_int) type {
                 if (picker.color[color_index] != value) {
                     picker.color[color_index] = value;
                     picker.spinners[color_index].setValue(value);
-                    if (picker.onChangedFn) |onChanged| onChanged(picker);
+                    if (picker.onChangedFn) |onChanged| onChanged.*(picker);
                 }
             }
         }
@@ -98,7 +98,7 @@ fn SpinnerChangedFn(comptime color_index: comptime_int) type {
                 if (picker.color[color_index] != spinner.value) {
                     picker.color[color_index] = @intCast(u8, spinner.value);
                     picker.sliders[color_index].setValue(@intToFloat(f32, spinner.value) / 255.0);
-                    if (picker.onChangedFn) |onChanged| onChanged(picker);
+                    if (picker.onChangedFn) |onChanged| onChanged.*(picker);
                 }
             }
         }

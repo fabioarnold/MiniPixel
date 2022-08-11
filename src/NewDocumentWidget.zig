@@ -45,7 +45,7 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
         .ok_button = try gui.Button.init(allocator, Rect(f32).make(rect.w - 160 - 10 - 10, rect.h - 25 - 10, 80, 25), "OK"),
         .cancel_button = try gui.Button.init(allocator, Rect(f32).make(rect.w - 80 - 10, rect.h - 25 - 10, 80, 25), "Cancel"),
     };
-    self.widget.onKeyDownFn = onKeyDown;
+    self.widget.onKeyDownFn = &onKeyDown;
 
     self.width_spinner.setValue(@intCast(i32, editor_widget.document.getWidth()));
     self.height_spinner.setValue(@intCast(i32, editor_widget.document.getHeight()));
@@ -54,11 +54,11 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
     self.width_spinner.max_value = 1 << 14; // 16k
     self.height_spinner.max_value = 1 << 14;
     self.truecolor_radio.checked = true;
-    self.truecolor_radio.onClickFn = onTruecolorRadioClick;
-    self.indexed_radio.onClickFn = onIndexedRadioClick;
+    self.truecolor_radio.onClickFn = &onTruecolorRadioClick;
+    self.indexed_radio.onClickFn = &onIndexedRadioClick;
 
-    self.ok_button.onClickFn = onOkButtonClick;
-    self.cancel_button.onClickFn = onCancelButtonClick;
+    self.ok_button.onClickFn = &onOkButtonClick;
+    self.cancel_button.onClickFn = &onCancelButtonClick;
 
     try self.widget.addChild(&self.width_label.widget);
     try self.widget.addChild(&self.width_spinner.widget);
@@ -70,7 +70,7 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
     try self.widget.addChild(&self.ok_button.widget);
     try self.widget.addChild(&self.cancel_button.widget);
 
-    self.widget.drawFn = draw;
+    self.widget.drawFn = &draw;
 
     return self;
 }

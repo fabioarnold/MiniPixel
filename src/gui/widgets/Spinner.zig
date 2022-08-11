@@ -25,9 +25,9 @@ pub fn Spinner(comptime T: type) type {
         step_value: T = 1,
         step_mode: StepMode = .linear,
 
-        baseTextBoxBlurFn: fn (*gui.Widget, *gui.FocusEvent) void,
+        baseTextBoxBlurFn: *const fn (*gui.Widget, *gui.FocusEvent) void,
 
-        onChangedFn: ?fn (*Self) void = null,
+        onChangedFn: ?*const fn (*Self) void = null,
 
         const Self = @This();
 
@@ -44,9 +44,9 @@ pub fn Spinner(comptime T: type) type {
             self.up_button.widget.focus_policy = gui.FocusPolicy.none();
             self.down_button.widget.focus_policy = gui.FocusPolicy.none();
             self.baseTextBoxBlurFn = self.text_box.widget.onBlurFn;
-            self.widget.onResizeFn = onResize;
-            self.widget.onKeyDownFn = onKeyDown;
-            self.widget.onKeyUpFn = onKeyUp;
+            self.widget.onResizeFn = &onResize;
+            self.widget.onKeyDownFn = &onKeyDown;
+            self.widget.onKeyUpFn = &onKeyUp;
 
             try self.widget.addChild(&self.up_button.widget);
             try self.widget.addChild(&self.down_button.widget);
@@ -80,21 +80,21 @@ pub fn Spinner(comptime T: type) type {
                     }
                 }
             }.changed;
-            self.text_box.widget.onBlurFn = struct {
+            self.text_box.widget.onBlurFn = &struct {
                 fn blur(widget: *gui.Widget, event: *gui.FocusEvent) void {
                     if (widget.parent) |parent| {
                         const spinner = @fieldParentPtr(Spinner(T), "widget", parent);
                         spinner.up_button.pressed = false;
                         spinner.down_button.pressed = false;
-                        spinner.baseTextBoxBlurFn(widget, event);
+                        spinner.baseTextBoxBlurFn.*(widget, event);
                         spinner.updateTextBox();
                         spinner.text_box.background_color = gui.theme_colors.light;
                     }
                 }
             }.blur;
 
-            self.up_button.iconFn = gui.drawSmallArrowUp;
-            self.up_button.onClickFn = struct {
+            self.up_button.iconFn = &gui.drawSmallArrowUp;
+            self.up_button.onClickFn = &struct {
                 fn click(button: *gui.Button) void {
                     if (button.widget.parent) |parent| {
                         const spinner = @fieldParentPtr(Spinner(T), "widget", parent);
@@ -105,8 +105,8 @@ pub fn Spinner(comptime T: type) type {
             }.click;
             self.up_button.auto_repeat_interval = 150;
 
-            self.down_button.iconFn = gui.drawSmallArrowDown;
-            self.down_button.onClickFn = struct {
+            self.down_button.iconFn = &gui.drawSmallArrowDown;
+            self.down_button.onClickFn = &struct {
                 fn click(button: *gui.Button) void {
                     if (button.widget.parent) |parent| {
                         const spinner = @fieldParentPtr(Spinner(T), "widget", parent);
@@ -224,7 +224,7 @@ pub fn Spinner(comptime T: type) type {
         }
 
         fn notifyChanged(self: *Self) void {
-            if (self.onChangedFn) |onChangedFn| onChangedFn(self);
+            if (self.onChangedFn) |onChangedFn| onChangedFn.*(self);
         }
     };
 }

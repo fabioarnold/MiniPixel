@@ -25,14 +25,14 @@ focused_widget: ?*gui.Widget = null,
 hovered_widget: ?*gui.Widget = null,
 automatic_cursor_tracking_widget: ?*gui.Widget = null,
 
-cursorFn: ?fn (nvg) void = null,
+cursorFn: ?*const fn (nvg) void = null,
 mouse_pos: Point(f32) = Point(f32).make(0, 0),
 
 close_request_context: usize = 0,
-onCloseRequestFn: ?fn (usize) bool = null, // true: yes, close window. false: no, don't close window.
+onCloseRequestFn: ?*const fn (usize) bool = null, // true: yes, close window. false: no, don't close window.
 
 closed_context: usize = 0,
-onClosedFn: ?fn (usize) void = null,
+onClosedFn: ?*const fn (usize) void = null,
 
 const Self = @This();
 
@@ -230,7 +230,7 @@ pub fn setTitle(self: *Self, title: [:0]const u8) void {
     gui.Application.setWindowTitle(self.id, title);
 }
 
-pub fn setCursor(self: *Self, cursor: ?fn (nvg) void) void {
+pub fn setCursor(self: *Self, cursor: ?*const fn (nvg) void) void {
     gui.Application.showCursor(cursor == null);
     self.cursorFn = cursor;
 }
@@ -243,7 +243,7 @@ pub fn draw(self: Self, vg: nvg) void {
     if (self.cursorFn) |cursor| {
         vg.save();
         vg.translate(self.mouse_pos.x, self.mouse_pos.y);
-        cursor(vg);
+        cursor.*(vg);
         vg.restore();
     }
 }

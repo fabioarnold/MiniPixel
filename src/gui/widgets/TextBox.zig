@@ -26,7 +26,7 @@ selection_end: usize = 0,
 
 glyph_positions: std.ArrayList(nvg.GlyphPosition), // cache
 
-base_key_down_fn: fn (*gui.Widget, *gui.KeyEvent) void,
+base_key_down_fn: *const fn (*gui.Widget, *gui.KeyEvent) void,
 
 blink: bool = false,
 blink_timer: gui.Timer,
@@ -49,16 +49,16 @@ pub fn init(allocator: std.mem.Allocator, rect: Rect(f32)) !*Self {
         },
     };
 
-    self.widget.onMouseMoveFn = onMouseMove;
-    self.widget.onMouseUpFn = onMouseUp;
-    self.widget.onMouseDownFn = onMouseDown;
-    self.widget.onKeyDownFn = onKeyDown;
-    self.widget.onTextInputFn = onTextInput;
-    self.widget.onEnterFn = onEnter;
-    self.widget.onLeaveFn = onLeave;
-    self.widget.onFocusFn = onFocus;
-    self.widget.onBlurFn = onBlur;
-    self.widget.drawFn = draw;
+    self.widget.onMouseMoveFn = &onMouseMove;
+    self.widget.onMouseUpFn = &onMouseUp;
+    self.widget.onMouseDownFn = &onMouseDown;
+    self.widget.onKeyDownFn = &onKeyDown;
+    self.widget.onTextInputFn = &onTextInput;
+    self.widget.onEnterFn = &onEnter;
+    self.widget.onLeaveFn = &onLeave;
+    self.widget.onFocusFn = &onFocus;
+    self.widget.onBlurFn = &onBlur;
+    self.widget.drawFn = &draw;
     self.widget.focus_policy.keyboard = true;
     self.widget.focus_policy.mouse = true;
     return self;
@@ -160,7 +160,7 @@ fn onBlur(widget: *gui.Widget, event: *gui.FocusEvent) void {
 
 fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
     var self = @fieldParentPtr(Self, "widget", widget);
-    self.base_key_down_fn(widget, event);
+    self.base_key_down_fn.*(widget, event);
     if (event.event.is_accepted) return;
     event.event.accept();
 

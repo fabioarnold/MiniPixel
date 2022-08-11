@@ -25,23 +25,23 @@ focus_policy: event.FocusPolicy = event.FocusPolicy{},
 enabled: bool = true,
 visible: bool = true,
 
-drawFn: fn (*Widget, vg: nvg) void = drawChildren,
+drawFn: *const fn (*Widget, vg: nvg) void = &drawChildren,
 
-onResizeFn: fn (*Widget, *event.ResizeEvent) void = onResize,
-onMouseMoveFn: fn (*Widget, *event.MouseEvent) void = onMouseMove,
-onMouseDownFn: fn (*Widget, *event.MouseEvent) void = onMouseDown,
-onMouseUpFn: fn (*Widget, *event.MouseEvent) void = onMouseUp,
-onMouseWheelFn: fn (*Widget, *event.MouseEvent) void = onMouseWheel,
-onTouchPanFn: fn (*Widget, *event.TouchEvent) void = onTouchPan,
-onTouchZoomFn: fn (*Widget, *event.TouchEvent) void = onTouchZoom,
-onKeyDownFn: fn (*Widget, *event.KeyEvent) void = onKeyDown,
-onKeyUpFn: fn (*Widget, *event.KeyEvent) void = onKeyUp,
-onTextInputFn: fn (*Widget, *event.TextInputEvent) void = onTextInput,
-onFocusFn: fn (*Widget, *event.FocusEvent) void = onFocus,
-onBlurFn: fn (*Widget, *event.FocusEvent) void = onBlur,
-onEnterFn: fn (*Widget) void = onEnter,
-onLeaveFn: fn (*Widget) void = onLeave,
-onClipboardUpdateFn: fn (*Widget) void = onClipboardUpdate,
+onResizeFn: *const fn (*Widget, *event.ResizeEvent) void = &onResize,
+onMouseMoveFn: *const fn (*Widget, *event.MouseEvent) void = &onMouseMove,
+onMouseDownFn: *const fn (*Widget, *event.MouseEvent) void = &onMouseDown,
+onMouseUpFn: *const fn (*Widget, *event.MouseEvent) void = &onMouseUp,
+onMouseWheelFn: *const fn (*Widget, *event.MouseEvent) void = &onMouseWheel,
+onTouchPanFn: *const fn (*Widget, *event.TouchEvent) void = &onTouchPan,
+onTouchZoomFn: *const fn (*Widget, *event.TouchEvent) void = &onTouchZoom,
+onKeyDownFn: *const fn (*Widget, *event.KeyEvent) void = &onKeyDown,
+onKeyUpFn: *const fn (*Widget, *event.KeyEvent) void = &onKeyUp,
+onTextInputFn: *const fn (*Widget, *event.TextInputEvent) void = &onTextInput,
+onFocusFn: *const fn (*Widget, *event.FocusEvent) void = &onFocus,
+onBlurFn: *const fn (*Widget, *event.FocusEvent) void = &onBlur,
+onEnterFn: *const fn (*Widget) void = &onEnter,
+onLeaveFn: *const fn (*Widget) void = &onLeave,
+onClipboardUpdateFn: *const fn (*Widget) void = &onClipboardUpdate,
 
 const Self = @This();
 
@@ -143,7 +143,7 @@ pub fn draw(self: *Self, vg: nvg) void {
     if (!self.visible) return;
     if (self.relative_rect.w <= 0 or self.relative_rect.h <= 0) return;
 
-    self.drawFn(self, vg);
+    self.drawFn.*(self, vg);
 
     if (debug_focus) {
         if (self.isFocused()) {
@@ -271,26 +271,26 @@ pub fn handleEvent(self: *Self, e: *event.Event) void {
     const focus_event = @fieldParentPtr(event.FocusEvent, "event", e);
 
     switch (e.type) {
-        .Resize => self.onResizeFn(self, resize_event),
-        .MouseMove => self.onMouseMoveFn(self, mouse_event),
+        .Resize => self.onResizeFn.*(self, resize_event),
+        .MouseMove => self.onMouseMoveFn.*(self, mouse_event),
         .MouseDown => {
             if (self.acceptsFocus(.mouse)) {
                 self.setFocus(true, .mouse);
             }
-            self.onMouseDownFn(self, mouse_event);
+            self.onMouseDownFn.*(self, mouse_event);
         },
-        .MouseUp => self.onMouseUpFn(self, mouse_event),
-        .MouseWheel => self.onMouseWheelFn(self, mouse_event),
-        .TouchPan => self.onTouchPanFn(self, touch_event),
-        .TouchZoom => self.onTouchZoomFn(self, touch_event),
-        .KeyDown => self.onKeyDownFn(self, key_event),
-        .KeyUp => self.onKeyUpFn(self, key_event),
-        .TextInput => self.onTextInputFn(self, text_input_event),
-        .Focus => self.onFocusFn(self, focus_event),
-        .Blur => self.onBlurFn(self, focus_event),
-        .Enter => self.onEnterFn(self),
-        .Leave => self.onLeaveFn(self),
-        .ClipboardUpdate => self.onClipboardUpdateFn(self),
+        .MouseUp => self.onMouseUpFn.*(self, mouse_event),
+        .MouseWheel => self.onMouseWheelFn.*(self, mouse_event),
+        .TouchPan => self.onTouchPanFn.*(self, touch_event),
+        .TouchZoom => self.onTouchZoomFn.*(self, touch_event),
+        .KeyDown => self.onKeyDownFn.*(self, key_event),
+        .KeyUp => self.onKeyUpFn.*(self, key_event),
+        .TextInput => self.onTextInputFn.*(self, text_input_event),
+        .Focus => self.onFocusFn.*(self, focus_event),
+        .Blur => self.onBlurFn.*(self, focus_event),
+        .Enter => self.onEnterFn.*(self),
+        .Leave => self.onLeaveFn.*(self),
+        .ClipboardUpdate => self.onClipboardUpdateFn.*(self),
     }
 }
 

@@ -27,7 +27,7 @@ rects: [2]Rect(f32),
 
 background_image: nvg.Image,
 
-onChangedFn: ?fn (*Self, change_type: ChangeType) void = null,
+onChangedFn: ?*const fn (*Self, change_type: ChangeType) void = null,
 
 const pad = 5;
 
@@ -51,10 +51,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         }),
     };
 
-    self.widget.onMouseDownFn = onMouseDown;
-    self.widget.onMouseUpFn = onMouseUp;
+    self.widget.onMouseDownFn = &onMouseDown;
+    self.widget.onMouseUpFn = &onMouseUp;
 
-    self.widget.drawFn = draw;
+    self.widget.drawFn = &draw;
 
     return self;
 }
@@ -66,7 +66,7 @@ pub fn deinit(self: *Self, vg: nvg) void {
 }
 
 fn notifyChanged(self: *Self, change_type: ChangeType) void {
-    if (self.onChangedFn) |onChanged| onChanged(self, change_type);
+    if (self.onChangedFn) |onChanged| onChanged.*(self, change_type);
 }
 
 fn setActive(self: *Self, active: ColorLayer) void {

@@ -22,7 +22,7 @@ pub fn init(allocator: std.mem.Allocator, rect: Rect(f32), text: []const u8) !*S
         .allocator = allocator,
         .text = text,
     };
-    self.widget.drawFn = draw;
+    self.widget.drawFn = &draw;
     return self;
 }
 

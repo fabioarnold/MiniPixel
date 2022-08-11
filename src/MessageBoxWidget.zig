@@ -32,7 +32,7 @@ const MessageBoxWidget = @This();
 
 widget: gui.Widget,
 allocator: Allocator,
-drawIconFn: fn (nvg, f32, f32) void,
+drawIconFn: *const fn (nvg, f32, f32) void,
 message_label: *gui.Label,
 ok_button: *gui.Button,
 cancel_button: *gui.Button,
@@ -47,19 +47,19 @@ pub fn init(allocator: Allocator, message: []const u8) !*MessageBoxWidget {
     self.* = MessageBoxWidget{
         .widget = gui.Widget.init(allocator, Rect(f32).make(0, 0, width, height)),
         .allocator = allocator,
-        .drawIconFn = drawNoIcon,
+        .drawIconFn = &drawNoIcon,
         .message_label = try gui.Label.init(allocator, Rect(f32).make(10 + 32 + 10, 10, width - 30 - 32, 40), message),
         .ok_button = try gui.Button.init(allocator, Rect(f32).make(width - 80 - 10, height - 25 - 10, 80, 25), "OK"),
         .cancel_button = try gui.Button.init(allocator, Rect(f32).make(width - 80 - 10, height - 25 - 10, 80, 25), "Cancel"),
         .yes_button = try gui.Button.init(allocator, Rect(f32).make(width - 80 - 10, height - 25 - 10, 80, 25), "Yes"),
         .no_button = try gui.Button.init(allocator, Rect(f32).make(width - 80 - 10, height - 25 - 10, 80, 25), "No"),
     };
-    self.widget.onKeyDownFn = onKeyDown;
+    self.widget.onKeyDownFn = &onKeyDown;
 
-    self.ok_button.onClickFn = onOkButtonClick;
-    self.cancel_button.onClickFn = onCancelButtonClick;
-    self.yes_button.onClickFn = onYesButtonClick;
-    self.no_button.onClickFn = onNoButtonClick;
+    self.ok_button.onClickFn = &onOkButtonClick;
+    self.cancel_button.onClickFn = &onCancelButtonClick;
+    self.yes_button.onClickFn = &onYesButtonClick;
+    self.no_button.onClickFn = &onNoButtonClick;
 
     try self.widget.addChild(&self.message_label.widget);
     try self.widget.addChild(&self.ok_button.widget);
@@ -67,7 +67,7 @@ pub fn init(allocator: Allocator, message: []const u8) !*MessageBoxWidget {
     try self.widget.addChild(&self.yes_button.widget);
     try self.widget.addChild(&self.no_button.widget);
 
-    self.widget.drawFn = draw;
+    self.widget.drawFn = &draw;
 
     return self;
 }
@@ -89,10 +89,10 @@ pub fn setSize(self: *MessageBoxWidget, width: f32, height: f32) void {
 
 pub fn configure(self: *MessageBoxWidget, icon: Icon, buttons: Buttons, message: []const u8) void {
     self.drawIconFn = switch (icon) {
-        .none => drawNoIcon,
-        .@"error" => drawErrorIcon,
-        .warning => drawWarningIcon,
-        .question => drawQuestionIcon,
+        .none => &drawNoIcon,
+        .@"error" => &drawErrorIcon,
+        .warning => &drawWarningIcon,
+        .question => &drawQuestionIcon,
     };
     const rect = self.widget.relative_rect;
     switch (buttons) {
@@ -259,7 +259,7 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     vg.fillColor(gui.theme_colors.background);
     vg.fill();
 
-    self.drawIconFn(vg, 10, 13);
+    self.drawIconFn.*(vg, 10, 13);
 
     widget.drawChildren(vg);
 }

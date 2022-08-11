@@ -19,7 +19,7 @@ image_alpha: nvg.Image,
 image_replace: nvg.Image,
 rects: [2]Rect(f32),
 
-onChangedFn: ?fn (*Self) void = null,
+onChangedFn: ?*const fn (*Self) void = null,
 
 const pad = 5;
 
@@ -38,9 +38,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         .image_replace = vg.createImageMem(image_replace_data, .{ .nearest = true }),
     };
 
-    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseDownFn = &onMouseDown;
 
-    self.widget.drawFn = draw;
+    self.widget.drawFn = &draw;
 
     return self;
 }
@@ -55,7 +55,7 @@ pub fn deinit(self: *Self, vg: nvg) void {
 fn setActive(self: *Self, active: BlendMode) void {
     if (self.active != active) {
         self.active = active;
-        if (self.onChangedFn) |onChanged| onChanged(self);
+        if (self.onChangedFn) |onChanged| onChanged.*(self);
     }
 }
 
