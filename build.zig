@@ -35,6 +35,7 @@ pub fn build(b: *Builder) !void {
     const automated_testing = b.option(bool, "automated-testing", "Enable automated testing") orelse false;
 
     const exe = b.addExecutable("minipixel", "src/main.zig");
+    exe.use_stage1 = true;
     exe.setBuildMode(mode);
     exe.setTarget(target);
 
