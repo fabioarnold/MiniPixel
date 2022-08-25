@@ -1,6 +1,7 @@
 const std = @import("std");
 const Application = @import("gui").Application;
 const Image = @import("Image.zig");
+const ClipboardWin32 = @import("ClipboardWin32.zig");
 
 var clipboard_image: ?Image = null;
 
@@ -10,27 +11,35 @@ pub fn deinit() void {
     }
 }
 
-usingnamespace switch (@import("builtin").os.tag) {
-    .windows => @import("ClipboardWin32.zig"),
-    else => struct {
-        pub fn hasImage() bool {
-            return clipboard_image != null;
-        }
+pub fn hasImage() bool {
+    if (@import("builtin").os.tag == .windows) {
+        return ClipboardWin32.hasImage();
+    }
 
-        pub fn getImage(allocator: std.mem.Allocator) !Image {
-            if (clipboard_image) |image| {
-                return try image.clone(allocator);
-            } else {
-                return error.EmptyClipboard;
-            }
-        }
+    return clipboard_image != null;
+}
 
-        pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
-            deinit();
-            clipboard_image = try image.clone(allocator);
-        }
-    },
-};
+pub fn getImage(allocator: std.mem.Allocator) !Image {
+    if (@import("builtin").os.tag == .windows) {
+        return try ClipboardWin32.getImage(allocator);
+    }
+
+    if (clipboard_image) |image| {
+        return try image.clone(allocator);
+    } else {
+        return error.EmptyClipboard;
+    }
+}
+
+pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
+    if (@import("builtin").os.tag == .windows) {
+        try ClipboardWin32.setImage(allocator, image);
+        return;
+    }
+
+    deinit();
+    clipboard_image = try image.clone(allocator);
+}
 
 fn isColorString(string: []const u8) bool {
     if (string.len != 9) return false;

@@ -6,7 +6,7 @@
 		{
 			"label": "build",
 			"type": "shell",
-			"command": "zig build -fno-stage1",
+			"command": "zig build",
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
