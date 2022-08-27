@@ -75,7 +75,7 @@ pub fn build(b: *Builder) !void {
     nanovg_build.addNanoVGPackage(exe);
     exe.addPackage(s2s);
     exe.addPackage(gui);
-    const nfd_lib = try @import("deps/nfd-zig/build.zig").makeLib(b, mode, target, "deps/nfd-zig/");
+    const nfd_lib = @import("deps/nfd-zig/build.zig").makeLib(b, mode, target);
     exe.linkLibrary(nfd_lib);
     exe.linkSystemLibrary("SDL2");
     if (exe.target.isWindows()) {
