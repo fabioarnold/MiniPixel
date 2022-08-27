@@ -27,15 +27,15 @@ pub fn init(allocator: Allocator) !*Self {
         .allocator = allocator,
         .close_button = try gui.Button.init(allocator, Rect(f32).make((dialog_rect.w - 80) / 2, dialog_rect.h - 25 - 10, 80, 25), "Close"),
     };
-    self.widget.onMouseMoveFn = &onMouseMove;
-    self.widget.onMouseDownFn = &onMouseDown;
-    self.widget.onKeyDownFn = &onKeyDown;
+    self.widget.onMouseMoveFn = onMouseMove;
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onKeyDownFn = onKeyDown;
 
-    self.close_button.onClickFn = &onCloseButtonClick;
+    self.close_button.onClickFn = onCloseButtonClick;
 
     try self.widget.addChild(&self.close_button.widget);
 
-    self.widget.drawFn = &draw;
+    self.widget.drawFn = draw;
 
     return self;
 }

@@ -17,7 +17,7 @@ focused: bool = false,
 pressed: bool = false,
 checked: bool = false,
 
-onClickFn: ?*const fn (*RadioButton) void = null,
+onClickFn: ?std.meta.FnPtr(fn (*RadioButton) void) = null,
 
 pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*RadioButton {
     var self = try allocator.create(RadioButton);
@@ -29,13 +29,13 @@ pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*RadioBu
     self.widget.focus_policy.mouse = true;
     self.widget.focus_policy.keyboard = true;
 
-    self.widget.drawFn = &draw;
-    self.widget.onMouseDownFn = &onMouseDown;
-    self.widget.onMouseUpFn = &onMouseUp;
-    self.widget.onKeyDownFn = &onKeyDown;
-    self.widget.onFocusFn = &onFocus;
-    self.widget.onEnterFn = &onEnter;
-    self.widget.onLeaveFn = &onLeave;
+    self.widget.drawFn = draw;
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseUpFn = onMouseUp;
+    self.widget.onKeyDownFn = onKeyDown;
+    self.widget.onFocusFn = onFocus;
+    self.widget.onEnterFn = onEnter;
+    self.widget.onLeaveFn = onLeave;
 
     return self;
 }

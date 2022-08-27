@@ -17,7 +17,7 @@ widget: gui.Widget,
 allocator: Allocator,
 text: [:0]const u8,
 font_size: f32 = 12,
-iconFn: ?*const fn (vg: nvg) void = null,
+iconFn: ?std.meta.FnPtr(fn (vg: nvg) void) = null,
 icon_x: f32 = 2,
 icon_y: f32 = 2,
 style: ButtonStyle = .default,
@@ -30,9 +30,9 @@ checked: bool = false,
 auto_repeat_timer: gui.Timer,
 auto_repeat_interval: u32 = 0, // in milliseconds
 
-onClickFn: ?*const fn (*Self) void = null,
-onEnterFn: ?*const fn (*Self) void = null,
-onLeaveFn: ?*const fn (*Self) void = null,
+onClickFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onEnterFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onLeaveFn: ?std.meta.FnPtr(fn (*Self) void) = null,
 
 const Self = @This();
 
@@ -43,22 +43,22 @@ pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*Self {
         .allocator = allocator,
         .text = text,
         .auto_repeat_timer = gui.Timer{
-            .on_elapsed_fn = &onAutoRepeatTimerElapsed,
+            .on_elapsed_fn = onAutoRepeatTimerElapsed,
             .ctx = @ptrToInt(self),
         },
     };
     self.widget.focus_policy.mouse = true;
     self.widget.focus_policy.keyboard = true;
 
-    self.widget.drawFn = &draw;
-    self.widget.onMouseDownFn = &onMouseDown;
-    self.widget.onMouseUpFn = &onMouseUp;
-    self.widget.onKeyDownFn = &onKeyDown;
-    self.widget.onKeyUpFn = &onKeyUp;
-    self.widget.onFocusFn = &onFocus;
-    self.widget.onBlurFn = &onBlur;
-    self.widget.onEnterFn = &onEnter;
-    self.widget.onLeaveFn = &onLeave;
+    self.widget.drawFn = draw;
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseUpFn = onMouseUp;
+    self.widget.onKeyDownFn = onKeyDown;
+    self.widget.onKeyUpFn = onKeyUp;
+    self.widget.onFocusFn = onFocus;
+    self.widget.onBlurFn = onBlur;
+    self.widget.onEnterFn = onEnter;
+    self.widget.onLeaveFn = onLeave;
 
     return self;
 }

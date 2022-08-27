@@ -27,7 +27,7 @@ rects: [2]Rect(f32),
 
 background_image: nvg.Image,
 
-onChangedFn: ?*const fn (*Self, change_type: ChangeType) void = null,
+onChangedFn: ?std.meta.FnPtr(fn (*Self, change_type: ChangeType) void) = null,
 
 const pad = 5;
 
@@ -51,10 +51,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         }),
     };
 
-    self.widget.onMouseDownFn = &onMouseDown;
-    self.widget.onMouseUpFn = &onMouseUp;
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseUpFn = onMouseUp;
 
-    self.widget.drawFn = &draw;
+    self.widget.drawFn = draw;
 
     return self;
 }

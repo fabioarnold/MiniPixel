@@ -19,7 +19,7 @@ image_alpha: nvg.Image,
 image_replace: nvg.Image,
 rects: [2]Rect(f32),
 
-onChangedFn: ?*const fn (*Self) void = null,
+onChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
 
 const pad = 5;
 
@@ -38,9 +38,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         .image_replace = vg.createImageMem(image_replace_data, .{ .nearest = true }),
     };
 
-    self.widget.onMouseDownFn = &onMouseDown;
+    self.widget.onMouseDownFn = onMouseDown;
 
-    self.widget.drawFn = &draw;
+    self.widget.drawFn = draw;
 
     return self;
 }

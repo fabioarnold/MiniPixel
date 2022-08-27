@@ -74,7 +74,7 @@ memory_text: [100]u8 = .{0} ** 100,
 
 message_box_widget: *MessageBoxWidget,
 message_box_result_context: usize = 0,
-onMessageBoxResultFn: ?*const fn (usize, MessageBoxWidget.Result) void = null,
+onMessageBoxResultFn: ?std.meta.FnPtr(fn (usize, MessageBoxWidget.Result) void) = null,
 
 new_document_widget: *NewDocumentWidget,
 about_dialog_widget: *AboutDialogWidget,
@@ -152,9 +152,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         .preview = try PreviewWidget.init(allocator, Rect(f32).make(0, 0, 163, 120), self.document, vg),
         .panel_right = try gui.Panel.init(allocator, Rect(f32).make(0, 0, 163, 200)),
     };
-    self.widget.onResizeFn = &onResize;
-    self.widget.onKeyDownFn = &onKeyDown;
-    self.widget.onClipboardUpdateFn = &onClipboardUpdate;
+    self.widget.onResizeFn = onResize;
+    self.widget.onKeyDownFn = onKeyDown;
+    self.widget.onClipboardUpdateFn = onClipboardUpdate;
 
     try self.initMenubar();
 
@@ -195,15 +195,15 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
     try self.widget.addChild(&self.panel_right.widget);
     try self.widget.addChild(&self.status_bar.widget);
 
-    configureToolbarButton(self.palette_open_button, &icons.iconOpen, tryOpenPalette, "Open Palette");
-    configureToolbarButton(self.palette_save_button, &icons.iconSave, trySavePalette, "Save Palette");
-    configureToolbarButton(self.palette_copy_button, &icons.iconCopyEnabled, tryCopyPalette, "Copy Color");
-    configureToolbarButton(self.palette_paste_button, &icons.iconPasteEnabled, tryPastePalette, "Paste Color");
-    configureToolbarButton(self.palette_toggle_button, &icons.iconColorPalette, tryTogglePalette, "Toggle between 8-bit indexed mode and true color");
+    configureToolbarButton(self.palette_open_button, icons.iconOpen, tryOpenPalette, "Open Palette");
+    configureToolbarButton(self.palette_save_button, icons.iconSave, trySavePalette, "Save Palette");
+    configureToolbarButton(self.palette_copy_button, icons.iconCopyEnabled, tryCopyPalette, "Copy Color");
+    configureToolbarButton(self.palette_paste_button, icons.iconPasteEnabled, tryPastePalette, "Paste Color");
+    configureToolbarButton(self.palette_toggle_button, icons.iconColorPalette, tryTogglePalette, "Toggle between 8-bit indexed mode and true color");
 
     std.mem.copy(u8, self.document.colormap, &self.color_palette.colors);
     try self.document.history.reset(self.document); // so palette is part of first snapshot
-    self.color_palette.onSelectionChangedFn = &struct {
+    self.color_palette.onSelectionChangedFn = struct {
         fn selectionChanged(color_palette: *ColorPaletteWidget) void {
             if (color_palette.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
@@ -230,7 +230,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         }
     }.selectionChanged;
 
-    self.canvas.onColorPickedFn = &struct {
+    self.canvas.onColorPickedFn = struct {
         fn colorPicked(canvas: *CanvasWidget) void {
             if (canvas.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
@@ -247,7 +247,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
             }
         }
     }.colorPicked;
-    self.canvas.onScaleChangedFn = &struct {
+    self.canvas.onScaleChangedFn = struct {
         fn zoomChanged(canvas: *CanvasWidget, zoom: f32) void {
             if (canvas.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
@@ -256,7 +256,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         }
     }.zoomChanged;
 
-    self.color_picker.onChangedFn = &struct {
+    self.color_picker.onChangedFn = struct {
         fn changed(color_picker: *ColorPickerWidget) void {
             if (color_picker.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
@@ -273,7 +273,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         }
     }.changed;
 
-    self.color_foreground_background.onChangedFn = &struct {
+    self.color_foreground_background.onChangedFn = struct {
         fn changed(color_foreground_background: *ColorForegroundBackgroundWidget, change_type: ColorForegroundBackgroundWidget.ChangeType) void {
             if (color_foreground_background.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
@@ -307,7 +307,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         }
     }.changed;
 
-    self.blend_mode.onChangedFn = &struct {
+    self.blend_mode.onChangedFn = struct {
         fn changed(blend_mode: *BlendModeWidget) void {
             if (blend_mode.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
@@ -329,52 +329,52 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
 
 fn configureToolbarButton(
     button: *gui.Button,
-    iconFn: *const fn (nvg) void,
+    iconFn: std.meta.FnPtr(fn (nvg) void),
     comptime onEditorClick: fn (*Self) void,
     comptime help_text: []const u8,
 ) void {
     button.iconFn = iconFn;
-    button.onClickFn = &struct {
+    button.onClickFn = struct {
         fn click(b: *gui.Button) void {
             onEditorClick(getEditorFromMenuButton(b));
         }
     }.click;
-    button.onEnterFn = &struct {
+    button.onEnterFn = struct {
         fn enter(b: *gui.Button) void {
             getEditorFromMenuButton(b).setHelpText(help_text);
         }
     }.enter;
-    button.onLeaveFn = &menuButtonOnLeave;
+    button.onLeaveFn = menuButtonOnLeave;
 }
 
 fn initMenubar(self: *Self) !void {
-    configureToolbarButton(self.new_button, &icons.iconNew, newDocument, "New Document (Ctrl+N)");
-    configureToolbarButton(self.open_button, &icons.iconOpen, tryOpenDocument, "Open Document (Ctrl+O)");
-    configureToolbarButton(self.save_button, &icons.iconSave, trySaveDocument, "Save Document (Ctrl+S)");
-    configureToolbarButton(self.saveas_button, &icons.iconSaveAs, trySaveAsDocument, "Save Document As (Ctrl+Shift+S)");
+    configureToolbarButton(self.new_button, icons.iconNew, newDocument, "New Document (Ctrl+N)");
+    configureToolbarButton(self.open_button, icons.iconOpen, tryOpenDocument, "Open Document (Ctrl+O)");
+    configureToolbarButton(self.save_button, icons.iconSave, trySaveDocument, "Save Document (Ctrl+S)");
+    configureToolbarButton(self.saveas_button, icons.iconSaveAs, trySaveAsDocument, "Save Document As (Ctrl+Shift+S)");
 
-    configureToolbarButton(self.undo_button, &icons.iconUndoDisabled, tryUndoDocument, "Undo Action (Ctrl+Z)");
-    configureToolbarButton(self.redo_button, &icons.iconRedoDisabled, tryRedoDocument, "Redo Action (Ctrl+Y)");
+    configureToolbarButton(self.undo_button, icons.iconUndoDisabled, tryUndoDocument, "Undo Action (Ctrl+Z)");
+    configureToolbarButton(self.redo_button, icons.iconRedoDisabled, tryRedoDocument, "Redo Action (Ctrl+Y)");
 
-    configureToolbarButton(self.cut_button, &icons.iconCut, cutDocument, "Cut Selection to Clipboard (Ctrl+X)");
-    configureToolbarButton(self.copy_button, &icons.iconCopyEnabled, copyDocument, "Copy Selection to Clipboard (Ctrl+C)");
-    configureToolbarButton(self.paste_button, &icons.iconPasteEnabled, pasteDocument, "Paste from Clipboard (Ctrl+V)");
+    configureToolbarButton(self.cut_button, icons.iconCut, cutDocument, "Cut Selection to Clipboard (Ctrl+X)");
+    configureToolbarButton(self.copy_button, icons.iconCopyEnabled, copyDocument, "Copy Selection to Clipboard (Ctrl+C)");
+    configureToolbarButton(self.paste_button, icons.iconPasteEnabled, pasteDocument, "Paste from Clipboard (Ctrl+V)");
 
-    configureToolbarButton(self.crop_tool_button, &icons.iconToolCrop, setToolCrop, "Crop/Enlarge Tool (C)");
-    configureToolbarButton(self.select_tool_button, &icons.iconToolSelect, setToolSelect, "Rectangle Select Tool (R)");
-    configureToolbarButton(self.draw_tool_button, &icons.iconToolPen, setToolDraw, "Pen Tool (N)");
-    configureToolbarButton(self.fill_tool_button, &icons.iconToolBucket, setToolFill, "Fill Tool (B)");
+    configureToolbarButton(self.crop_tool_button, icons.iconToolCrop, setToolCrop, "Crop/Enlarge Tool (C)");
+    configureToolbarButton(self.select_tool_button, icons.iconToolSelect, setToolSelect, "Rectangle Select Tool (R)");
+    configureToolbarButton(self.draw_tool_button, icons.iconToolPen, setToolDraw, "Pen Tool (N)");
+    configureToolbarButton(self.fill_tool_button, icons.iconToolBucket, setToolFill, "Fill Tool (B)");
 
-    configureToolbarButton(self.mirror_h_tool_button, &icons.iconMirrorHorizontally, mirrorHorizontallyDocument, "Mirror Horizontally");
-    configureToolbarButton(self.mirror_v_tool_button, &icons.iconMirrorVertically, mirrorVerticallyDocument, "Mirror Vertically");
-    configureToolbarButton(self.rotate_ccw_tool_button, &icons.iconRotateCcw, rotateDocumentCcw, "Rotate Counterclockwise");
-    configureToolbarButton(self.rotate_cw_tool_button, &icons.iconRotateCw, rotateDocumentCw, "Rotate Clockwise");
+    configureToolbarButton(self.mirror_h_tool_button, icons.iconMirrorHorizontally, mirrorHorizontallyDocument, "Mirror Horizontally");
+    configureToolbarButton(self.mirror_v_tool_button, icons.iconMirrorVertically, mirrorVerticallyDocument, "Mirror Vertically");
+    configureToolbarButton(self.rotate_ccw_tool_button, icons.iconRotateCcw, rotateDocumentCcw, "Rotate Counterclockwise");
+    configureToolbarButton(self.rotate_cw_tool_button, icons.iconRotateCw, rotateDocumentCw, "Rotate Clockwise");
 
-    configureToolbarButton(self.pixel_grid_button, &icons.iconPixelGrid, togglePixelGrid, "Toggle Pixel Grid (#)");
+    configureToolbarButton(self.pixel_grid_button, icons.iconPixelGrid, togglePixelGrid, "Toggle Pixel Grid (#)");
     self.pixel_grid_button.checked = self.canvas.pixel_grid_enabled;
-    configureToolbarButton(self.custom_grid_button, &icons.iconCustomGrid, toggleCustomGrid, "Toggle Custom Grid");
+    configureToolbarButton(self.custom_grid_button, icons.iconCustomGrid, toggleCustomGrid, "Toggle Custom Grid");
     self.custom_grid_button.checked = self.canvas.pixel_grid_enabled;
-    configureToolbarButton(self.snap_button, &icons.iconSnapDisabled, toggleGridSnapping, "Toggle Grid Snapping");
+    configureToolbarButton(self.snap_button, icons.iconSnapDisabled, toggleGridSnapping, "Toggle Grid Snapping");
     self.snap_button.widget.enabled = false;
     self.snap_button.checked = self.canvas.grid_snapping_enabled;
     self.custom_grid_x_spinner.min_value = 2;
@@ -382,7 +382,7 @@ fn initMenubar(self: *Self) !void {
     self.custom_grid_x_spinner.step_mode = .exponential;
     self.custom_grid_x_spinner.setValue(@intCast(i32, self.canvas.custom_grid_spacing_x));
     self.custom_grid_x_spinner.widget.enabled = false;
-    self.custom_grid_x_spinner.onChangedFn = &struct {
+    self.custom_grid_x_spinner.onChangedFn = struct {
         fn changed(spinner: *gui.Spinner(i32)) void {
             if (spinner.widget.parent) |menu_bar_widget| {
                 if (menu_bar_widget.parent) |parent| {
@@ -397,7 +397,7 @@ fn initMenubar(self: *Self) !void {
     self.custom_grid_y_spinner.step_mode = .exponential;
     self.custom_grid_y_spinner.setValue(@intCast(i32, self.canvas.custom_grid_spacing_y));
     self.custom_grid_y_spinner.widget.enabled = false;
-    self.custom_grid_y_spinner.onChangedFn = &struct {
+    self.custom_grid_y_spinner.onChangedFn = struct {
         fn changed(spinner: *gui.Spinner(i32)) void {
             if (spinner.widget.parent) |menu_bar_widget| {
                 if (menu_bar_widget.parent) |parent| {
@@ -413,7 +413,7 @@ fn initMenubar(self: *Self) !void {
     self.zoom_spinner.max_value = CanvasWidget.max_scale;
     //self.zoom_spinner.step_value = 0.5;
     self.zoom_spinner.step_mode = .exponential;
-    self.zoom_spinner.onChangedFn = &struct {
+    self.zoom_spinner.onChangedFn = struct {
         fn changed(spinner: *gui.Spinner(f32)) void {
             if (spinner.widget.parent) |menu_bar_widget| {
                 if (menu_bar_widget.parent) |parent| {
@@ -425,7 +425,7 @@ fn initMenubar(self: *Self) !void {
         }
     }.changed;
 
-    configureToolbarButton(self.about_button, &icons.iconAbout, showAboutDialog, "About Mini Pixel");
+    configureToolbarButton(self.about_button, icons.iconAbout, showAboutDialog, "About Mini Pixel");
 
     // build menu bar
     try self.menu_bar.addButton(self.new_button);
@@ -564,14 +564,14 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
 pub fn onUndoChanged(self: *Self, document: *Document) void {
     self.undo_button.widget.enabled = document.canUndo();
     self.undo_button.iconFn = if (self.undo_button.widget.enabled)
-        &icons.iconUndoEnabled
+        icons.iconUndoEnabled
     else
-        &icons.iconUndoDisabled;
+        icons.iconUndoDisabled;
     self.redo_button.widget.enabled = document.canRedo();
     self.redo_button.iconFn = if (self.redo_button.widget.enabled)
-        &icons.iconRedoEnabled
+        icons.iconRedoEnabled
     else
-        &icons.iconRedoDisabled;
+        icons.iconRedoDisabled;
     self.onDocumentChanged();
     self.updateImageStatus();
     self.has_unsaved_changes = true;
@@ -586,25 +586,25 @@ fn onClipboardUpdate(widget: *gui.Widget) void {
 fn checkClipboard(self: *Self) void {
     if (Clipboard.hasImage()) {
         self.paste_button.widget.enabled = true;
-        self.paste_button.iconFn = &icons.iconPasteEnabled;
+        self.paste_button.iconFn = icons.iconPasteEnabled;
     } else {
         self.paste_button.widget.enabled = false;
-        self.paste_button.iconFn = &icons.iconPasteDisabled;
+        self.paste_button.iconFn = icons.iconPasteDisabled;
     }
 
     if (self.color_palette.selected != null) {
         self.palette_copy_button.widget.enabled = true;
-        self.palette_copy_button.iconFn = &icons.iconCopyEnabled;
+        self.palette_copy_button.iconFn = icons.iconCopyEnabled;
     } else {
         self.palette_copy_button.widget.enabled = false;
-        self.palette_copy_button.iconFn = &icons.iconCopyDisabled;
+        self.palette_copy_button.iconFn = icons.iconCopyDisabled;
     }
     if (self.color_palette.selected != null and Clipboard.hasColor(self.allocator)) {
         self.palette_paste_button.widget.enabled = true;
-        self.palette_paste_button.iconFn = &icons.iconPasteEnabled;
+        self.palette_paste_button.iconFn = icons.iconPasteEnabled;
     } else {
         self.palette_paste_button.widget.enabled = false;
-        self.palette_paste_button.iconFn = &icons.iconPasteDisabled;
+        self.palette_paste_button.iconFn = icons.iconPasteDisabled;
     }
 }
 
@@ -654,7 +654,7 @@ pub fn showErrorMessageBox(self: *Self, title: [:0]const u8, message: []const u8
     self.showMessageBox(title);
 }
 
-pub fn showUnsavedChangesDialog(self: *Self, onResultFn: ?*const fn (usize, MessageBoxWidget.Result) void, result_context: usize) void {
+pub fn showUnsavedChangesDialog(self: *Self, onResultFn: ?std.meta.FnPtr(fn (usize, MessageBoxWidget.Result) void), result_context: usize) void {
     self.message_box_widget.setSize(280, 100);
     self.message_box_widget.configure(.question, .yes_no_cancel, "This file has been changed.\nWould you like to save those changes?");
     self.message_box_widget.yes_button.text = "Save";
@@ -678,7 +678,7 @@ fn showMessageBox(self: *Self, title: [:0]const u8) void {
             self.message_box_widget.ok_button.widget.setFocus(true, .programmatic);
             self.message_box_widget.yes_button.widget.setFocus(true, .programmatic);
             window.closed_context = @ptrToInt(self);
-            window.onClosedFn = &onMessageBoxClosed;
+            window.onClosedFn = onMessageBoxClosed;
         } else |_| {}
     }
 }
@@ -905,7 +905,7 @@ fn toggleCustomGrid(self: *Self) void {
     self.canvas.custom_grid_enabled = !self.canvas.custom_grid_enabled;
     self.custom_grid_button.checked = self.canvas.custom_grid_enabled;
     self.snap_button.widget.enabled = self.canvas.custom_grid_enabled;
-    self.snap_button.iconFn = if (self.canvas.custom_grid_enabled) &icons.iconSnapEnabled else &icons.iconSnapDisabled;
+    self.snap_button.iconFn = if (self.canvas.custom_grid_enabled) icons.iconSnapEnabled else icons.iconSnapDisabled;
     self.custom_grid_x_spinner.widget.enabled = self.canvas.custom_grid_enabled;
     self.custom_grid_y_spinner.widget.enabled = self.canvas.custom_grid_enabled;
 }
@@ -979,7 +979,7 @@ fn togglePalette(self: *Self) !void {
         } else {
             self.message_box_widget.setSize(190, 100);
             self.message_box_widget.configure(.warning, .ok_cancel, "Some colors will be lost\nduring conversion.");
-            self.onMessageBoxResultFn = &struct {
+            self.onMessageBoxResultFn = struct {
                 fn onResult(context: usize, result: MessageBoxWidget.Result) void {
                     if (result == .ok) {
                         var editor = @intToPtr(*Self, context);

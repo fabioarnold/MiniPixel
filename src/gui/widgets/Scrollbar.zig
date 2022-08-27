@@ -21,7 +21,7 @@ decrement_button: *gui.Button,
 increment_button: *gui.Button,
 thumb_button: *gui.Button,
 
-onChangedFn: ?*const fn (*Self) void = null,
+onChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
 
 pub const button_size = 16;
 const scroll_speed = 5;
@@ -38,29 +38,29 @@ pub fn init(allocator: Allocator, rect: Rect(f32), orientation: gui.Orientation)
         .decrement_button = try gui.Button.init(allocator, Rect(f32).make(0, 0, button_size, button_size), ""),
         .thumb_button = try gui.Button.init(allocator, Rect(f32).make(0, 0, button_size, button_size), ""),
     };
-    self.widget.onResizeFn = &onResize;
-    self.widget.onMouseMoveFn = &onMouseMove;
-    self.widget.onMouseDownFn = &onMouseDown;
-    self.widget.onMouseUpFn = &onMouseUp;
-    self.widget.drawFn = &draw;
+    self.widget.onResizeFn = onResize;
+    self.widget.onMouseMoveFn = onMouseMove;
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseUpFn = onMouseUp;
+    self.widget.drawFn = draw;
 
-    self.thumb_button.widget.onMouseDownFn = &thumbMouseDown;
-    self.thumb_button.widget.onMouseMoveFn = &thumbMouseMove;
+    self.thumb_button.widget.onMouseDownFn = thumbMouseDown;
+    self.thumb_button.widget.onMouseMoveFn = thumbMouseMove;
     self.thumb_button.widget.focus_policy = gui.FocusPolicy.none();
 
-    self.decrement_button.onClickFn = &decrementClick;
+    self.decrement_button.onClickFn = decrementClick;
     self.decrement_button.widget.focus_policy = gui.FocusPolicy.none();
     self.decrement_button.auto_repeat_interval = 10;
-    self.decrement_button.iconFn = &if (self.orientation == .vertical)
+    self.decrement_button.iconFn = if (self.orientation == .vertical)
         gui.drawSmallArrowUp
     else
         gui.drawSmallArrowLeft;
     self.decrement_button.icon_x = 5;
     self.decrement_button.icon_y = 5;
-    self.increment_button.onClickFn = &incrementClick;
+    self.increment_button.onClickFn = incrementClick;
     self.increment_button.widget.focus_policy = gui.FocusPolicy.none();
     self.increment_button.auto_repeat_interval = 10;
-    self.increment_button.iconFn = &if (self.orientation == .vertical)
+    self.increment_button.iconFn = if (self.orientation == .vertical)
         gui.drawSmallArrowDown
     else
         gui.drawSmallArrowRight;

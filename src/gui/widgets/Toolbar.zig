@@ -25,8 +25,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .separators = ArrayList(*gui.Widget).init(allocator),
     };
 
-    self.widget.onResizeFn = &onResize;
-    self.widget.drawFn = &draw;
+    self.widget.onResizeFn = onResize;
+    self.widget.drawFn = draw;
 
     return self;
 }
@@ -79,7 +79,7 @@ pub fn addButton(self: *Self, button: *gui.Button) !void {
 pub fn addSeparator(self: *Self) !void {
     var separator = try self.allocator.create(gui.Widget);
     separator.* = gui.Widget.init(self.allocator, Rect(f32).make(0, 0, 4, 20));
-    separator.drawFn = &drawSeparator;
+    separator.drawFn = drawSeparator;
     try self.separators.append(separator);
     try self.addWidget(separator);
 }

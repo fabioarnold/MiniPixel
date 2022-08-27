@@ -32,11 +32,11 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document, vg: nvg)
         }),
     };
 
-    self.widget.onMouseMoveFn = &onMouseMove;
-    self.widget.onMouseDownFn = &onMouseDown;
-    self.widget.onMouseUpFn = &onMouseUp;
+    self.widget.onMouseMoveFn = onMouseMove;
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseUpFn = onMouseUp;
 
-    self.widget.drawFn = &draw;
+    self.widget.drawFn = draw;
 
     return self;
 }

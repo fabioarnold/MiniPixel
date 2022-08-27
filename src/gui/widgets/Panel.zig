@@ -18,7 +18,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .widget = gui.Widget.init(allocator, rect),
         .allocator = allocator,
     };
-    self.widget.drawFn = &draw;
+    self.widget.drawFn = draw;
 
     return self;
 }

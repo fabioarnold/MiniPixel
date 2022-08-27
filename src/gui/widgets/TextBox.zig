@@ -13,7 +13,7 @@ text: std.ArrayList(u8),
 text_alignment: gui.TextAlignment = .left,
 background_color: nvg.Color,
 
-onChangedFn: ?*const fn (*Self) void = null,
+onChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
 
 hovered: bool = false,
 
@@ -26,7 +26,7 @@ selection_end: usize = 0,
 
 glyph_positions: std.ArrayList(nvg.GlyphPosition), // cache
 
-base_key_down_fn: *const fn (*gui.Widget, *gui.KeyEvent) void,
+base_key_down_fn: std.meta.FnPtr(fn (*gui.Widget, *gui.KeyEvent) void),
 
 blink: bool = false,
 blink_timer: gui.Timer,
@@ -44,21 +44,21 @@ pub fn init(allocator: std.mem.Allocator, rect: Rect(f32)) !*Self {
         .background_color = gui.theme_colors.light,
         .base_key_down_fn = widget.onKeyDownFn,
         .blink_timer = gui.Timer{
-            .on_elapsed_fn = &onBlinkTimerElapsed,
+            .on_elapsed_fn = onBlinkTimerElapsed,
             .ctx = @ptrToInt(self),
         },
     };
 
-    self.widget.onMouseMoveFn = &onMouseMove;
-    self.widget.onMouseUpFn = &onMouseUp;
-    self.widget.onMouseDownFn = &onMouseDown;
-    self.widget.onKeyDownFn = &onKeyDown;
-    self.widget.onTextInputFn = &onTextInput;
-    self.widget.onEnterFn = &onEnter;
-    self.widget.onLeaveFn = &onLeave;
-    self.widget.onFocusFn = &onFocus;
-    self.widget.onBlurFn = &onBlur;
-    self.widget.drawFn = &draw;
+    self.widget.onMouseMoveFn = onMouseMove;
+    self.widget.onMouseUpFn = onMouseUp;
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onKeyDownFn = onKeyDown;
+    self.widget.onTextInputFn = onTextInput;
+    self.widget.onEnterFn = onEnter;
+    self.widget.onLeaveFn = onLeave;
+    self.widget.onFocusFn = onFocus;
+    self.widget.onBlurFn = onBlur;
+    self.widget.drawFn = draw;
     self.widget.focus_policy.keyboard = true;
     self.widget.focus_policy.mouse = true;
     return self;

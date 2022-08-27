@@ -67,11 +67,11 @@ const CropTool = struct {
             7 => Rectf.make(rect.x + rect.w, rect.y + rect.h, zs, zs),
         };
     }
-    fn getZoneCursor(i: u3) *const fn (nvg) void {
+    fn getZoneCursor(i: u3) std.meta.FnPtr(fn (nvg) void) {
         return switch (i) {
-            1, 6 => &icons.cursorMoveVertically,
-            3, 4 => &icons.cursorMoveHorizontally,
-            else => &icons.cursorMove,
+            1, 6 => icons.cursorMoveVertically,
+            3, 4 => icons.cursorMoveHorizontally,
+            else => icons.cursorMove,
         };
     }
 
@@ -315,15 +315,15 @@ const CropTool = struct {
         }
     }
 
-    fn getCursor(self: CropTool, canvas: *CanvasWidget) *const fn (nvg) void {
+    fn getCursor(self: CropTool, canvas: *CanvasWidget) std.meta.FnPtr(fn (nvg) void) {
         if (self.crop_rect) |rect| {
             if (self.drag_zone) |drag_zone| {
                 return getZoneCursor(drag_zone);
             } else if (self.drag_offset != null) {
-                return &icons.cursorMove; // TODO: grab cursor?
+                return icons.cursorMove; // TODO: grab cursor?
             } else if (self.edit_point) |edit_point| {
                 if (rect.contains(edit_point)) {
-                    return &icons.cursorMove;
+                    return icons.cursorMove;
                 } else {
                     if (self.mouse_point) |mouse_point| {
                         const gui_rect = canvas.rectFromDocumentSpace(ritof(rect), true);
@@ -336,7 +336,7 @@ const CropTool = struct {
                 }
             }
         }
-        return &icons.cursorCrosshair;
+        return icons.cursorCrosshair;
     }
 
     fn getStatusText(self: CropTool, buf: []u8) [:0]const u8 {
@@ -507,14 +507,14 @@ const SelectTool = struct {
         vg.fill();
     }
 
-    fn getCursor(self: SelectTool, canvas: *CanvasWidget) *const fn (nvg) void {
+    fn getCursor(self: SelectTool, canvas: *CanvasWidget) std.meta.FnPtr(fn (nvg) void) {
         if (canvas.document.selection) |selection| {
-            if (self.drag_offset != null) return &icons.cursorMove; // TODO: grab cursor?
+            if (self.drag_offset != null) return icons.cursorMove; // TODO: grab cursor?
             if (self.edit_point) |edit_point| {
-                if (selection.rect.contains(edit_point)) return &icons.cursorMove;
+                if (selection.rect.contains(edit_point)) return icons.cursorMove;
             }
         }
-        return &icons.cursorCrosshair;
+        return icons.cursorCrosshair;
     }
 
     fn getStatusText(self: SelectTool, canvas: CanvasWidget, buf: []u8) [:0]const u8 {
@@ -690,8 +690,8 @@ const DrawTool = struct {
         canvas.document.previewBrush(self.edit_point.x, self.edit_point.y);
     }
 
-    fn getCursor(self: DrawTool) *const fn (nvg) void {
-        return if (self.picking) &icons.cursorPipette else &icons.cursorPen;
+    fn getCursor(self: DrawTool) std.meta.FnPtr(fn (nvg) void) {
+        return if (self.picking) icons.cursorPipette else icons.cursorPen;
     }
 
     fn getStatusText(self: DrawTool, canvas: CanvasWidget, buf: []u8) [:0]const u8 {
@@ -746,8 +746,8 @@ const FillTool = struct {
         }
     }
 
-    fn getCursor(self: FillTool) *const fn (nvg) void {
-        return if (self.picking) &icons.cursorPipette else &icons.cursorBucket;
+    fn getCursor(self: FillTool) std.meta.FnPtr(fn (nvg) void) {
+        return if (self.picking) icons.cursorPipette else icons.cursorBucket;
     }
 
     fn getStatusText(self: FillTool, canvas: CanvasWidget, buf: []u8) [:0]const u8 {
@@ -776,7 +776,7 @@ const CanvasWidget = @This();
 widget: gui.Widget,
 allocator: Allocator,
 
-baseOnKeyDownFn: *const fn (*gui.Widget, *gui.KeyEvent) void,
+baseOnKeyDownFn: std.meta.FnPtr(fn (*gui.Widget, *gui.KeyEvent) void),
 
 tool: ToolType = .draw,
 crop_tool: CropTool = CropTool{},
@@ -804,8 +804,8 @@ blue_grid_image: nvg.Image,
 hovered: bool = false,
 scroll_offset: ?Pointf = null, // in document space
 
-onColorPickedFn: ?*const fn (*Self) void = null,
-onScaleChangedFn: ?*const fn (*Self, f32) void = null,
+onColorPickedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onScaleChangedFn: ?std.meta.FnPtr(fn (*Self, f32) void) = null,
 
 pub const min_scale = 1.0 / 32.0;
 pub const max_scale = 64.0;
@@ -837,28 +837,28 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document, vg: nvg)
     self.widget.focus_policy.keyboard = true;
     self.widget.focus_policy.mouse = true;
 
-    self.widget.onResizeFn = &onResize;
-    self.widget.onMouseMoveFn = &onMouseMove;
-    self.widget.onMouseDownFn = &onMouseDown;
-    self.widget.onMouseUpFn = &onMouseUp;
-    self.widget.onMouseWheelFn = &onMouseWheel;
-    self.widget.onTouchPanFn = &onTouchPan;
-    self.widget.onTouchZoomFn = &onTouchZoom;
+    self.widget.onResizeFn = onResize;
+    self.widget.onMouseMoveFn = onMouseMove;
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseUpFn = onMouseUp;
+    self.widget.onMouseWheelFn = onMouseWheel;
+    self.widget.onTouchPanFn = onTouchPan;
+    self.widget.onTouchZoomFn = onTouchZoom;
     self.baseOnKeyDownFn = self.widget.onKeyDownFn;
-    self.widget.onKeyDownFn = &onKeyDown;
-    self.widget.onKeyUpFn = &onKeyUp;
-    self.widget.onEnterFn = &onEnter;
-    self.widget.onLeaveFn = &onLeave;
-    self.widget.drawFn = &draw;
+    self.widget.onKeyDownFn = onKeyDown;
+    self.widget.onKeyUpFn = onKeyUp;
+    self.widget.onEnterFn = onEnter;
+    self.widget.onLeaveFn = onLeave;
+    self.widget.drawFn = draw;
 
-    self.horizontal_scrollbar.onChangedFn = &struct {
+    self.horizontal_scrollbar.onChangedFn = struct {
         fn changed(scrollbar: *gui.Scrollbar) void {
             const canvas = @fieldParentPtr(Self, "widget", scrollbar.widget.parent.?);
             const client_w = canvas.getClientRect().w;
             canvas.translation.x = @round(0.5 * client_w - scrollbar.value);
         }
     }.changed;
-    self.vertical_scrollbar.onChangedFn = &struct {
+    self.vertical_scrollbar.onChangedFn = struct {
         fn changed(scrollbar: *gui.Scrollbar) void {
             const canvas = @fieldParentPtr(Self, "widget", scrollbar.widget.parent.?);
             const client_h = canvas.getClientRect().h;

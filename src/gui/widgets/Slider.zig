@@ -17,7 +17,7 @@ pub fn Slider(comptime T: type) type {
         max_value: T = 100,
         pressed: bool = false,
 
-        onChangedFn: *const fn (*Self) void = &onChanged,
+        onChangedFn: std.meta.FnPtr(fn (*Self) void) = onChanged,
 
         const Self = @This();
 
@@ -27,10 +27,10 @@ pub fn Slider(comptime T: type) type {
                 .widget = gui.Widget.init(allocator, rect),
                 .allocator = allocator,
             };
-            self.widget.onMouseMoveFn = &onMouseMove;
-            self.widget.onMouseDownFn = &onMouseDown;
-            self.widget.onMouseUpFn = &onMouseUp;
-            self.widget.drawFn = &draw;
+            self.widget.onMouseMoveFn = onMouseMove;
+            self.widget.onMouseDownFn = onMouseDown;
+            self.widget.onMouseUpFn = onMouseUp;
+            self.widget.drawFn = draw;
 
             return self;
         }

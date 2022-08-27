@@ -14,7 +14,7 @@ sliders: [5]*gui.Slider(f32) = undefined,
 
 color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 
-onChangedFn: ?*const fn (*ColorPickerWidget) void = null,
+onChangedFn: ?std.meta.FnPtr(fn (*ColorPickerWidget) void) = null,
 
 const Self = @This();
 
@@ -24,20 +24,20 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
         .widget = gui.Widget.init(allocator, rect),
         .allocator = allocator,
     };
-    self.widget.drawFn = &draw;
+    self.widget.drawFn = draw;
 
     const pad = 5;
     inline for ([_]u2{ 0, 1, 2, 3 }) |i| {
         const y = @intToFloat(f32, i) * 28;
         self.sliders[i] = try gui.Slider(f32).init(allocator, Rect(f32).make(pad, y + pad, rect.w - 50 - 2 * pad, 23));
         self.sliders[i].max_value = 1;
-        self.sliders[i].onChangedFn = &SliderChangedFn(i).changed;
-        self.sliders[i].widget.drawFn = &SliderDrawFn(i).draw;
+        self.sliders[i].onChangedFn = SliderChangedFn(i).changed;
+        self.sliders[i].widget.drawFn = SliderDrawFn(i).draw;
         try self.widget.addChild(&self.sliders[i].widget);
 
         self.spinners[i] = try gui.Spinner(i32).init(allocator, Rect(f32).make(rect.w - 50, y + pad, 45, 23));
         self.spinners[i].max_value = 255;
-        self.spinners[i].onChangedFn = &SpinnerChangedFn(i).changed;
+        self.spinners[i].onChangedFn = SpinnerChangedFn(i).changed;
         try self.widget.addChild(&self.spinners[i].widget);
     }
 

@@ -14,7 +14,7 @@ colors: [4 * 256]u8 = undefined,
 selected: ?usize = null,
 selection_locked: bool = false,
 
-onSelectionChangedFn: ?*const fn (*Self) void = null,
+onSelectionChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
 
 const Self = @This();
 
@@ -29,10 +29,10 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
     try self.loadPalContents(default_pal_contents);
 
-    self.widget.onMouseMoveFn = &onMouseMove;
-    self.widget.onMouseDownFn = &onMouseDown;
+    self.widget.onMouseMoveFn = onMouseMove;
+    self.widget.onMouseDownFn = onMouseDown;
 
-    self.widget.drawFn = &draw;
+    self.widget.drawFn = draw;
 
     return self;
 }

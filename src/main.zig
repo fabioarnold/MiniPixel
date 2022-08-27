@@ -80,7 +80,7 @@ const SdlWindow = struct {
             window_height = @floatToInt(c_int, self.video_scale * self.video_height);
         }
         const maybe_window = c.SDL_CreateWindow(
-            @ptrCast([*c]const u8, title),
+            title.ptr,
             @bitCast(c_int, c.SDL_WINDOWPOS_UNDEFINED_DISPLAY(display_index)),
             @bitCast(c_int, c.SDL_WINDOWPOS_UNDEFINED_DISPLAY(display_index)),
             window_width,
@@ -692,7 +692,7 @@ fn sdlDestroyWindow(id: u32) void {
 
 fn sdlSetWindowTitle(window_id: u32, title: [:0]const u8) void {
     if (findSdlWindow(window_id)) |window| {
-        c.SDL_SetWindowTitle(window.handle, @ptrCast([*c]const u8, title));
+        c.SDL_SetWindowTitle(window.handle, title.ptr);
     }
 }
 
@@ -711,7 +711,7 @@ pub fn sdlGetClipboardText(allocator: std.mem.Allocator) !?[]const u8 {
 pub fn sdlSetClipboardText(allocator: std.mem.Allocator, text: []const u8) !void {
     const sdl_text = try allocator.dupeZ(u8, text);
     defer allocator.free(sdl_text);
-    if (c.SDL_SetClipboardText(@ptrCast([*c]const u8, sdl_text)) != 0) {
+    if (c.SDL_SetClipboardText(sdl_text.ptr) != 0) {
         return error.SdlSetClipboardTextFailed;
     }
     sdlProcessClipboardUpdate(); // broadcasts a gui.ClipboardUpdate event to all windows
@@ -792,15 +792,15 @@ pub fn main() !void {
     }
 
     app = try gui.Application.init(allocator, .{
-        .createWindow = &sdlCreateWindow,
-        .destroyWindow = &sdlDestroyWindow,
-        .setWindowTitle = &sdlSetWindowTitle,
-        .startTimer = &sdlAddTimer,
-        .cancelTimer = &sdlCancelTimer,
-        .showCursor = &sdlShowCursor,
-        .hasClipboardText = &sdlHasClipboardText,
-        .getClipboardText = &sdlGetClipboardText,
-        .setClipboardText = &sdlSetClipboardText,
+        .createWindow = sdlCreateWindow,
+        .destroyWindow = sdlDestroyWindow,
+        .setWindowTitle = sdlSetWindowTitle,
+        .startTimer = sdlAddTimer,
+        .cancelTimer = sdlCancelTimer,
+        .showCursor = sdlShowCursor,
+        .hasClipboardText = sdlHasClipboardText,
+        .getClipboardText = sdlGetClipboardText,
+        .setClipboardText = sdlSetClipboardText,
     });
     defer app.deinit();
     var main_window = try app.createWindow("Untitled - Mini Pixel", 800, 600, .{});
@@ -834,7 +834,7 @@ pub fn main() !void {
     defer editor_widget.deinit(vg);
     main_window.setMainWidget(&editor_widget.widget);
     main_window.close_request_context = @ptrToInt(main_window);
-    main_window.onCloseRequestFn = &onMainWindowCloseRequest;
+    main_window.onCloseRequestFn = onMainWindowCloseRequest;
     if (window_config_file_path) |file_path| {
         loadAndApplyWindowConfig(allocator, main_window, file_path) catch {}; // don't care
         editor_widget.canvas.centerDocument(); // Window size might have changed recenter document
@@ -886,7 +886,7 @@ pub fn automatedTestLoopIteration() void {
 
 fn onMainWindowCloseRequest(context: usize) bool {
     if (editor_widget.has_unsaved_changes) {
-        editor_widget.showUnsavedChangesDialog(&onUnsavedChangesDialogResult, context);
+        editor_widget.showUnsavedChangesDialog(onUnsavedChangesDialogResult, context);
         return false;
     }
     const window = @intToPtr(*gui.Window, context);
