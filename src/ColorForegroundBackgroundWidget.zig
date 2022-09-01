@@ -27,7 +27,7 @@ rects: [2]Rect(f32),
 
 background_image: nvg.Image,
 
-onChangedFn: ?fn (*Self, change_type: ChangeType) void = null,
+onChangedFn: ?std.meta.FnPtr(fn (*Self, change_type: ChangeType) void) = null,
 
 const pad = 5;
 

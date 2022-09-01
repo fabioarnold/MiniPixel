@@ -8,17 +8,17 @@ const Application = @This();
 
 pub const SystemFunctions = struct {
     // essential
-    createWindow: fn ([:0]const u8, u32, u32, gui.Window.CreateOptions, *gui.Window) anyerror!u32,
-    destroyWindow: fn (u32) void,
-    setWindowTitle: fn (u32, [:0]const u8) void,
+    createWindow: std.meta.FnPtr(fn ([:0]const u8, u32, u32, gui.Window.CreateOptions, *gui.Window) anyerror!u32),
+    destroyWindow: std.meta.FnPtr(fn (u32) void),
+    setWindowTitle: std.meta.FnPtr(fn (u32, [:0]const u8) void),
 
     // optional
-    startTimer: ?fn (*gui.Timer, u32) u32 = null,
-    cancelTimer: ?fn (u32) void = null,
-    showCursor: ?fn (bool) void = null,
-    hasClipboardText: ?fn () bool = null,
-    getClipboardText: ?fn (std.mem.Allocator) anyerror!?[]const u8 = null,
-    setClipboardText: ?fn (std.mem.Allocator, []const u8) anyerror!void = null,
+    startTimer: ?std.meta.FnPtr(fn (*gui.Timer, u32) u32) = null,
+    cancelTimer: ?std.meta.FnPtr(fn (u32) void) = null,
+    showCursor: ?std.meta.FnPtr(fn (bool) void) = null,
+    hasClipboardText: ?std.meta.FnPtr(fn () bool) = null,
+    getClipboardText: ?std.meta.FnPtr(fn (std.mem.Allocator) anyerror!?[]const u8) = null,
+    setClipboardText: ?std.meta.FnPtr(fn (std.mem.Allocator, []const u8) anyerror!void) = null,
 };
 
 var system: SystemFunctions = undefined;

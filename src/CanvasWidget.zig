@@ -67,7 +67,7 @@ const CropTool = struct {
             7 => Rectf.make(rect.x + rect.w, rect.y + rect.h, zs, zs),
         };
     }
-    fn getZoneCursor(i: u3) fn (nvg) void {
+    fn getZoneCursor(i: u3) std.meta.FnPtr(fn (nvg) void) {
         return switch (i) {
             1, 6 => icons.cursorMoveVertically,
             3, 4 => icons.cursorMoveHorizontally,
@@ -315,7 +315,7 @@ const CropTool = struct {
         }
     }
 
-    fn getCursor(self: CropTool, canvas: *CanvasWidget) fn (nvg) void {
+    fn getCursor(self: CropTool, canvas: *CanvasWidget) std.meta.FnPtr(fn (nvg) void) {
         if (self.crop_rect) |rect| {
             if (self.drag_zone) |drag_zone| {
                 return getZoneCursor(drag_zone);
@@ -507,7 +507,7 @@ const SelectTool = struct {
         vg.fill();
     }
 
-    fn getCursor(self: SelectTool, canvas: *CanvasWidget) fn (nvg) void {
+    fn getCursor(self: SelectTool, canvas: *CanvasWidget) std.meta.FnPtr(fn (nvg) void) {
         if (canvas.document.selection) |selection| {
             if (self.drag_offset != null) return icons.cursorMove; // TODO: grab cursor?
             if (self.edit_point) |edit_point| {
@@ -690,7 +690,7 @@ const DrawTool = struct {
         canvas.document.previewBrush(self.edit_point.x, self.edit_point.y);
     }
 
-    fn getCursor(self: DrawTool) fn (nvg) void {
+    fn getCursor(self: DrawTool) std.meta.FnPtr(fn (nvg) void) {
         return if (self.picking) icons.cursorPipette else icons.cursorPen;
     }
 
@@ -746,7 +746,7 @@ const FillTool = struct {
         }
     }
 
-    fn getCursor(self: FillTool) fn (nvg) void {
+    fn getCursor(self: FillTool) std.meta.FnPtr(fn (nvg) void) {
         return if (self.picking) icons.cursorPipette else icons.cursorBucket;
     }
 
@@ -776,7 +776,7 @@ const CanvasWidget = @This();
 widget: gui.Widget,
 allocator: Allocator,
 
-baseOnKeyDownFn: fn (*gui.Widget, *gui.KeyEvent) void,
+baseOnKeyDownFn: std.meta.FnPtr(fn (*gui.Widget, *gui.KeyEvent) void),
 
 tool: ToolType = .draw,
 crop_tool: CropTool = CropTool{},
@@ -804,8 +804,8 @@ blue_grid_image: nvg.Image,
 hovered: bool = false,
 scroll_offset: ?Pointf = null, // in document space
 
-onColorPickedFn: ?fn (*Self) void = null,
-onScaleChangedFn: ?fn (*Self, f32) void = null,
+onColorPickedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onScaleChangedFn: ?std.meta.FnPtr(fn (*Self, f32) void) = null,
 
 pub const min_scale = 1.0 / 32.0;
 pub const max_scale = 64.0;

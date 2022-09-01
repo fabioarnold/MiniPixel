@@ -30,7 +30,7 @@ pub fn initFromFile(allocator: Allocator, file_path: []const u8) !Image {
     var colormap_entries: u32 = undefined;
     const c_file_path = try std.cstr.addNullByte(allocator, file_path);
     defer allocator.free(c_file_path);
-    var err = readPngFileInfo(c_file_path, &image_width, &image_height, &colormap_entries);
+    var err = readPngFileInfo(c_file_path.ptr, &image_width, &image_height, &colormap_entries);
     if (err != 0) return error.ReadInfoFail;
 
     const bytes_per_pixel: u32 = if (colormap_entries > 0) 1 else 4; // indexed or rgba
@@ -53,7 +53,7 @@ pub fn initFromFile(allocator: Allocator, file_path: []const u8) !Image {
         self.colormap = colormap;
     }
 
-    err = readPngFile(c_file_path, self.pixels.ptr, if (self.colormap) |colormap| colormap.ptr else null);
+    err = readPngFile(c_file_path.ptr, self.pixels.ptr, if (self.colormap) |colormap| colormap.ptr else null);
     if (err != 0) return error.ReadPngFail;
 
     return self;
@@ -116,7 +116,7 @@ pub fn writeToFile(self: Image, file_path: []const u8) !void {
     }
     const c_file_path = try std.cstr.addNullByte(self.allocator, file_path);
     defer self.allocator.free(c_file_path);
-    const err = writePngFile(c_file_path, self.width, self.height, self.pixels.ptr, colormap_ptr, colormap_entries);
+    const err = writePngFile(c_file_path.ptr, self.width, self.height, self.pixels.ptr, colormap_ptr, colormap_entries);
     if (err != 0) return error.WritePngFail;
 }
 

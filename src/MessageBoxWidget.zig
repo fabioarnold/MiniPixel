@@ -32,7 +32,7 @@ const MessageBoxWidget = @This();
 
 widget: gui.Widget,
 allocator: Allocator,
-drawIconFn: fn (nvg, f32, f32) void,
+drawIconFn: std.meta.FnPtr(fn (nvg, f32, f32) void),
 message_label: *gui.Label,
 ok_button: *gui.Button,
 cancel_button: *gui.Button,

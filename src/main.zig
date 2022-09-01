@@ -80,7 +80,7 @@ const SdlWindow = struct {
             window_height = @floatToInt(c_int, self.video_scale * self.video_height);
         }
         const maybe_window = c.SDL_CreateWindow(
-            title,
+            title.ptr,
             @bitCast(c_int, c.SDL_WINDOWPOS_UNDEFINED_DISPLAY(display_index)),
             @bitCast(c_int, c.SDL_WINDOWPOS_UNDEFINED_DISPLAY(display_index)),
             window_width,
@@ -692,7 +692,7 @@ fn sdlDestroyWindow(id: u32) void {
 
 fn sdlSetWindowTitle(window_id: u32, title: [:0]const u8) void {
     if (findSdlWindow(window_id)) |window| {
-        c.SDL_SetWindowTitle(window.handle, title);
+        c.SDL_SetWindowTitle(window.handle, title.ptr);
     }
 }
 
@@ -711,7 +711,7 @@ pub fn sdlGetClipboardText(allocator: std.mem.Allocator) !?[]const u8 {
 pub fn sdlSetClipboardText(allocator: std.mem.Allocator, text: []const u8) !void {
     const sdl_text = try allocator.dupeZ(u8, text);
     defer allocator.free(sdl_text);
-    if (c.SDL_SetClipboardText(sdl_text) != 0) {
+    if (c.SDL_SetClipboardText(sdl_text.ptr) != 0) {
         return error.SdlSetClipboardTextFailed;
     }
     sdlProcessClipboardUpdate(); // broadcasts a gui.ClipboardUpdate event to all windows
