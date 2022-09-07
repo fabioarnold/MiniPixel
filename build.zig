@@ -38,6 +38,7 @@ pub fn build(b: *Builder) !void {
     exe.setMainPkgPath(".");
     exe.setBuildMode(mode);
     exe.setTarget(target);
+    exe.use_stage1 = true;
 
     const exe_options = b.addOptions();
     exe.addOptions("build_options", exe_options);
