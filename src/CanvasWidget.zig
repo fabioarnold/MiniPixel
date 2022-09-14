@@ -724,7 +724,6 @@ const FillTool = struct {
     picking: bool = false,
 
     fn onMouseMove(self: *FillTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
-        _ = self;
         const point = canvas.toDocumentSpace(event.x, event.y);
         self.edit_point.x = @floatToInt(i32, @floor(point.x));
         self.edit_point.y = @floatToInt(i32, @floor(point.y));
