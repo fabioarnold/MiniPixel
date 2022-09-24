@@ -43,7 +43,7 @@ pub fn build(b: *Builder) !void {
     exe.addOptions("build_options", exe_options);
     exe_options.addOption(bool, "automated_testing", automated_testing);
 
-    exe.addIncludeDir("lib/gl2/include");
+    exe.addIncludePath("lib/gl2/include");
     if (exe.target.isWindows()) {
         exe.addVcpkgPaths(.dynamic) catch @panic("vcpkg not installed");
         if (exe.vcpkg_bin_path) |bin_path| {
