@@ -12,7 +12,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: goto-bus-stop/setup-zig@v1
         with:
           version: master
@@ -21,7 +21,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - uses: goto-bus-stop/setup-zig@v1
@@ -33,19 +33,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
 
-      - name: Install latest CMake.
-        uses: lukka/get-cmake@latest
-
-      - name: Restore artifacts, or setup vcpkg
-        uses: lukka/run-vcpkg@v10
-        with:
-          vcpkgGitCommitId: 'c2960201e3c6218128471b71833e2c2a65ceac31'
-          runVcpkgInstall: true
-          runVcpkgFormatString: '[`install`, `--recurse`, `--clean-after-build`, `--x-install-root`, `vcpkg/installed`, `--triplet`, `$[env.VCPKG_DEFAULT_TRIPLET]`]'
+      - run: vcpkg install --recurse --x-install-root C:\vcpkg\installed --triplet x64-windows
 
       # So Zig finds vcpkg
       - run: vcpkg integrate install
