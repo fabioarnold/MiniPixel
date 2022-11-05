@@ -808,7 +808,7 @@ pub fn main() !void {
     //     c.SDL_SetWindowMinimumSize(main_sdl_window.handle, 400, 200);
     // }
 
-    if (builtin.os.tag == .linux or builtin.os.tag == .macos or true) {
+    if (builtin.os.tag == .linux or builtin.os.tag == .macos and false) {
         mainloop_type = .regular_interval;
         _ = c.SDL_GL_SetSwapInterval(0); // disable VSync
     }
