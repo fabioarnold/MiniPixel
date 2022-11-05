@@ -81,6 +81,9 @@ pub fn build(b: *Builder) !void {
     if (exe.target.isWindows()) {
         // Workaround for CI: Zig detects pkg-config and resolves -lpng16 which doesn't exist
         exe.linkSystemLibraryName("libpng16");
+    } else if (exe.target.isDarwin()) {
+        exe.addLibraryPath("/opt/homebrew/lib");
+        exe.linkSystemLibrary("png");
     } else {
         exe.linkSystemLibrary("libpng16");
     }
