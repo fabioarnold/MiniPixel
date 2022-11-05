@@ -729,7 +729,7 @@ fn sdlHandleEvent(sdl_event: c.SDL_Event) void {
         c.SDL_USEREVENT => sdlProcessUserEvent(sdl_event.user),
         c.SDL_DROPFILE => sdlProcessDropFile(sdl_event.drop),
         c.SDL_CLIPBOARDUPDATE => sdlProcessClipboardUpdate(),
-        c.SDL_MULTIGESTURE => sdlProcessMultiGesture(sdl_event.mgesture),
+        // c.SDL_MULTIGESTURE => sdlProcessMultiGesture(sdl_event.mgesture),
         else => {},
     }
 }
