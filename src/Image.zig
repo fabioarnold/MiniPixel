@@ -98,12 +98,12 @@ pub fn deinit(self: Image) void {
 }
 
 pub fn clone(self: Image, allocator: std.mem.Allocator) !Image {
-    if (self.colormap != null) @panic("Not implementated");
     return Image{
         .allocator = allocator,
         .width = self.width,
         .height = self.height,
         .pixels = try allocator.dupe(u8, self.pixels),
+        .colormap = if (self.colormap) |colormap| try allocator.dupe(u8, colormap) else null,
     };
 }
 
