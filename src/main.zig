@@ -190,18 +190,22 @@ const SdlWindow = struct {
             c.SDL_GetVersion(&sys_info.version);
             _ = c.SDL_GetWindowWMInfo(self.handle, &sys_info);
             if (sys_info.subsystem == c.SDL_SYSWM_X11) {
-                const str = c.XGetDefault(sys_info.info.x11.display, "Xft", "dpi");
-                const dpi_or_error = std.fmt.parseFloat(f32, std.mem.sliceTo(str, 0));
-                if (dpi_or_error) |dpi| {
-                    return dpi;
-                } else |_| {} // fall through to SDL2 default implementation
+                if (c.XGetDefault(sys_info.info.x11.display, "Xft", "dpi")) |str| {
+                    const dpi_or_error = std.fmt.parseFloat(f32, std.mem.sliceTo(str, 0));
+                    if (dpi_or_error) |dpi| {
+                        return dpi;
+                    } else |_| {} // fall through to SDL2 default implementation
+                } else {
+                    // xrandr -> subpixel: unknown
+                    return 96.0; // DPI where 1px is 1px
+                }
             }
         }
 
         const display = self.getDisplayIndex();
         var dpi: f32 = undefined;
-        _ = c.SDL_GetDisplayDPI(display, &dpi, null, null);
-        return dpi;
+        var err = c.SDL_GetDisplayDPI(display, &dpi, null, null);
+        return if (err == 0) dpi else 96.0;
     }
 
     fn setupFrame(self: *SdlWindow) void {
