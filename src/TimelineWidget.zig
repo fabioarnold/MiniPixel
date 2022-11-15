@@ -72,7 +72,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     self.play_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
             const timeline = @fieldParentPtr(Self, "widget", button.widget.parent.?);
-            if (timeline.play_button.iconFn == icons.iconTimelinePlay) {
+            if (timeline.play_button.iconFn == &icons.iconTimelinePlay) {
                 timeline.play_button.iconFn = icons.iconTimelinePause;
                 timeline.document.play();
             } else {

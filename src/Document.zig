@@ -168,8 +168,10 @@ allocator: Allocator,
 x: i32 = 0,
 y: i32 = 0,
 frame_count: u32 = 10,
+frame_time: u32 = 100, // in ms
 selected_frame: u32 = 0,
 onion_skinning: bool = false,
+playback_timer: gui.Timer,
 
 texture: nvg.Image, // image for display using nvg
 texture_palette: nvg.Image,
@@ -202,6 +204,10 @@ pub fn init(allocator: Allocator, vg: nvg) !*Self {
     var self = try allocator.create(Self);
     self.* = Self{
         .allocator = allocator,
+        .playback_timer = gui.Timer{
+            .on_elapsed_fn = onPlaybackTimerElapsed,
+            .ctx = @ptrToInt(self),
+        },
         .texture = undefined,
         .texture_palette = undefined,
         .selection_texture = undefined,
@@ -468,12 +474,21 @@ pub fn getColorDepth(self: Self) u32 {
     };
 }
 
+fn onPlaybackTimerElapsed(context: usize) void {
+    var self = @intToPtr(*Self, context);
+    if (self.selected_frame == self.frame_count - 1) {
+        self.gotoFirstFrame();
+    } else {
+        self.gotoNextFrame();
+    }
+}
+
 pub fn play(self: *Self) void {
-    _ = self;
+    self.playback_timer.start(self.frame_time);
 }
 
 pub fn pause(self: *Self) void {
-    _ = self;
+    self.playback_timer.stop();
 }
 
 pub fn gotoNextFrame(self: *Self) void {
