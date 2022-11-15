@@ -238,7 +238,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         fn colorPicked(canvas: *CanvasWidget) void {
             if (canvas.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
-                switch (editor.document.bitmap) {
+                switch (editor.document.getBitmapType()) {
                     .color => editor.color_foreground_background.setRgba(.foreground, &editor.document.foreground_color),
                     .indexed => {
                         if (editor.color_foreground_background.active == .foreground) {
@@ -1012,7 +1012,7 @@ fn tryTogglePalette(self: *Self) void {
 fn onDocumentChanged(self: *Self) void {
     // update GUI
     std.mem.copy(u8, &self.color_palette.colors, self.document.colormap);
-    switch (self.document.bitmap) {
+    switch (self.document.getBitmapType()) {
         .color => {
             self.palette_toggle_button.checked = false;
             self.color_palette.selection_locked = false;

@@ -209,7 +209,7 @@ pub fn fill(self: ColorBitmap, color: Color) void {
     }
 }
 
-pub fn floodFill(self: *ColorBitmap, allocator: Allocator, x: i32, y: i32, color: Color) !void {
+pub fn floodFill(self: ColorBitmap, allocator: Allocator, x: i32, y: i32, color: Color) !void {
     const old_color = self.getPixel(x, y) orelse return;
     if (col.eql(old_color, color)) return;
 

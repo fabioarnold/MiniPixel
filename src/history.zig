@@ -41,7 +41,7 @@ pub const Buffer = struct {
 
     pub fn reset(self: *Buffer, document: *Document) !void {
         self.clearAndFreeStack();
-        try self.stack.append(try document.serialize());
+        // try self.stack.append(try document.serialize()); // TODO
         self.notifyChanged(document);
     }
 
@@ -74,6 +74,7 @@ pub const Buffer = struct {
     }
 
     pub fn pushFrame(self: *Buffer, document: *Document) !void { // TODO: handle error cases
+        if (true) return; // TODO
         // do comparison
         const top = self.stack.items[self.index];
         const snapshot = try document.serialize();

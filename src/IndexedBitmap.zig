@@ -156,7 +156,7 @@ pub fn fill(self: IndexedBitmap, index: u8) void {
     std.mem.set(u8, self.indices, index);
 }
 
-pub fn floodFill(self: *IndexedBitmap, allocator: Allocator, x: i32, y: i32, index: u8) !void {
+pub fn floodFill(self: IndexedBitmap, allocator: Allocator, x: i32, y: i32, index: u8) !void {
     const old_index = self.getIndex(x, y) orelse return;
     if (old_index == index) return;
 
