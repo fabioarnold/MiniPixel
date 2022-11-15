@@ -164,10 +164,11 @@ const SdlWindow = struct {
         _ = c.SDL_GL_MakeCurrent(self.handle, self.context);
     }
 
+    const default_dpi: f32 = 96;
+
     fn updateVideoScale(self: *SdlWindow) void {
         switch (builtin.os.tag) {
             .windows, .linux => {
-                const default_dpi: f32 = 96;
                 const dpi = self.getLogicalDpi();
                 self.video_scale = dpi / default_dpi;
             },
@@ -185,23 +186,27 @@ const SdlWindow = struct {
     }
 
     fn getLogicalDpi(self: SdlWindow) f32 {
-        if (builtin.os.tag == .linux) { // SDL_GetDisplayDPI returns physical DPI on Linux/X11
+        // SDL_GetDisplayDPI returns the physical DPI on Linux/X11. But we want the logical DPI.
+        if (builtin.os.tag == .linux) {
             var sys_info: c.SDL_SysWMinfo = undefined;
             c.SDL_GetVersion(&sys_info.version);
-            _ = c.SDL_GetWindowWMInfo(self.handle, &sys_info);
-            if (sys_info.subsystem == c.SDL_SYSWM_X11) {
-                const str = c.XGetDefault(sys_info.info.x11.display, "Xft", "dpi");
-                const dpi_or_error = std.fmt.parseFloat(f32, std.mem.sliceTo(str, 0));
-                if (dpi_or_error) |dpi| {
-                    return dpi;
-                } else |_| {} // fall through to SDL2 default implementation
+            if (c.SDL_GetWindowWMInfo(self.handle, &sys_info) == c.SDL_TRUE and sys_info.subsystem == c.SDL_SYSWM_X11) {
+                if (c.XGetDefault(sys_info.info.x11.display, "Xft", "dpi")) |dpi_str| {
+                    if (std.fmt.parseFloat(f32, std.mem.sliceTo(dpi_str, 0))) |dpi| {
+                        return dpi;
+                    } else |_| {} // fall through to SDL2 default implementation
+                }
             }
         }
 
         const display = self.getDisplayIndex();
         var dpi: f32 = undefined;
-        _ = c.SDL_GetDisplayDPI(display, &dpi, null, null);
-        return dpi;
+        const sdl_error = c.SDL_GetDisplayDPI(display, &dpi, null, null);
+        if (sdl_error == 0) {
+            return dpi;
+        }
+
+        return default_dpi;
     }
 
     fn setupFrame(self: *SdlWindow) void {
@@ -211,7 +216,6 @@ const SdlWindow = struct {
 
         switch (builtin.os.tag) {
             .windows, .linux => {
-                const default_dpi: f32 = 96;
                 const dpi = self.getLogicalDpi();
                 const new_video_scale = dpi / default_dpi;
                 if (new_video_scale != self.video_scale) { // detect DPI change
