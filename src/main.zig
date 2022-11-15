@@ -256,6 +256,7 @@ const SdlWindow = struct {
             c.SDL_ShowWindow(self.handle);
         }
         c.SDL_GL_SwapWindow(self.handle);
+        c.glFinish();
         self.dirty = false;
     }
 };
@@ -808,10 +809,8 @@ pub fn main() !void {
     //     c.SDL_SetWindowMinimumSize(main_sdl_window.handle, 400, 200);
     // }
 
-    if (builtin.os.tag == .linux or builtin.os.tag == .macos and false) {
-        mainloop_type = .regular_interval;
-        _ = c.SDL_GL_SetSwapInterval(0); // disable VSync
-    }
+    mainloop_type = .regular_interval;
+    _ = c.SDL_GL_SetSwapInterval(1); // enable VSync
 
     _ = gladLoadGL();
 
