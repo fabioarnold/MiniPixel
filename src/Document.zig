@@ -330,7 +330,10 @@ fn getSelectedFrameBitmap(self: Self) Bitmap {
 const Snapshot = struct {
     x: i32,
     y: i32,
-    bitmap: Bitmap,
+    frame_count: u32,
+    frame_time: u32,
+    selected_frame: u32,
+    bitmaps: []Bitmap,
     colormap: []u8,
     selection: ?struct {
         rect: Recti,
@@ -339,11 +342,13 @@ const Snapshot = struct {
 };
 
 pub fn serialize(self: Document) ![]u8 {
-    if (false) {
     var snapshot = Snapshot{
         .x = self.x,
         .y = self.y,
-        .bitmap = self.bitmap,
+        .frame_count = self.frame_count,
+        .frame_time = self.frame_time,
+        .selected_frame = self.selected_frame,
+        .bitmaps = self.bitmaps.items,
         .colormap = self.colormap,
         .selection = if (self.selection) |selection| .{
             .rect = selection.rect,
@@ -363,12 +368,9 @@ pub fn serialize(self: Document) ![]u8 {
     }
 
     return output.items;
-    }
-    @panic("TODO");
 }
 
 pub fn deserialize(self: *Document, data: []u8) !void {
-    if (false) {
     var snapshot: Snapshot = undefined;
     var input = std.io.fixedBufferStream(data);
 
@@ -381,9 +383,12 @@ pub fn deserialize(self: *Document, data: []u8) !void {
         snapshot = try s2s.deserializeAlloc(input.reader(), Snapshot, self.allocator);
     }
 
+    self.frame_count = snapshot.frame_count;
+    self.frame_time = snapshot.frame_time;
+    self.selected_frame = snapshot.selected_frame;
     self.freeSelection();
-    self.bitmap.deinit(self.allocator);
-    self.bitmap = snapshot.bitmap;
+    self.deinitBitmaps();
+    self.bitmaps = ArrayList(Bitmap).fromOwnedSlice(self.allocator, snapshot.bitmaps);
     self.allocator.free(self.colormap);
     self.colormap = snapshot.colormap;
     self.freeSelection();
@@ -396,7 +401,7 @@ pub fn deserialize(self: *Document, data: []u8) !void {
     }
 
     self.preview_bitmap.deinit(self.allocator);
-    self.preview_bitmap = try self.bitmap.clone(self.allocator);
+    self.preview_bitmap = try self.getSelectedFrameBitmap().clone(self.allocator);
     self.need_texture_recreation = true;
 
     if (self.x != snapshot.x or self.y != snapshot.y) {
@@ -408,8 +413,6 @@ pub fn deserialize(self: *Document, data: []u8) !void {
     }
     self.last_preview = .full;
     self.clearPreview();
-    }
-    @panic("TODO");
 }
 
 pub fn convertToTruecolor(self: *Self) !void {
@@ -977,7 +980,7 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
             self.need_selection_texture_update = true;
         }
     } else {
-        std.debug.assert(self.frame_count == 1);
+        std.debug.assert(self.frame_count == 1); // FIXME
         try self.bitmaps.items[0].rotate(self.allocator, clockwise);
         const d = @divTrunc(@intCast(i32, self.getHeight()) - @intCast(i32, self.getWidth()), 2);
         if (d != 0) {
