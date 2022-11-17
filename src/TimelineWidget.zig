@@ -12,6 +12,54 @@ const Document = @import("Document.zig");
 
 const TimelineWidget = @This();
 
+const LayerWidget = struct {
+    widget: gui.Widget,
+    allocator: Allocator,
+
+    document: *Document, // just a reference
+
+    visible_button: *gui.Button,
+
+    fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*LayerWidget {
+        var self = try allocator.create(LayerWidget);
+
+        self.* = LayerWidget{
+            .widget = gui.Widget.init(allocator, rect),
+            .allocator = allocator,
+            .document = document,
+            .visible_button = try gui.Button.init(allocator, Rect(f32).make(1, 1, 20, 20), ""),
+        };
+
+        self.visible_button.style = .toolbar;
+        self.visible_button.iconFn = icons.iconEyeOpen;
+        self.visible_button.onClickFn = struct {
+            fn click(button: *gui.Button) void {
+                const layer_widget = @fieldParentPtr(LayerWidget, "widget", button.widget.parent.?);
+                if (layer_widget.visible_button.iconFn == &icons.iconEyeOpen) {
+                    layer_widget.visible_button.iconFn = icons.iconEyeClosed;
+                    layer_widget.visible_button.checked = true;
+                    // layer_widget.document.setLayerVisible(0, false);
+                } else {
+                    layer_widget.visible_button.iconFn = icons.iconEyeOpen;
+                    layer_widget.visible_button.checked = false;
+                    // layer_widget.document.setLayerVisible(0, true);
+                }
+            }
+        }.click;
+
+        try self.widget.addChild(&self.visible_button.widget);
+
+        return self;
+    }
+
+    fn deinit(self: *LayerWidget) void {
+        self.visible_button.deinit();
+
+        self.widget.deinit();
+        self.allocator.destroy(self);
+    }
+};
+
 widget: gui.Widget,
 allocator: Allocator,
 
@@ -23,6 +71,8 @@ play_button: *gui.Button,
 right_button: *gui.Button,
 end_button: *gui.Button,
 onion_skinning_button: *gui.Button,
+
+layer_widgets: ArrayList(*LayerWidget),
 
 const Self = @This();
 
@@ -42,6 +92,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         .right_button = try gui.Button.init(allocator, Rect(f32).make(65, 5, 21, 21), ""),
         .end_button = try gui.Button.init(allocator, Rect(f32).make(85, 5, 21, 21), ""),
         .onion_skinning_button = try gui.Button.init(allocator, Rect(f32).make(5 + 60, 5 + 21 + 5, 21, 21), ""),
+        .layer_widgets = ArrayList(*LayerWidget).init(allocator),
     };
     self.widget.onResizeFn = onResize;
     self.widget.onMouseDownFn = onMouseDown;
@@ -116,6 +167,15 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     try self.widget.addChild(&self.end_button.widget);
     try self.widget.addChild(&self.onion_skinning_button.widget);
 
+    var i: usize = 0;
+    while (i < document.layer_count) : (i += 1) {
+        try self.layer_widgets.append(try LayerWidget.init(allocator, Rect(f32).make(5, 51 + @intToFloat(f32, i) * tile_w, 200, tile_w), document));
+    }
+
+    for (self.layer_widgets.items) |layer_widget| {
+        try self.widget.addChild(&layer_widget.widget);
+    }
+
     return self;
 }
 
@@ -126,6 +186,10 @@ pub fn deinit(self: *Self) void {
     self.right_button.deinit();
     self.end_button.deinit();
     self.onion_skinning_button.deinit();
+    for (self.layer_widgets.items) |layer_widget| {
+        layer_widget.deinit();
+    }
+    self.layer_widgets.deinit();
 
     self.widget.deinit();
     self.allocator.destroy(self);
@@ -180,7 +244,7 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
     vg.stroke();
 
     const frame_count = self.document.frame_count;
-    const layer_count: usize = 3;
+    const layer_count = self.document.layer_count;
 
     // draw selection
     const selected_frame = self.document.selected_frame;

@@ -181,6 +181,7 @@ allocator: Allocator,
 // For tracking offset after cropping operation
 x: i32 = 0,
 y: i32 = 0,
+layer_count: u32 = 3,
 frame_count: u32 = 10,
 frame_time: u32 = 100, // in ms
 selected_frame: u32 = 0,

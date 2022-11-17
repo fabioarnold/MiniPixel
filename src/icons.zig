@@ -987,6 +987,43 @@ pub fn iconOnionSkinning(vg: nvg) void {
     vg.stroke();
 }
 
+pub fn iconEyeOpen(vg: nvg) void {
+    vg.lineJoin(.round);
+    defer vg.lineJoin(.miter);
+    vg.beginPath();
+    vg.moveTo(0.5, 8);
+    vg.bezierTo(5.5, 3, 10.5, 3, 15.5, 8);
+    vg.bezierTo(10.5, 13, 5.5, 13, 0.5, 8);
+    vg.fillColor(nvg.rgbf(1, 1, 1));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(66, 66, 66));
+    vg.stroke();
+    vg.beginPath();
+    vg.ellipse(8, 8, 3.5, 3.5);
+    vg.fillColor(nvg.rgb(30, 170, 15));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(66, 66, 66));
+    vg.stroke();
+    vg.beginPath();
+    vg.ellipse(8, 8, 2, 2);
+    vg.fillColor(nvg.rgb(66, 66, 66));
+    vg.fill();
+    vg.beginPath();
+    vg.ellipse(9, 7, 1, 1);
+    vg.fillColor(nvg.rgbf(1, 1, 1));
+    vg.fill();
+}
+
+pub fn iconEyeClosed(vg: nvg) void {
+    vg.lineCap(.round);
+    defer vg.lineCap(.butt);
+    vg.beginPath();
+    vg.moveTo(15.5, 8);
+    vg.bezierTo(10.5, 13, 5.5, 13, 0.5, 8);
+    vg.strokeColor(nvg.rgb(66, 66, 66));
+    vg.stroke();
+}
+
 pub fn cursorArrow(vg: nvg) void {
     vg.beginPath();
     vg.moveTo(-0.5, -0.5);
