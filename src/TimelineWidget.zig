@@ -169,7 +169,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
 
     var i: usize = 0;
     while (i < document.layer_count) : (i += 1) {
-        try self.layer_widgets.append(try LayerWidget.init(allocator, Rect(f32).make(5, 51 + @intToFloat(f32, i) * tile_w, 200, tile_w), document));
+        try self.layer_widgets.append(try LayerWidget.init(allocator, Rect(f32).make(5, 51 + @intToFloat(f32, i) * tile_w, 60, tile_w), document));
     }
 
     for (self.layer_widgets.items) |layer_widget| {
@@ -222,10 +222,12 @@ fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {
     const y = 5 + 21 + 5;
     if (mouse_x >= x and mouse_y >= y) {
         const frame = @floatToInt(u32, (mouse_x - x) / tile_w);
-        // const layer = @floatToInt(usize, (mouse_y - y) / tile_w);
-
         if (frame < self.document.frame_count) {
             self.document.gotoFrame(frame);
+        }
+        const layer = @floatToInt(u32, (mouse_y - y) / tile_w);
+        if (layer > 0 and layer - 1 < self.document.layer_count) {
+            self.document.selectLayer(layer - 1);
         }
     }
 }
@@ -248,7 +250,7 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
 
     // draw selection
     const selected_frame = self.document.selected_frame;
-    const selected_layer: usize = 0;
+    const selected_layer = self.document.selected_layer;
     vg.beginPath();
     vg.rect(x + 1, y + 1 + @intToFloat(f32, 1 + selected_layer) * tile_w, name_w + @intToFloat(f32, frame_count) * tile_w, tile_w);
     vg.rect(x + 1 + name_w + @intToFloat(f32, selected_frame) * tile_w, y + 1, tile_w, @intToFloat(f32, 1 + layer_count) * tile_w);

@@ -182,6 +182,7 @@ allocator: Allocator,
 x: i32 = 0,
 y: i32 = 0,
 layer_count: u32 = 3,
+selected_layer: u32 = 0,
 frame_count: u32 = 10,
 frame_time: u32 = 100, // in ms
 selected_frame: u32 = 0,
@@ -552,6 +553,12 @@ pub fn gotoFrame(self: *Self, frame: u32) void {
         self.selected_frame = frame;
         self.last_preview = .full;
         self.clearPreview();
+    }
+}
+
+pub fn selectLayer(self: *Self, layer: u32) void {
+    if (layer < self.layer_count and layer != self.selected_layer) {
+        self.selected_layer = layer;
     }
 }
 
