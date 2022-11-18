@@ -194,9 +194,11 @@ const SdlWindow = struct {
                 if (c.XGetDefault(sys_info.info.x11.display, "Xft", "dpi")) |dpi_str| {
                     if (std.fmt.parseFloat(f32, std.mem.sliceTo(dpi_str, 0))) |dpi| {
                         return dpi;
-                    } else |_| {} // fall through to SDL2 default implementation
+                    } else |_| {}
                 }
             }
+            // We don't want the physical value from SDL_GetDisplayDPI.
+            return default_dpi;
         }
 
         const display = self.getDisplayIndex();
