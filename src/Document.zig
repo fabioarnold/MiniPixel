@@ -3,6 +3,7 @@ const snapshot_compression_enabled = true;
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+const ArrayListUnmanaged = std.ArrayListUnmanaged;
 
 const nvg = @import("nanovg");
 const s2s = @import("s2s");
@@ -27,6 +28,34 @@ const HistoryBuffer = @import("history.zig").Buffer;
 const HistorySnapshot = @import("history.zig").Snapshot;
 
 const Document = @This();
+
+const Cel = struct {
+    bitmap: ?Bitmap = null,
+
+    pub fn deinit(self: *Cel, allocator: Allocator) void {
+        if (self.bitmap) |bitmap| {
+            bitmap.deinit(allocator);
+            self.bitmap = null;
+        }
+    }
+};
+
+const Layer = struct {
+    cels: ArrayListUnmanaged(Cel) = .{},
+
+    pub fn init(allocator: Allocator, frame_count: u32) !Layer {
+        var self = Layer{};
+        try self.cels.appendNTimes(allocator, Cel{}, frame_count);
+        return self;
+    }
+
+    pub fn deinit(self: *Layer, allocator: Allocator) void {
+        for (self.cels.items) |*cel| {
+            cel.deinit(allocator);
+        }
+        self.cels.deinit(allocator);
+    }
+};
 
 pub const Selection = struct {
     rect: Recti,
@@ -59,18 +88,22 @@ allocator: Allocator,
 // For tracking offset after cropping operation
 x: i32 = 0,
 y: i32 = 0,
-layer_count: u32 = 3,
-selected_layer: u32 = 0,
+
+width: u32 = 16,
+height: u32 = 16,
+bitmap_type: BitmapType = .color,
+layers: ArrayList(Layer),
+colormap: []u8,
 frame_count: u32 = 10,
 frame_time: u32 = 100, // in ms
+
+selected_layer: u32 = 0,
 selected_frame: u32 = 0,
 onion_skinning: bool = false,
 playback_timer: gui.Timer,
 
 texture: nvg.Image, // image for display using nvg
 texture_palette: nvg.Image,
-bitmaps: ArrayList(Bitmap),
-colormap: []u8,
 preview_bitmap: Bitmap, // preview brush and lines
 last_preview: PrimitivePreview = .none,
 need_texture_update: bool = false, // bitmap needs to be uploaded to gpu on next draw call
@@ -105,19 +138,17 @@ pub fn init(allocator: Allocator, vg: nvg) !*Self {
         .texture = undefined,
         .texture_palette = undefined,
         .selection_texture = undefined,
-        .bitmaps = ArrayList(Bitmap).init(allocator),
+        .layers = ArrayList(Layer).init(allocator),
         .colormap = try allocator.alloc(u8, 4 * 256),
         .preview_bitmap = undefined,
         .history = try HistoryBuffer.init(allocator),
     };
 
-    var i: u32 = 0;
-    while (i < self.frame_count) : (i += 1) {
-        var bitmap = try Bitmap.init(.color, allocator, 32, 32);
-        bitmap.color.fill(self.background_color);
-        try self.bitmaps.append(bitmap);
-    }
-    self.preview_bitmap = try self.getSelectedFrameBitmap().clone(self.allocator);
+    // Create initial layer
+    try self.layers.append(try Layer.init(allocator, self.frame_count));
+
+    self.preview_bitmap = try Bitmap.init(allocator, self.width, self.height, self.bitmap_type);
+    self.preview_bitmap.clear();
     self.texture = self.preview_bitmap.createTexture(vg);
     self.texture_palette = vg.createImageRGBA(256, 1, .{ .nearest = true }, self.colormap);
     self.selection_texture = vg.createImageRGBA(0, 0, .{}, &.{}); // dummy
@@ -126,16 +157,16 @@ pub fn init(allocator: Allocator, vg: nvg) !*Self {
     return self;
 }
 
-fn deinitBitmaps(self: *Self) void {
-    for (self.bitmaps.items) |*bitmap| {
-        bitmap.deinit(self.allocator);
+fn deinitLayers(self: *Self) void {
+    for (self.layers.items) |*layer| {
+        layer.deinit(self.allocator);
     }
-    self.bitmaps.deinit();
+    self.layers.deinit();
 }
 
 pub fn deinit(self: *Self, vg: nvg) void {
     self.history.deinit();
-    self.deinitBitmaps();
+    self.deinitLayers();
     self.preview_bitmap.deinit(self.allocator);
     self.allocator.free(self.colormap);
     vg.deleteImage(self.texture);
@@ -145,6 +176,7 @@ pub fn deinit(self: *Self, vg: nvg) void {
 }
 
 pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) !void {
+    if (false) {
     self.deinitBitmaps();
     self.preview_bitmap.deinit(self.allocator);
     self.freeSelection();
@@ -167,10 +199,13 @@ pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) 
     self.y = 0;
 
     try self.history.reset(self);
+    }
+    @panic("TODO");
 }
 
-// FIXME: this only handles files with a single frame
+// FIXME: this only handles files with a single frame and layer
 pub fn load(self: *Self, file_path: []const u8) !void {
+    if (false) {
     const image = try Image.initFromFile(self.allocator, file_path);
     if (image.colormap) |colormap| {
         if (colormap.len != self.colormap.len) return error.UnexpectedColormapLen;
@@ -192,28 +227,31 @@ pub fn load(self: *Self, file_path: []const u8) !void {
     self.freeSelection();
 
     try self.history.reset(self);
+    }
+    @panic("TODO");
 }
 
-// FIXME: this only handles files with a single frame
+// FIXME: this only handles files with a single frame and layer
 pub fn save(self: *Self, file_path: []const u8) !void {
-    var image = self.getSelectedFrameBitmap().toImage(self.allocator);
+    const bitmap = try self.getOrCreateCurrentCelBitmap();
+    var image = bitmap.toImage(self.allocator);
     if (self.getBitmapType() == .indexed) {
         image.colormap = col.trimBlackColorsRight(self.colormap);
     }
     try image.writeToFile(file_path);
 }
 
-fn getSelectedFrameBitmap(self: Self) Bitmap {
-    return self.bitmaps.items[self.selected_frame];
-}
-
 const Snapshot = struct {
     x: i32,
     y: i32,
+    width: u32,
+    height: u32,
+    bitmap_type: BitmapType,
     frame_count: u32,
     frame_time: u32,
     selected_frame: u32,
-    bitmaps: []Bitmap,
+    selected_layer: u32,
+    layers: []Layer,
     colormap: []u8,
     selection: ?struct {
         rect: Recti,
@@ -225,10 +263,14 @@ pub fn serialize(self: Document) ![]u8 {
     var snapshot = Snapshot{
         .x = self.x,
         .y = self.y,
+        .width = self.width,
+        .height = self.height,
+        .bitmap_type = self.bitmap_type,
         .frame_count = self.frame_count,
         .frame_time = self.frame_time,
         .selected_frame = self.selected_frame,
-        .bitmaps = self.bitmaps.items,
+        .selected_layer = self.selected_layer,
+        .layers = self.layers.items,
         .colormap = self.colormap,
         .selection = if (self.selection) |selection| .{
             .rect = selection.rect,
@@ -263,12 +305,19 @@ pub fn deserialize(self: *Document, data: []u8) !void {
         snapshot = try s2s.deserializeAlloc(input.reader(), Snapshot, self.allocator);
     }
 
+    self.width = self.width;
+    self.height = self.height;
     self.frame_count = snapshot.frame_count;
     self.frame_time = snapshot.frame_time;
+    self.bitmap_type = snapshot.bitmap_type;
     self.selected_frame = snapshot.selected_frame;
-    self.freeSelection();
-    self.deinitBitmaps();
-    self.bitmaps = ArrayList(Bitmap).fromOwnedSlice(self.allocator, snapshot.bitmaps);
+    self.selected_layer = snapshot.selected_layer;
+    self.deinitLayers();
+    // HACK: snapshot contains the wrong capacity
+    for (snapshot.layers) |*layer| {
+        layer.cels.capacity = layer.cels.items.len;
+    }
+    self.layers = ArrayList(Layer).fromOwnedSlice(self.allocator, snapshot.layers);
     self.allocator.free(self.colormap);
     self.colormap = snapshot.colormap;
     self.freeSelection();
@@ -281,7 +330,8 @@ pub fn deserialize(self: *Document, data: []u8) !void {
     }
 
     self.preview_bitmap.deinit(self.allocator);
-    self.preview_bitmap = try self.getSelectedFrameBitmap().clone(self.allocator);
+    self.preview_bitmap = try Bitmap.init(self.allocator, self.width, self.height, self.bitmap_type);
+    self.preview_bitmap.clear();
     self.need_texture_recreation = true;
 
     if (self.x != snapshot.x or self.y != snapshot.y) {
@@ -295,7 +345,23 @@ pub fn deserialize(self: *Document, data: []u8) !void {
     self.clearPreview();
 }
 
+fn getCurrentCelBitmap(self: Self) ?Bitmap {
+    return self.layers.items[self.selected_layer].cels.items[self.selected_frame].bitmap;
+}
+
+fn getOrCreateCurrentCelBitmap(self: Self) !Bitmap {
+    const cel = &self.layers.items[self.selected_layer].cels.items[self.selected_frame];
+    if (cel.bitmap) |bitmap| {
+        return bitmap;
+    }
+    const bitmap = try Bitmap.init(self.allocator, self.width, self.height, self.bitmap_type);
+    bitmap.clear();
+    cel.bitmap = bitmap;
+    return bitmap;
+}
+
 pub fn convertToTruecolor(self: *Self) !void {
+    if (false) {
     for (self.bitmaps.items) |*bitmap| {
         switch (bitmap.*) {
             .color => return, // Nothing to do
@@ -318,9 +384,15 @@ pub fn convertToTruecolor(self: *Self) !void {
     self.need_texture_recreation = true;
 
     try self.history.pushFrame(self);
+    }
+    @panic("TODO");
 }
 
 pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
+    if (self.getBitmapType() == .color) {
+        return true;
+    }
+    if (false) {
     switch (self.getSelectedFrameBitmap()) {
         .indexed => return true,
         .color => |color_bitmap| {
@@ -332,9 +404,12 @@ pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
             return try color_bitmap.canLosslesslyConvertToIndexed(self.allocator, self.colormap);
         },
     }
+    }
+    @panic("TODO");
 }
 
 pub fn convertToIndexed(self: *Self) !void {
+    if (false) {
     for (self.bitmaps.items) |*bitmap| {
         switch (bitmap.*) {
             .color => |color_bitmap| {
@@ -357,6 +432,8 @@ pub fn convertToIndexed(self: *Self) !void {
     self.need_texture_recreation = true;
 
     try self.history.pushFrame(self);
+    }
+    @panic("TODO");
 }
 
 pub const PaletteUpdateMode = enum {
@@ -370,6 +447,7 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
         for (map) |*m, i| {
             m.* = @truncate(u8, col.findNearest(palette, self.colormap[4 * i ..]));
         }
+        if (false) {
         for (self.bitmaps.items) |bitmap| {
             switch (bitmap) {
                 .indexed => |indexed_bitmap| {
@@ -382,6 +460,8 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
         }
         self.last_preview = .full;
         self.clearPreview();
+        }
+        @panic("TODO");
     }
 
     std.mem.copy(u8, self.colormap, palette);
@@ -391,22 +471,30 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
 }
 
 pub fn getWidth(self: Self) u32 {
-    return self.getSelectedFrameBitmap().getWidth();
+    return self.width;
 }
 
 pub fn getHeight(self: Self) u32 {
-    return self.getSelectedFrameBitmap().getHeight();
+    return self.height;
 }
 
 pub fn getBitmapType(self: Self) BitmapType {
-    return std.meta.activeTag(self.getSelectedFrameBitmap());
+    return self.bitmap_type;
 }
 
 pub fn getColorDepth(self: Self) u32 {
-    return switch (self.getSelectedFrameBitmap()) {
+    return switch (self.getBitmapType()) {
         .color => 32,
         .indexed => 8,
     };
+}
+
+pub fn getLayerCount(self: Self) u32 {
+    return @intCast(u32, self.layers.items.len);
+}
+
+pub fn getFrameCount(self: Self) u32 {
+    return self.frame_count;
 }
 
 fn onPlaybackTimerElapsed(context: usize) void {
@@ -435,7 +523,7 @@ pub fn gotoFrame(self: *Self, frame: u32) void {
 }
 
 pub fn selectLayer(self: *Self, layer: u32) void {
-    if (layer < self.layer_count and layer != self.selected_layer) {
+    if (layer < self.getLayerCount() and layer != self.selected_layer) {
         self.selected_layer = layer;
     }
 }
@@ -482,12 +570,14 @@ pub fn cut(self: *Self) !void {
     if (self.selection != null) {
         self.freeSelection();
     } else {
-        switch (self.getSelectedFrameBitmap()) {
-            .color => |color_bitmap| color_bitmap.fill(self.background_color),
-            .indexed => |indexed_bitmap| indexed_bitmap.fill(self.background_index),
+        if (self.getCurrentCelBitmap()) |bitmap| {
+            switch (bitmap) {
+                .color => |color_bitmap| color_bitmap.fill(self.background_color),
+                .indexed => |indexed_bitmap| indexed_bitmap.fill(self.background_index),
+            }
+            self.last_preview = .full;
+            self.clearPreview();
         }
-        self.last_preview = .full;
-        self.clearPreview();
     }
 
     try self.history.pushFrame(self);
@@ -505,12 +595,14 @@ pub fn copy(self: *Self) !void {
             .y = selection.rect.y,
         };
     } else {
-        var image = self.getSelectedFrameBitmap().toImage(self.allocator);
-        if (self.getBitmapType() == .indexed) {
-            image.colormap = col.trimBlackColorsRight(self.colormap);
+        if (self.getCurrentCelBitmap()) |bitmap| {
+            var image = bitmap.toImage(self.allocator);
+            if (self.getBitmapType() == .indexed) {
+                image.colormap = col.trimBlackColorsRight(self.colormap);
+            }
+            try Clipboard.setImage(self.allocator, image);
+            self.copy_location = null;
         }
-        try Clipboard.setImage(self.allocator, image);
-        self.copy_location = null;
     }
 }
 
@@ -639,7 +731,7 @@ pub fn clearSelection(self: *Self) !void {
         const h = @intCast(u32, intersection.h);
         // blit to source
         var y: u32 = 0;
-        switch (self.getSelectedFrameBitmap()) {
+        switch (try self.getOrCreateCurrentCelBitmap()) {
             .color => |color_bitmap| {
                 while (y < h) : (y += 1) {
                     const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
@@ -690,11 +782,11 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
     const sy = @intCast(u32, intersection.y);
     const w = @intCast(u32, intersection.w);
     const h = @intCast(u32, intersection.h);
-    const bitmap = try Bitmap.init(self.getBitmapType(), self.allocator, w, h);
+    const bitmap = try Bitmap.init(self.allocator, w, h, self.getBitmapType());
 
     // move pixels
     var y: u32 = 0;
-    switch (self.getSelectedFrameBitmap()) {
+    switch (try self.getOrCreateCurrentCelBitmap()) {
         .color => |color_bitmap| {
             while (y < h) : (y += 1) {
                 const di = 4 * (y * w);
@@ -785,24 +877,37 @@ pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
 }
 
 pub fn clearPreview(self: *Self) void {
-    const bitmap = self.getSelectedFrameBitmap();
     switch (self.last_preview) {
-        .none => {},
+        .none => return,
         .brush => |brush| {
-            switch (bitmap) {
-                .color => |color_bitmap| color_bitmap.copyPixelUnchecked(self.preview_bitmap.color, brush.x, brush.y),
-                .indexed => |indexed_bitmap| indexed_bitmap.copyIndexUnchecked(self.preview_bitmap.indexed, brush.x, brush.y),
+            if (self.getCurrentCelBitmap()) |bitmap| {
+                switch (bitmap) {
+                    .color => |color_bitmap| color_bitmap.copyPixelUnchecked(self.preview_bitmap.color, brush.x, brush.y),
+                    .indexed => |indexed_bitmap| indexed_bitmap.copyIndexUnchecked(self.preview_bitmap.indexed, brush.x, brush.y),
+                }
+            } else {
+                self.preview_bitmap.clearPixelUnchecked(brush.x, brush.y);
             }
         },
         .line => |line| {
-            switch (bitmap) {
-                .color => |color_bitmap| color_bitmap.copyLine(self.preview_bitmap.color, line.x0, line.y0, line.x1, line.y1),
-                .indexed => |indexed_bitmap| indexed_bitmap.copyLine(self.preview_bitmap.indexed, line.x0, line.y0, line.x1, line.y1),
+            if (self.getCurrentCelBitmap()) |bitmap| {
+                switch (bitmap) {
+                    .color => |color_bitmap| color_bitmap.copyLine(self.preview_bitmap.color, line.x0, line.y0, line.x1, line.y1),
+                    .indexed => |indexed_bitmap| indexed_bitmap.copyLine(self.preview_bitmap.indexed, line.x0, line.y0, line.x1, line.y1),
+                }
+            } else {
+                self.preview_bitmap.clearLine(line.x0, line.y0, line.x1, line.y1);
             }
         },
-        .full => switch (bitmap) {
-            .color => |color_bitmap| std.mem.copy(u8, self.preview_bitmap.color.pixels, color_bitmap.pixels),
-            .indexed => |indexed_bitmap| std.mem.copy(u8, self.preview_bitmap.indexed.indices, indexed_bitmap.indices),
+        .full => {
+            if (self.getCurrentCelBitmap()) |bitmap| {
+                switch (bitmap) {
+                    .color => |color_bitmap| std.mem.copy(u8, self.preview_bitmap.color.pixels, color_bitmap.pixels),
+                    .indexed => |indexed_bitmap| std.mem.copy(u8, self.preview_bitmap.indexed.indices, indexed_bitmap.indices),
+                }
+            } else {
+                self.preview_bitmap.clear();
+            }
         },
     }
     self.last_preview = .none;
@@ -819,7 +924,8 @@ pub fn fill(self: *Self, color_layer: ColorLayer) !void {
         }
         self.need_selection_texture_update = true;
     } else {
-        switch (self.getSelectedFrameBitmap()) {
+        const bitmap = try self.getOrCreateCurrentCelBitmap();
+        switch (bitmap) {
             .color => |color_bitmap| color_bitmap.fill(color),
             .indexed => |indexed_bitmap| indexed_bitmap.fill(index),
         }
@@ -834,10 +940,12 @@ pub fn mirrorHorizontally(self: *Self) !void {
         selection.bitmap.mirrorHorizontally();
         self.need_selection_texture_update = true;
     } else {
-        self.getSelectedFrameBitmap().mirrorHorizontally();
-        self.last_preview = .full;
-        self.clearPreview();
-        try self.history.pushFrame(self);
+        if (self.getCurrentCelBitmap()) |bitmap| {
+            bitmap.mirrorHorizontally();
+            self.last_preview = .full;
+            self.clearPreview();
+            try self.history.pushFrame(self);
+        }
     }
 }
 
@@ -846,10 +954,12 @@ pub fn mirrorVertically(self: *Self) !void {
         selection.bitmap.mirrorVertically();
         self.need_selection_texture_update = true;
     } else {
-        self.getSelectedFrameBitmap().mirrorVertically();
-        self.last_preview = .full;
-        self.clearPreview();
-        try self.history.pushFrame(self);
+        if (self.getCurrentCelBitmap()) |bitmap| {
+            bitmap.mirrorVertically();
+            self.last_preview = .full;
+            self.clearPreview();
+            try self.history.pushFrame(self);
+        }
     }
 }
 
@@ -866,7 +976,7 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
             self.need_selection_texture_update = true;
         }
     } else {
-        std.debug.assert(self.frame_count == 1); // FIXME
+        if (false) {
         try self.bitmaps.items[0].rotate(self.allocator, clockwise);
         const d = @divTrunc(@intCast(i32, self.getHeight()) - @intCast(i32, self.getWidth()), 2);
         if (d != 0) {
@@ -878,30 +988,36 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
         self.last_preview = .full;
         self.clearPreview();
         try self.history.pushFrame(self);
+        }
+        @panic("TODO");
     }
 }
 
-pub fn beginStroke(self: *Self, x: i32, y: i32) void {
-    var success = false;
-    switch (self.getSelectedFrameBitmap()) {
+pub fn beginStroke(self: *Self, x: i32, y: i32) !void {
+    if (x < 0 or y < 0) return;
+    const ux = @intCast(u32, x);
+    const uy = @intCast(u32, y);
+    if (ux >= self.width or uy >= self.height) return;
+
+    const bitmap = try self.getOrCreateCurrentCelBitmap();
+    switch (bitmap) {
         .color => |color_bitmap| {
-            success = switch (self.blend_mode) {
-                .alpha => color_bitmap.blendPixel(x, y, self.foreground_color),
-                .replace => color_bitmap.setPixel(x, y, self.foreground_color),
-            };
+            switch (self.blend_mode) {
+                .alpha => color_bitmap.blendPixelUnchecked(ux, uy, self.foreground_color),
+                .replace => color_bitmap.setPixelUnchecked(ux, uy, self.foreground_color),
+            }
         },
         .indexed => |indexed_bitmap| {
-            success = indexed_bitmap.setIndex(x, y, self.foreground_index);
+            indexed_bitmap.setIndexUnchecked(ux, uy, self.foreground_index);
         },
     }
-    if (success) {
-        self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
-        self.clearPreview();
-    }
+    self.last_preview = PrimitivePreview{ .brush = .{ .x = ux, .y = uy } };
+    self.clearPreview();
 }
 
-pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
-    switch (self.getSelectedFrameBitmap()) {
+pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) !void {
+    const bitmap = try self.getOrCreateCurrentCelBitmap();
+    switch (bitmap) {
         .color => |color_bitmap| {
             switch (self.blend_mode) {
                 .alpha => color_bitmap.blendLine(x0, y0, x1, y1, self.foreground_color, true),
@@ -921,37 +1037,44 @@ pub fn endStroke(self: *Self) !void {
 }
 
 pub fn pick(self: *Self, x: i32, y: i32) void {
-    switch (self.getSelectedFrameBitmap()) {
-        .color => |color_bitmap| {
-            if (color_bitmap.getPixel(x, y)) |color| {
-                self.foreground_color = color;
-            }
-        },
-        .indexed => |indexed_bitmap| {
-            if (indexed_bitmap.getIndex(x, y)) |index| {
-                self.foreground_index = index;
-                const color = self.colormap[4 * @as(usize, self.foreground_index) ..][0..4];
-                std.mem.copy(u8, &self.foreground_color, color);
-            }
-        },
+    if (self.getCurrentCelBitmap()) |bitmap| {
+        switch (bitmap) {
+            .color => |color_bitmap| {
+                if (color_bitmap.getPixel(x, y)) |color| {
+                    self.foreground_color = color;
+                }
+            },
+            .indexed => |indexed_bitmap| {
+                if (indexed_bitmap.getIndex(x, y)) |index| {
+                    self.foreground_index = index;
+                    const color = self.colormap[4 * @as(usize, self.foreground_index) ..][0..4];
+                    std.mem.copy(u8, &self.foreground_color, color);
+                }
+            },
+        }
     }
+    // TODO: set colors to transparent when there's no cell?
 }
 
 pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
-    switch (self.getSelectedFrameBitmap()) {
-        .color => |color_bitmap| return color_bitmap.getPixel(x, y),
-        .indexed => |indexed_bitmap| {
-            if (indexed_bitmap.getIndex(x, y)) |index| {
-                const c = self.colormap[4 * @as(usize, index) ..];
-                return [4]u8{ c[0], c[1], c[2], c[3] };
-            }
-        },
+    if (self.getCurrentCelBitmap()) |bitmap| {
+        switch (bitmap) {
+            .color => |color_bitmap| return color_bitmap.getPixel(x, y),
+            .indexed => |indexed_bitmap| {
+                if (indexed_bitmap.getIndex(x, y)) |index| {
+                    const c = self.colormap[4 * @as(usize, index) ..];
+                    return [4]u8{ c[0], c[1], c[2], c[3] };
+                }
+            },
+        }
     }
     return null;
 }
 
 pub fn floodFill(self: *Self, x: i32, y: i32) !void {
-    switch (self.getSelectedFrameBitmap()) {
+    // TODO: we could optimize this by just filling the cel if it was empty
+    const bitmap = try self.getOrCreateCurrentCelBitmap();
+    switch (bitmap) {
         .color => |*color_bitmap| {
             switch (self.blend_mode) {
                 .alpha => {
@@ -973,7 +1096,7 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
 pub fn draw(self: *Self, vg: nvg) void {
     if (self.need_texture_recreation) {
         vg.deleteImage(self.texture);
-        self.texture = self.getSelectedFrameBitmap().createTexture(vg);
+        self.texture = self.preview_bitmap.createTexture(vg);
         self.need_texture_recreation = false;
         vg.updateImage(self.texture_palette, self.colormap);
         self.need_texture_update = false;
@@ -993,7 +1116,7 @@ pub fn draw(self: *Self, vg: nvg) void {
     const height = @intToFloat(f32, self.getHeight());
     vg.beginPath();
     vg.rect(0, 0, width, height);
-    const pattern = switch (self.getSelectedFrameBitmap()) {
+    const pattern = switch (self.getBitmapType()) {
         .color => vg.imagePattern(0, 0, width, height, 0, self.texture, 1),
         .indexed => vg.indexedImagePattern(0, 0, width, height, 0, self.texture, self.texture_palette, 1),
     };
@@ -1023,7 +1146,7 @@ pub fn drawSelection(self: *Self, vg: nvg) void {
         );
         vg.beginPath();
         vg.rect(rect.x, rect.y, rect.w, rect.h);
-        const pattern = switch (self.getSelectedFrameBitmap()) {
+        const pattern = switch (self.getBitmapType()) {
             .color => vg.imagePattern(rect.x, rect.y, rect.w, rect.h, 0, self.selection_texture, 1),
             .indexed => vg.indexedImagePattern(rect.x, rect.y, rect.w, rect.h, 0, self.selection_texture, self.texture_palette, 1),
         };

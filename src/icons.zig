@@ -182,8 +182,8 @@ fn iconRedo(vg: nvg, enabled: bool) void {
 
 pub fn iconCut(vg: nvg) void {
     vg.beginPath();
-    vg.ellipse(4, 13, 2, 2);
-    vg.ellipse(12, 13, 2, 2);
+    vg.circle(4, 13, 2);
+    vg.circle(12, 13, 2);
     vg.strokeColor(nvg.rgb(66, 66, 66));
     vg.strokeWidth(2);
     vg.stroke();
@@ -443,7 +443,7 @@ pub fn iconToolBucket(vg: nvg) void {
     vg.fill();
     vg.stroke();
     vg.beginPath();
-    vg.ellipse(9.5, 8.5, 1, 1);
+    vg.circle(9.5, 8.5, 1);
     vg.stroke();
     vg.beginPath();
     vg.moveTo(3.5, 10.5);
@@ -912,22 +912,22 @@ pub fn iconCross(vg: nvg) void {
 
 pub fn iconTimelineBegin(vg: nvg) void {
     vg.beginPath();
-    vg.moveTo(11, 2);
-    vg.lineTo(11, 11);
-    vg.lineTo(2, 6.5);
+    vg.moveTo(12, 2);
+    vg.lineTo(12, 12);
+    vg.lineTo(2, 7);
     vg.closePath();
-    vg.rect(2, 2, 1, 9);
+    vg.rect(2, 2, 1, 10);
     vg.fillColor(nvg.rgb(66, 66, 66));
     vg.fill();
 }
 
 pub fn iconTimelineLeft(vg: nvg) void {
     vg.beginPath();
-    vg.moveTo(6, 2);
-    vg.lineTo(6, 11);
-    vg.lineTo(1.5, 6.5);
+    vg.moveTo(8, 2);
+    vg.lineTo(8, 12);
+    vg.lineTo(2, 7);
     vg.closePath();
-    vg.rect(7, 2, 2, 9);
+    vg.rect(9, 2, 2, 10);
     vg.fillColor(nvg.rgb(66, 66, 66));
     vg.fill();
 }
@@ -935,8 +935,8 @@ pub fn iconTimelineLeft(vg: nvg) void {
 pub fn iconTimelinePlay(vg: nvg) void {
     vg.beginPath();
     vg.moveTo(2, 2);
-    vg.lineTo(2, 11);
-    vg.lineTo(11, 6.5);
+    vg.lineTo(2, 12);
+    vg.lineTo(12, 7);
     vg.closePath();
     vg.fillColor(nvg.rgb(66, 66, 66));
     vg.fill();
@@ -944,19 +944,19 @@ pub fn iconTimelinePlay(vg: nvg) void {
 
 pub fn iconTimelinePause(vg: nvg) void {
     vg.beginPath();
-    vg.rect(4, 2, 2, 9);
-    vg.rect(7, 2, 2, 9);
+    vg.rect(4, 2, 2, 10);
+    vg.rect(8, 2, 2, 10);
     vg.fillColor(nvg.rgb(66, 66, 66));
     vg.fill();
 }
 
 pub fn iconTimelineRight(vg: nvg) void {
     vg.beginPath();
-    vg.moveTo(7, 2);
-    vg.lineTo(7, 11);
-    vg.lineTo(11.5, 6.5);
+    vg.moveTo(6, 2);
+    vg.lineTo(6, 12);
+    vg.lineTo(12, 7);
     vg.closePath();
-    vg.rect(4, 2, 2, 9);
+    vg.rect(3, 2, 2, 10);
     vg.fillColor(nvg.rgb(66, 66, 66));
     vg.fill();
 }
@@ -964,10 +964,10 @@ pub fn iconTimelineRight(vg: nvg) void {
 pub fn iconTimelineEnd(vg: nvg) void {
     vg.beginPath();
     vg.moveTo(2, 2);
-    vg.lineTo(2, 11);
-    vg.lineTo(11, 6.5);
+    vg.lineTo(2, 12);
+    vg.lineTo(12, 7);
     vg.closePath();
-    vg.rect(10, 2, 1, 9);
+    vg.rect(11, 2, 1, 10);
     vg.fillColor(nvg.rgb(66, 66, 66));
     vg.fill();
 }
@@ -999,17 +999,17 @@ pub fn iconEyeOpen(vg: nvg) void {
     vg.strokeColor(nvg.rgb(66, 66, 66));
     vg.stroke();
     vg.beginPath();
-    vg.ellipse(8, 8, 3.5, 3.5);
+    vg.circle(8, 8, 3.5);
     vg.fillColor(nvg.rgb(30, 170, 15));
     vg.fill();
     vg.strokeColor(nvg.rgb(66, 66, 66));
     vg.stroke();
     vg.beginPath();
-    vg.ellipse(8, 8, 2, 2);
+    vg.circle(8, 8, 2);
     vg.fillColor(nvg.rgb(66, 66, 66));
     vg.fill();
     vg.beginPath();
-    vg.ellipse(9, 7, 1, 1);
+    vg.circle(9, 7, 1);
     vg.fillColor(nvg.rgbf(1, 1, 1));
     vg.fill();
 }
@@ -1143,7 +1143,7 @@ pub fn cursorBucket(vg: nvg) void {
     vg.fill();
     vg.stroke();
     vg.beginPath();
-    vg.ellipse(9.5, 8.5, 1, 1);
+    vg.circle(9.5, 8.5, 1);
     vg.stroke();
     vg.beginPath();
     vg.moveTo(3.5, 10.5);

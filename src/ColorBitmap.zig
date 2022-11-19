@@ -91,8 +91,15 @@ pub fn blendPixel(self: ColorBitmap, x: i32, y: i32, color: Color) bool {
 }
 
 pub fn setPixelUnchecked(self: ColorBitmap, x: u32, y: u32, color: Color) void {
+    @setRuntimeSafety(false);
     std.debug.assert(x < self.width);
     std.mem.copy(u8, self.pixels[4 * (y * self.width + x) ..][0..4], &color);
+}
+
+pub fn blendPixelUnchecked(self: ColorBitmap, x: u32, y: u32, color: Color) void {
+    const dst = self.getPixelUnchecked(x, y);
+    const blended = col.blend(color[0..], dst[0..]);
+    self.setPixelUnchecked(x, y, blended);
 }
 
 pub fn getPixel(self: ColorBitmap, x: i32, y: i32) ?Color {

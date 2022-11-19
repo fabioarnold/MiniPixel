@@ -77,7 +77,7 @@ layer_widgets: ArrayList(*LayerWidget),
 const Self = @This();
 
 const name_w: f32 = 160; // col for layer names
-const tile_w: f32 = 20;
+const tile_w: f32 = 22;
 
 pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     var self = try allocator.create(Self);
@@ -86,12 +86,12 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         .widget = gui.Widget.init(allocator, rect),
         .allocator = allocator,
         .document = document,
-        .begin_button = try gui.Button.init(allocator, Rect(f32).make(5, 5, 21, 21), ""),
-        .left_button = try gui.Button.init(allocator, Rect(f32).make(25, 5, 21, 21), ""),
-        .play_button = try gui.Button.init(allocator, Rect(f32).make(45, 5, 21, 21), ""),
-        .right_button = try gui.Button.init(allocator, Rect(f32).make(65, 5, 21, 21), ""),
-        .end_button = try gui.Button.init(allocator, Rect(f32).make(85, 5, 21, 21), ""),
-        .onion_skinning_button = try gui.Button.init(allocator, Rect(f32).make(5 + 60, 5 + 21 + 5, 21, 21), ""),
+        .begin_button = try gui.Button.init(allocator, Rect(f32).make(5 + 0 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .left_button = try gui.Button.init(allocator, Rect(f32).make(5 + 1 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .play_button = try gui.Button.init(allocator, Rect(f32).make(5 + 2 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .right_button = try gui.Button.init(allocator, Rect(f32).make(5 + 3 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .end_button = try gui.Button.init(allocator, Rect(f32).make(5 + 4 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .onion_skinning_button = try gui.Button.init(allocator, Rect(f32).make(5 + 63, 5 + tile_w + 5, tile_w, tile_w), ""),
         .layer_widgets = ArrayList(*LayerWidget).init(allocator),
     };
     self.widget.onResizeFn = onResize;
@@ -168,8 +168,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     try self.widget.addChild(&self.onion_skinning_button.widget);
 
     var i: usize = 0;
-    while (i < document.layer_count) : (i += 1) {
-        try self.layer_widgets.append(try LayerWidget.init(allocator, Rect(f32).make(5, 51 + @intToFloat(f32, i) * tile_w, 60, tile_w), document));
+    while (i < document.getLayerCount()) : (i += 1) {
+        try self.layer_widgets.append(try LayerWidget.init(allocator, Rect(f32).make(5, 53 + @intToFloat(f32, i) * (tile_w - 1), 60, tile_w), document));
     }
 
     for (self.layer_widgets.items) |layer_widget| {
@@ -226,7 +226,7 @@ fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {
             self.document.gotoFrame(frame);
         }
         const layer = @floatToInt(u32, (mouse_y - y) / tile_w);
-        if (layer > 0 and layer - 1 < self.document.layer_count) {
+        if (layer > 0 and layer - 1 < self.document.getLayerCount()) {
             self.document.selectLayer(layer - 1);
         }
     }
@@ -240,20 +240,20 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
 
     vg.beginPath();
     const x = rect.x + 5;
-    const y = rect.y + 5 + 21 + 5;
+    const y = rect.y + 5 + tile_w + 5;
     vg.rect(x + 0.5, y + 0.5, rect.w - 1 - 10, rect.h - 1 - 15 - 21);
     vg.strokeColor(gui.theme_colors.border);
     vg.stroke();
 
-    const frame_count = self.document.frame_count;
-    const layer_count = self.document.layer_count;
+    const layer_count = self.document.getLayerCount();
+    const frame_count = self.document.getFrameCount();
 
     // draw selection
-    const selected_frame = self.document.selected_frame;
     const selected_layer = self.document.selected_layer;
+    const selected_frame = self.document.selected_frame;
     vg.beginPath();
-    vg.rect(x + 1, y + 1 + @intToFloat(f32, 1 + selected_layer) * tile_w, name_w + @intToFloat(f32, frame_count) * tile_w, tile_w);
-    vg.rect(x + 1 + name_w + @intToFloat(f32, selected_frame) * tile_w, y + 1, tile_w, @intToFloat(f32, 1 + layer_count) * tile_w);
+    vg.rect(x + 1, y + 1 + @intToFloat(f32, 1 + selected_layer) * (tile_w - 1), name_w + @intToFloat(f32, frame_count) * (tile_w - 1), (tile_w - 1));
+    vg.rect(x + 1 + name_w + @intToFloat(f32, selected_frame) * (tile_w - 1), y + 1, (tile_w - 1), @intToFloat(f32, 1 + layer_count) * (tile_w - 1));
     vg.fillColor(nvg.rgbf(1, 1, 1));
     vg.fill();
 
@@ -261,18 +261,18 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
     vg.beginPath();
     var row: usize = 0;
     while (row <= layer_count) : (row += 1) {
-        vg.moveTo(x + 1, y + @intToFloat(f32, 1 + row) * tile_w + 0.5);
-        vg.lineTo(x + name_w + @intToFloat(f32, frame_count) * tile_w + 1, y + @intToFloat(f32, 1 + row) * tile_w + 0.5);
+        vg.moveTo(x + 1, y + @intToFloat(f32, 1 + row) * (tile_w - 1) + 0.5);
+        vg.lineTo(x + name_w + @intToFloat(f32, frame_count) * (tile_w - 1) + 1, y + @intToFloat(f32, 1 + row) * (tile_w - 1) + 0.5);
     }
     var col: usize = 0;
     while (col < 3) : (col += 1) {
-        vg.moveTo(x + @intToFloat(f32, 1 + col) * tile_w + 0.5, y + 1);
-        vg.lineTo(x + @intToFloat(f32, 1 + col) * tile_w + 0.5, y + @intToFloat(f32, 1 + layer_count) * tile_w + 0.5);
+        vg.moveTo(x + @intToFloat(f32, 1 + col) * (tile_w - 1) + 0.5, y + 1);
+        vg.lineTo(x + @intToFloat(f32, 1 + col) * (tile_w - 1) + 0.5, y + @intToFloat(f32, 1 + layer_count) * (tile_w - 1) + 0.5);
     }
     col = 0;
     while (col <= frame_count) : (col += 1) {
-        vg.moveTo(x + name_w + @intToFloat(f32, col) * tile_w + 0.5, y + 1);
-        vg.lineTo(x + name_w + @intToFloat(f32, col) * tile_w + 0.5, y + @intToFloat(f32, 1 + layer_count) * tile_w + 0.5);
+        vg.moveTo(x + name_w + @intToFloat(f32, col) * (tile_w - 1) + 0.5, y + 1);
+        vg.lineTo(x + name_w + @intToFloat(f32, col) * (tile_w - 1) + 0.5, y + @intToFloat(f32, 1 + layer_count) * (tile_w - 1) + 0.5);
     }
     vg.strokeColor(gui.theme_colors.shadow);
     vg.stroke();
@@ -286,13 +286,32 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
     var layer: usize = 1;
     while (layer <= layer_count) : (layer += 1) {
         const text = std.fmt.bufPrint(&buf, "Layer #{}", .{layer}) catch unreachable;
-        _ = vg.text(x + 60 + 5, y + (@intToFloat(f32, layer) + 0.5) * tile_w + 1, text);
+        _ = vg.text(x + 60 + 5, y + (@intToFloat(f32, layer) + 0.5) * (tile_w - 1) + 1, text);
     }
     vg.textAlign(.{.horizontal = .center, .vertical = .middle});
     var frame: usize = 0;
     while (frame < frame_count) : (frame += 1) {
         const text = std.fmt.bufPrint(&buf, "{}", .{frame + 1}) catch unreachable;
-        _ = vg.text(x + name_w + (@intToFloat(f32, frame) + 0.5) * tile_w, y + 0.5 * tile_w + 1, text);
+        _ = vg.text(x + name_w + (@intToFloat(f32, frame) + 0.5) * (tile_w - 1), y + 0.5 * (tile_w - 1) + 1, text);
+    }
+
+    // draw cel indicators
+    row = 0;
+    while (row < layer_count) : (row += 1) {
+        col = 0;
+        while (col < frame_count) : (col += 1) {
+            if (self.document.layers.items[row].cels.items[col].bitmap == null) {
+                vg.beginPath();
+                vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, 1 + row)) * (tile_w - 1) + 11, 5.5);
+                vg.strokeColor(nvg.rgb(66, 66, 66));
+                vg.stroke();
+            } else {
+                vg.beginPath();
+                vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, 1 + row)) * (tile_w - 1) + 11, 6);
+                vg.fillColor(nvg.rgb(66, 66, 66));
+                vg.fill();
+            }
+        }
     }
 
     widget.drawChildren(vg);
