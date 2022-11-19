@@ -19,6 +19,7 @@ const LayerWidget = struct {
     document: *Document, // just a reference
 
     visible_button: *gui.Button,
+    lock_button: *gui.Button,
 
     fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*LayerWidget {
         var self = try allocator.create(LayerWidget);
@@ -28,6 +29,7 @@ const LayerWidget = struct {
             .allocator = allocator,
             .document = document,
             .visible_button = try gui.Button.init(allocator, Rect(f32).make(1, 1, 20, 20), ""),
+            .lock_button = try gui.Button.init(allocator, Rect(f32).make(22, 1, 20, 20), ""),
         };
 
         self.visible_button.style = .toolbar;
@@ -46,14 +48,32 @@ const LayerWidget = struct {
                 }
             }
         }.click;
+        self.lock_button.style = .toolbar;
+        self.lock_button.iconFn = icons.iconLockOpen;
+        self.lock_button.onClickFn = struct {
+            fn click(button: *gui.Button) void {
+                const layer_widget = @fieldParentPtr(LayerWidget, "widget", button.widget.parent.?);
+                if (layer_widget.lock_button.iconFn == &icons.iconLockOpen) {
+                    layer_widget.lock_button.iconFn = icons.iconLockClosed;
+                    layer_widget.lock_button.checked = true;
+                    // layer_widget.document.setLayerVisible(0, false);
+                } else {
+                    layer_widget.lock_button.iconFn = icons.iconLockOpen;
+                    layer_widget.lock_button.checked = false;
+                    // layer_widget.document.setLayerVisible(0, true);
+                }
+            }
+        }.click;
 
         try self.widget.addChild(&self.visible_button.widget);
+        try self.widget.addChild(&self.lock_button.widget);
 
         return self;
     }
 
     fn deinit(self: *LayerWidget) void {
         self.visible_button.deinit();
+        self.lock_button.deinit();
 
         self.widget.deinit();
         self.allocator.destroy(self);

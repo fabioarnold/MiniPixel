@@ -1024,6 +1024,64 @@ pub fn iconEyeClosed(vg: nvg) void {
     vg.stroke();
 }
 
+pub fn iconLockOpen(vg: nvg) void {
+    vg.lineCap(.square);
+    defer vg.lineCap(.butt);
+    vg.beginPath();
+    vg.moveTo(5.5, 7.5);
+    vg.lineTo(5.5, 4.5);
+    vg.bezierTo(5.5, 3.5, 6.5, 2.5, 7.5, 2.5);
+    vg.lineTo(8.5, 2.5);
+    vg.bezierTo(9.5, 2.5, 10.5, 3.5, 10.5, 4.5);
+    vg.lineTo(10.5, 5.5);
+    vg.strokeWidth(3);
+    vg.stroke();
+    vg.strokeWidth(1);
+    vg.strokeColor(nvg.rgb(196, 196, 196));
+    vg.stroke();
+    vg.beginPath();
+    vg.moveTo(3.5, 8.5);
+    vg.lineTo(3.5, 13.5);
+    vg.lineTo(4.5, 14.5);
+    vg.lineTo(11.5, 14.5);
+    vg.lineTo(12.5, 13.5);
+    vg.lineTo(12.5, 8.5);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(247, 226, 107));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(66, 66, 66));
+    vg.stroke();
+}
+
+pub fn iconLockClosed(vg: nvg) void {
+    vg.lineCap(.square);
+    defer vg.lineCap(.butt);
+    vg.beginPath();
+    vg.moveTo(5.5, 8.5);
+    vg.lineTo(5.5, 5.5);
+    vg.bezierTo(5.5, 4.5, 6.5, 3.5, 7.5, 3.5);
+    vg.lineTo(8.5, 3.5);
+    vg.bezierTo(9.5, 3.5, 10.5, 4.5, 10.5, 5.5);
+    vg.lineTo(10.5, 6.5);
+    vg.strokeWidth(3);
+    vg.stroke();
+    vg.strokeWidth(1);
+    vg.strokeColor(nvg.rgb(196, 196, 196));
+    vg.stroke();
+    vg.beginPath();
+    vg.moveTo(3.5, 7.5);
+    vg.lineTo(3.5, 12.5);
+    vg.lineTo(4.5, 13.5);
+    vg.lineTo(11.5, 13.5);
+    vg.lineTo(12.5, 12.5);
+    vg.lineTo(12.5, 7.5);
+    vg.closePath();
+    vg.fillColor(nvg.rgb(247, 226, 107));
+    vg.fill();
+    vg.strokeColor(nvg.rgb(66, 66, 66));
+    vg.stroke();
+}
+
 pub fn cursorArrow(vg: nvg) void {
     vg.beginPath();
     vg.moveTo(-0.5, -0.5);
