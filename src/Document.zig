@@ -15,8 +15,8 @@ const Rect = geometry.Rect;
 const Recti = Rect(i32);
 
 const CanvasWidget = @import("CanvasWidget.zig");
-const ColorBitmap = @import("ColorBitmap.zig");
-const IndexedBitmap = @import("IndexedBitmap.zig");
+const Bitmap = @import("bitmap.zig").Bitmap;
+pub const BitmapType = @import("bitmap.zig").BitmapType;
 const col = @import("color.zig");
 const Color = col.Color;
 const ColorLayer = col.ColorLayer;
@@ -28,131 +28,9 @@ const HistorySnapshot = @import("history.zig").Snapshot;
 
 const Document = @This();
 
-pub const BitmapType = enum(u8) {
-    color,
-    indexed,
-};
-const Bitmap = union(BitmapType) {
-    color: ColorBitmap,
-    indexed: IndexedBitmap,
-
-    fn init(bitmap_type: BitmapType, allocator: Allocator, width: u32, height: u32) !Bitmap {
-        return switch (bitmap_type) {
-            .color => .{ .color = try ColorBitmap.init(allocator, width, height) },
-            .indexed => .{ .indexed = try IndexedBitmap.init(allocator, width, height) },
-        };
-    }
-
-    fn initFromImage(image: Image) Bitmap {
-        return if (image.colormap != null) .{ .indexed = IndexedBitmap{
-            .width = image.width,
-            .height = image.height,
-            .indices = image.pixels,
-        } } else .{ .color = ColorBitmap{
-            .width = image.width,
-            .height = image.height,
-            .pixels = image.pixels,
-        } };
-    }
-
-    fn deinit(self: Bitmap, allocator: Allocator) void {
-        switch (self) {
-            .color => |color_bitmap| color_bitmap.deinit(allocator),
-            .indexed => |indexed_bitmap| indexed_bitmap.deinit(allocator),
-        }
-    }
-
-    fn clone(self: Bitmap, allocator: Allocator) !Bitmap {
-        return switch (self) {
-            .color => |color_bitmap| Bitmap{ .color = try color_bitmap.clone(allocator) },
-            .indexed => |indexed_bitmap| Bitmap{ .indexed = try indexed_bitmap.clone(allocator) },
-        };
-    }
-
-    fn getWidth(self: Bitmap) u32 {
-        return switch (self) {
-            .color => |color_bitmap| color_bitmap.width,
-            .indexed => |indexed_bitmap| indexed_bitmap.width,
-        };
-    }
-
-    fn getHeight(self: Bitmap) u32 {
-        return switch (self) {
-            .color => |color_bitmap| color_bitmap.height,
-            .indexed => |indexed_bitmap| indexed_bitmap.height,
-        };
-    }
-
-    fn createTexture(self: Bitmap, vg: nvg) nvg.Image {
-        return switch (self) {
-            .color => |color_bitmap| nvg.createImageRGBA(
-                vg,
-                color_bitmap.width,
-                color_bitmap.height,
-                .{ .nearest = true },
-                color_bitmap.pixels,
-            ),
-            .indexed => |indexed_bitmap| nvg.createImageAlpha(
-                vg,
-                indexed_bitmap.width,
-                indexed_bitmap.height,
-                .{ .nearest = true },
-                indexed_bitmap.indices,
-            ),
-        };
-    }
-
-    fn toImage(self: Bitmap, allocator: Allocator) Image {
-        return switch (self) {
-            .color => |color_bitmap| Image{
-                .allocator = allocator,
-                .width = color_bitmap.width,
-                .height = color_bitmap.height,
-                .pixels = color_bitmap.pixels,
-            },
-            .indexed => |*indexed_bitmap| Image{
-                .allocator = allocator,
-                .width = indexed_bitmap.width,
-                .height = indexed_bitmap.height,
-                .pixels = indexed_bitmap.indices,
-            },
-        };
-    }
-
-    fn mirrorHorizontally(self: Bitmap) void {
-        switch (self) {
-            .color => |color_bitmap| color_bitmap.mirrorHorizontally(),
-            .indexed => |indexed_bitmap| indexed_bitmap.mirrorHorizontally(),
-        }
-    }
-
-    fn mirrorVertically(self: Bitmap) void {
-        switch (self) {
-            .color => |color_bitmap| color_bitmap.mirrorVertically(),
-            .indexed => |indexed_bitmap| indexed_bitmap.mirrorVertically(),
-        }
-    }
-
-    fn rotate(self: *Bitmap, allocator: Allocator, clockwise: bool) !void {
-        try switch (self.*) {
-            .color => |*color_bitmap| color_bitmap.rotate(allocator, clockwise),
-            .indexed => |*indexed_bitmap| indexed_bitmap.rotate(allocator, clockwise),
-        };
-    }
-};
-
 pub const Selection = struct {
     rect: Recti,
     bitmap: Bitmap,
-    // texture: nvg.Image,
-    // need_texture_recreation: bool = false,
-
-    // fn updateTexture(self: Selection) void {
-    //     switch (self.bitmap) {
-    //         .color => |color_bitmap| nvg.updateImage(self.texture, color_bitmap.pixels),
-    //         .indexed => |indexed_bitmap| nvg.updateImage(self.texture, indexed_bitmap.indices),
-    //     }
-    // }
 };
 
 const PrimitiveTag = enum {
