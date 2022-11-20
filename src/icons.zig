@@ -1035,6 +1035,7 @@ pub fn iconLockOpen(vg: nvg) void {
     vg.bezierTo(9.5, 2.5, 10.5, 3.5, 10.5, 4.5);
     vg.lineTo(10.5, 5.5);
     vg.strokeWidth(3);
+    vg.strokeColor(nvg.rgb(66, 66, 66));
     vg.stroke();
     vg.strokeWidth(1);
     vg.strokeColor(nvg.rgb(196, 196, 196));
@@ -1064,6 +1065,7 @@ pub fn iconLockClosed(vg: nvg) void {
     vg.bezierTo(9.5, 3.5, 10.5, 4.5, 10.5, 5.5);
     vg.lineTo(10.5, 6.5);
     vg.strokeWidth(3);
+    vg.strokeColor(nvg.rgb(66, 66, 66));
     vg.stroke();
     vg.strokeWidth(1);
     vg.strokeColor(nvg.rgb(196, 196, 196));

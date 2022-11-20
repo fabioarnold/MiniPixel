@@ -205,7 +205,6 @@ pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) 
 
 // FIXME: this only handles files with a single frame and layer
 pub fn load(self: *Self, file_path: []const u8) !void {
-    if (false) {
     const image = try Image.initFromFile(self.allocator, file_path);
     if (image.colormap) |colormap| {
         if (colormap.len != self.colormap.len) return error.UnexpectedColormapLen;
@@ -213,22 +212,29 @@ pub fn load(self: *Self, file_path: []const u8) !void {
         self.colormap = colormap;
     }
 
-    self.deinitBitmaps();
-    self.bitmaps = ArrayList(Bitmap).init(self.allocator);
-    try self.bitmaps.append(Bitmap.initFromImage(image));
+    const bitmap = Bitmap.initFromImage(image);
+    self.width = bitmap.getWidth();
+    self.height = bitmap.getHeight();
+    self.bitmap_type = bitmap.getType();
     self.frame_count = 1;
     self.selected_frame = 0;
+    self.selected_layer = 0;
+    self.deinitLayers();
+    self.layers = ArrayList(Layer).init(self.allocator);
+    const layer = try Layer.init(self.allocator, self.frame_count);
+    layer.cels.items[0].bitmap = bitmap;
+    try self.layers.append(layer);
+
     self.preview_bitmap.deinit(self.allocator);
-    self.preview_bitmap = try self.bitmaps.items[0].clone(self.allocator);
+    self.preview_bitmap = try bitmap.clone(self.allocator);
     self.need_texture_recreation = true;
+    self.last_preview = .none;
     self.x = 0;
     self.y = 0;
 
     self.freeSelection();
 
     try self.history.reset(self);
-    }
-    @panic("TODO");
 }
 
 // FIXME: this only handles files with a single frame and layer
@@ -629,7 +635,7 @@ pub fn paste(self: *Self) !void {
     }
 
     var bitmap = Bitmap.initFromImage(image);
-    if (std.meta.activeTag(bitmap) != self.getBitmapType()) {
+    if (bitmap.getType() != self.getBitmapType()) {
         const converted_bitmap: Bitmap = switch (bitmap) {
             .color => |color_bitmap| .{ .indexed = try color_bitmap.convertToIndexed(self.allocator, self.colormap) },
             .indexed => |indexed_bitmap| .{ .color = try indexed_bitmap.convertToTruecolor(self.allocator, image.colormap.?) },

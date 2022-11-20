@@ -84,6 +84,10 @@ pub const Bitmap = union(BitmapType) {
         };
     }
 
+    pub fn getType(self: Bitmap) BitmapType {
+        return std.meta.activeTag(self);
+    }
+
     pub fn createTexture(self: Bitmap, vg: nvg) nvg.Image {
         return switch (self) {
             .color => |color_bitmap| nvg.createImageRGBA(
