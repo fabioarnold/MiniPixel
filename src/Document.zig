@@ -176,31 +176,27 @@ pub fn deinit(self: *Self, vg: nvg) void {
 }
 
 pub fn createNew(self: *Self, width: u32, height: u32, bitmap_type: BitmapType) !void {
-    if (false) {
-    self.deinitBitmaps();
+    self.deinitLayers();
     self.preview_bitmap.deinit(self.allocator);
     self.freeSelection();
 
-    self.bitmaps = ArrayList(Bitmap).init(self.allocator);
-    var i: u32 = 0;
-    while (i < self.frame_count) : (i += 1) {
-        var bitmap = try Bitmap.init(bitmap_type, self.allocator, width, height);
-        switch (bitmap_type) {
-            .color => bitmap.color.fill(self.background_color),
-            .indexed => bitmap.indexed.fill(self.background_index),
-        }
-        bitmap.color.fill(self.background_color);
-        try self.bitmaps.append(bitmap);
-    }
+    self.width = width;
+    self.height = height;
+    self.bitmap_type = bitmap_type;
+    self.frame_count = 1;
+    self.selected_frame = 0;
+    self.selected_layer = 0;
+    // Create initial layer
+    self.layers = ArrayList(Layer).init(self.allocator);
+    try self.layers.append(try Layer.init(self.allocator, self.frame_count));
 
-    self.preview_bitmap = try self.getSelectedFrameBitmap().clone(self.allocator);
+    self.preview_bitmap = try Bitmap.init(self.allocator, self.width, self.height, self.bitmap_type);
+    self.preview_bitmap.clear();
     self.need_texture_recreation = true;
     self.x = 0;
     self.y = 0;
 
     try self.history.reset(self);
-    }
-    @panic("TODO");
 }
 
 // FIXME: this only handles files with a single frame and layer
