@@ -90,6 +90,13 @@ left_button: *gui.Button,
 play_button: *gui.Button,
 right_button: *gui.Button,
 end_button: *gui.Button,
+
+add_frame_button: *gui.Button,
+delete_frame_button: *gui.Button,
+
+add_layer_button: *gui.Button,
+delete_layer_button: *gui.Button,
+
 onion_skinning_button: *gui.Button,
 
 layer_widgets: ArrayList(*LayerWidget),
@@ -111,7 +118,11 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         .play_button = try gui.Button.init(allocator, Rect(f32).make(5 + 2 * (tile_w - 1), 5, tile_w, tile_w), ""),
         .right_button = try gui.Button.init(allocator, Rect(f32).make(5 + 3 * (tile_w - 1), 5, tile_w, tile_w), ""),
         .end_button = try gui.Button.init(allocator, Rect(f32).make(5 + 4 * (tile_w - 1), 5, tile_w, tile_w), ""),
-        .onion_skinning_button = try gui.Button.init(allocator, Rect(f32).make(5 + 63, 5 + tile_w + 5, tile_w, tile_w), ""),
+        .add_frame_button = try gui.Button.init(allocator, Rect(f32).make(15 + 5 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .delete_frame_button = try gui.Button.init(allocator, Rect(f32).make(15 + 6 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .add_layer_button = try gui.Button.init(allocator, Rect(f32).make(25 + 7 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .delete_layer_button = try gui.Button.init(allocator, Rect(f32).make(25 + 8 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .onion_skinning_button = try gui.Button.init(allocator, Rect(f32).make(5 + 64, 5 + tile_w + 5, 20, 20), ""),
         .layer_widgets = ArrayList(*LayerWidget).init(allocator),
     };
     self.widget.onResizeFn = onResize;
@@ -171,6 +182,44 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         }
     }.click;
 
+    self.add_frame_button.iconFn = icons.iconAddFrame;
+    self.add_frame_button.icon_x = 3;
+    self.add_frame_button.icon_y = 3;
+    self.add_frame_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            const timeline = @fieldParentPtr(Self, "widget", button.widget.parent.?);
+            timeline.document.addFrame() catch {}; // TODO: handle?
+        }
+    }.click;
+    self.delete_frame_button.iconFn = icons.iconDeleteFrameDisabled;
+    self.delete_frame_button.icon_x = 3;
+    self.delete_frame_button.icon_y = 3;
+    self.delete_frame_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            const timeline = @fieldParentPtr(Self, "widget", button.widget.parent.?);
+            timeline.document.deleteFrame(timeline.document.selected_frame) catch {}; // TODO: handle?
+        }
+    }.click;
+    self.add_layer_button.iconFn = icons.iconAddLayer;
+    self.add_layer_button.icon_x = 3;
+    self.add_layer_button.icon_y = 3;
+    self.add_layer_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            const timeline = @fieldParentPtr(Self, "widget", button.widget.parent.?);
+            timeline.document.addLayer() catch {}; // TODO: handle?
+        }
+    }.click;
+    self.delete_layer_button.iconFn = icons.iconDeleteLayerDisabled;
+    self.delete_layer_button.icon_x = 3;
+    self.delete_layer_button.icon_y = 3;
+    self.delete_layer_button.onClickFn = struct {
+        fn click(button: *gui.Button) void {
+            const timeline = @fieldParentPtr(Self, "widget", button.widget.parent.?);
+            timeline.document.deleteLayer(timeline.document.selected_layer) catch {}; // TODO: handle?
+        }
+    }.click;
+
+    self.onion_skinning_button.widget.visible = false;
     self.onion_skinning_button.style = .toolbar;
     self.onion_skinning_button.iconFn = icons.iconOnionSkinning;
     self.onion_skinning_button.onClickFn = struct {
@@ -185,16 +234,13 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     try self.widget.addChild(&self.play_button.widget);
     try self.widget.addChild(&self.right_button.widget);
     try self.widget.addChild(&self.end_button.widget);
+    try self.widget.addChild(&self.add_frame_button.widget);
+    try self.widget.addChild(&self.delete_frame_button.widget);
+    try self.widget.addChild(&self.add_layer_button.widget);
+    try self.widget.addChild(&self.delete_layer_button.widget);
     try self.widget.addChild(&self.onion_skinning_button.widget);
 
-    var i: usize = 0;
-    while (i < document.getLayerCount()) : (i += 1) {
-        try self.layer_widgets.append(try LayerWidget.init(allocator, Rect(f32).make(5, 53 + @intToFloat(f32, i) * (tile_w - 1), 60, tile_w), document));
-    }
-
-    for (self.layer_widgets.items) |layer_widget| {
-        try self.widget.addChild(&layer_widget.widget);
-    }
+    self.onDocumentChanged(); // Sync
 
     return self;
 }
@@ -205,6 +251,10 @@ pub fn deinit(self: *Self) void {
     self.play_button.deinit();
     self.right_button.deinit();
     self.end_button.deinit();
+    self.add_frame_button.deinit();
+    self.delete_frame_button.deinit();
+    self.add_layer_button.deinit();
+    self.delete_layer_button.deinit();
     self.onion_skinning_button.deinit();
     for (self.layer_widgets.items) |layer_widget| {
         layer_widget.deinit();
@@ -215,8 +265,33 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
+pub fn onDocumentChanged(self: *Self) void {
+    const layer_count = self.document.getLayerCount();
+    self.delete_frame_button.widget.enabled = self.document.getFrameCount() > 1;
+    self.delete_frame_button.iconFn = if (self.delete_frame_button.widget.enabled) icons.iconDeleteFrame else icons.iconDeleteFrameDisabled;
+    self.delete_layer_button.widget.enabled = layer_count > 1;
+    self.delete_layer_button.iconFn = if (self.delete_layer_button.widget.enabled) icons.iconDeleteLayer else icons.iconDeleteLayerDisabled;
+
+    // Sync layer widgets
+    if (layer_count < self.layer_widgets.items.len) {
+        const remove_count = self.layer_widgets.items.len - layer_count;
+        for (self.layer_widgets.items[layer_count..]) |layer_widget| {
+            layer_widget.deinit();
+        }
+        self.layer_widgets.shrinkRetainingCapacity(layer_count);
+        self.widget.children.shrinkRetainingCapacity(self.widget.children.items.len - remove_count);
+    } else {
+        var i: usize = self.layer_widgets.items.len;
+        while (i < layer_count) : (i += 1) {
+            const rect = Rect(f32).make(5, 53 + @intToFloat(f32, i) * (tile_w - 1), 60, tile_w);
+            const layer_widget = LayerWidget.init(self.allocator, rect, self.document) catch return; // TODO: handle?
+            self.layer_widgets.append(layer_widget) catch return;
+            self.widget.addChild(&layer_widget.widget) catch return;
+        }
+    }
+}
+
 fn onResize(widget: *gui.Widget, event: *const gui.ResizeEvent) void {
-    // TODO
     _ = widget;
     _ = event;
     // const self = @fieldParentPtr(Self, "widget", widget);
@@ -239,13 +314,13 @@ fn onMouseMove(widget: *gui.Widget, event: *const gui.MouseEvent) void {
 
 fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {
     const x = 5 + name_w;
-    const y = 5 + 21 + 5;
+    const y = 5 + tile_w + 5;
     if (mouse_x >= x and mouse_y >= y) {
-        const frame = @floatToInt(u32, (mouse_x - x) / tile_w);
+        const frame = @floatToInt(u32, (mouse_x - x) / (tile_w - 1));
         if (frame < self.document.frame_count) {
             self.document.gotoFrame(frame);
         }
-        const layer = @floatToInt(u32, (mouse_y - y) / tile_w);
+        const layer = @floatToInt(u32, (mouse_y - y) / (tile_w - 1));
         if (layer > 0 and layer - 1 < self.document.getLayerCount()) {
             self.document.selectLayer(layer - 1);
         }

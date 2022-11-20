@@ -1048,6 +1048,7 @@ fn onDocumentChanged(self: *Self) void {
             self.blend_mode.widget.enabled = false;
         },
     }
+    self.timeline.onDocumentChanged();
 }
 
 fn updateDocumentPalette(self: *Self, mode: Document.PaletteUpdateMode) !void {

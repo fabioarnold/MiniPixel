@@ -94,7 +94,7 @@ height: u32 = 16,
 bitmap_type: BitmapType = .color,
 layers: ArrayList(Layer),
 colormap: []u8,
-frame_count: u32 = 10,
+frame_count: u32 = 1,
 frame_time: u32 = 100, // in ms
 
 selected_layer: u32 = 0,
@@ -552,6 +552,45 @@ pub fn gotoFirstFrame(self: *Self) void {
 
 pub fn gotoLastFrame(self: *Self) void {
     self.gotoFrame(self.frame_count - 1);
+}
+
+pub fn addFrame(self: *Self) !void {
+    for (self.layers.items) |*layer| {
+        try layer.cels.append(self.allocator, Cel{});
+    }
+    self.frame_count += 1;
+    try self.history.pushFrame(self);
+}
+
+pub fn deleteFrame(self: *Self, frame_index: usize) !void {
+    if (self.frame_count == 1) return;
+    if (frame_index >= self.frame_count) return;
+    for (self.layers.items) |*layer| {
+        var cel = layer.cels.orderedRemove(frame_index);
+        cel.deinit(self.allocator);
+    }
+    self.frame_count -= 1;
+    if (self.selected_frame == self.frame_count) self.selected_frame -= 1;
+    self.last_preview = .full;
+    self.clearPreview();
+    try self.history.pushFrame(self);
+}
+
+pub fn addLayer(self: *Self) !void {
+    const layer = try Layer.init(self.allocator, self.frame_count);
+    try self.layers.append(layer);
+    try self.history.pushFrame(self);
+}
+
+pub fn deleteLayer(self: *Self, layer_index: usize) !void {
+    if (self.getLayerCount() == 1) return;
+    if (layer_index >= self.getLayerCount()) return;
+    var layer = self.layers.orderedRemove(layer_index);
+    layer.deinit(self.allocator);
+    if (self.selected_layer == self.getLayerCount()) self.selected_layer -= 1;
+    self.last_preview = .full;
+    self.clearPreview();
+    try self.history.pushFrame(self);
 }
 
 pub fn canUndo(self: Self) bool {

@@ -1084,6 +1084,124 @@ pub fn iconLockClosed(vg: nvg) void {
     vg.stroke();
 }
 
+fn drawPlus(vg: nvg, enabled: bool) void {
+    vg.beginPath();
+    vg.moveTo(10.5, 7.5);
+    vg.lineTo(12.5, 7.5);
+    vg.lineTo(12.5, 10.5);
+    vg.lineTo(15.5, 10.5);
+    vg.lineTo(15.5, 12.5);
+    vg.lineTo(12.5, 12.5);
+    vg.lineTo(12.5, 15.5);
+    vg.lineTo(10.5, 15.5);
+    vg.lineTo(10.5, 12.5);
+    vg.lineTo(7.5, 12.5);
+    vg.lineTo(7.5, 10.5);
+    vg.lineTo(10.5, 10.5);
+    vg.closePath();
+    vg.fillColor(if (enabled) nvg.rgb(166, 202, 240) else nvg.rgb(170, 170, 170));
+    vg.fill();
+    vg.strokeColor(if (enabled) nvg.rgb(26, 111, 161) else nvg.rgb(170, 170, 170));
+    vg.stroke();
+}
+
+fn drawCross(vg: nvg, enabled: bool) void {
+    vg.beginPath();
+    vg.moveTo(9.5, 8);
+    vg.lineTo(11.5, 10);
+    vg.lineTo(13.5, 8);
+    vg.lineTo(15, 9.5);
+    vg.lineTo(13, 11.5);
+    vg.lineTo(15, 13.5);
+    vg.lineTo(13.5, 15);
+    vg.lineTo(11.5, 13);
+    vg.lineTo(9.5, 15);
+    vg.lineTo(8, 13.5);
+    vg.lineTo(10, 11.5);
+    vg.lineTo(8, 9.5);
+    vg.closePath();
+    vg.fillColor(if (enabled) nvg.rgb(250, 10, 0) else nvg.rgb(170, 170, 170));
+    vg.fill();
+    vg.strokeColor(if (enabled) nvg.rgb(66, 66, 66) else nvg.rgb(170, 170, 170));
+    vg.stroke();
+}
+
+pub fn iconFrame(vg: nvg, enabled: bool) void {
+    vg.beginPath();
+    vg.rect(0, 2, 16, 12);
+    vg.fillColor(if (enabled) nvg.rgb(66, 66, 66) else nvg.rgb(170, 170, 170));
+    vg.fill();
+    vg.beginPath();
+    vg.rect(0, 3, 2, 1);
+    vg.rect(3, 3, 2, 1);
+    vg.rect(6, 3, 2, 1);
+    vg.rect(9, 3, 2, 1);
+    vg.rect(12, 3, 2, 1);
+    vg.rect(15, 3, 1, 1);
+    vg.rect(0, 12, 2, 1);
+    vg.rect(3, 12, 2, 1);
+    vg.rect(6, 12, 2, 1);
+    vg.rect(9, 12, 2, 1);
+    vg.rect(12, 12, 2, 1);
+    vg.rect(15, 12, 1, 1);
+    vg.fillColor(if (enabled) nvg.rgbf(1, 1, 1) else nvg.rgb(224, 224, 224));
+    vg.fill();
+    vg.beginPath();
+    vg.rect(0, 5, 3, 6);
+    vg.rect(4, 5, 4, 6);
+    vg.rect(9, 5, 4, 6);
+    vg.rect(14, 5, 2, 6);
+    vg.fillColor(if (enabled) nvg.rgb(196, 196, 196) else nvg.rgb(224, 224, 224));
+    vg.fill();
+}
+
+pub fn iconAddFrame(vg: nvg) void {
+    iconFrame(vg, true);
+    drawPlus(vg, true);
+}
+
+pub fn iconDeleteFrame(vg: nvg) void {
+    iconFrame(vg, true);
+    drawCross(vg, true);
+}
+
+pub fn iconDeleteFrameDisabled(vg: nvg) void {
+    iconFrame(vg, false);
+    drawCross(vg, false);
+}
+
+pub fn iconLayer(vg: nvg, enabled: bool) void {
+    vg.fillColor(if (enabled) nvg.rgbf(1, 1, 1) else nvg.rgb(224, 224, 224));
+    vg.strokeColor(if (enabled) nvg.rgb(66, 66, 66) else nvg.rgb(170, 170, 170));
+    var i: usize = 0;
+    while (i < 2) : (i += 1) {
+        const y: f32 = if (i == 0) 4 else 0;
+        vg.beginPath();
+        vg.moveTo(5.5, y + 0.5);
+        vg.lineTo(11.5, y + 6.5);
+        vg.lineTo(6.5, y + 11.5);
+        vg.lineTo(0.5, y + 5.5);
+        vg.closePath();
+        vg.fill();
+        vg.stroke();
+    }
+}
+
+pub fn iconAddLayer(vg: nvg) void {
+    iconLayer(vg, true);
+    drawPlus(vg, true);
+}
+
+pub fn iconDeleteLayer(vg: nvg) void {
+    iconLayer(vg, true);
+    drawCross(vg, true);
+}
+
+pub fn iconDeleteLayerDisabled(vg: nvg) void {
+    iconLayer(vg, false);
+    drawCross(vg, false);
+}
+
 pub fn cursorArrow(vg: nvg) void {
     vg.beginPath();
     vg.moveTo(-0.5, -0.5);
