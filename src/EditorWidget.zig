@@ -552,6 +552,14 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
             else => key_event.event.ignore(),
         }
     } else if (key_event.modifiers == 0) {
+        const has_selection = self.document.selection != null;
+        if (!has_selection) {
+            switch (key_event.key) {
+                .Left => self.document.gotoPrevFrame(),
+                .Right => self.document.gotoNextFrame(),
+                else => {},
+            }
+        }
         switch (key_event.key) {
             .C => self.setTool(.crop), // Crop
             .R => self.setTool(.select), // Rectangle select
@@ -559,6 +567,7 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
             .B => self.setTool(.fill), // Bucket
             .X => self.color_foreground_background.swap(),
             .Hash => self.togglePixelGrid(),
+            // .Space => self.document.togglePlayback(), // TODO
             else => key_event.event.ignore(),
         }
     } else {
