@@ -1084,6 +1084,23 @@ pub fn iconLockClosed(vg: nvg) void {
     vg.stroke();
 }
 
+pub fn iconUnlinked(vg: nvg) void {
+    vg.beginPath();
+    vg.circle(4, 8, 3);
+    vg.circle(12, 8, 3);
+    vg.fillColor(nvg.rgb(66, 66, 66));
+    vg.fill();
+}
+
+pub fn iconLinked(vg: nvg) void {
+    vg.beginPath();
+    vg.circle(4, 8, 3);
+    vg.circle(12, 8, 3);
+    vg.rect(4, 5, 8, 6);
+    vg.fillColor(nvg.rgb(66, 66, 66));
+    vg.fill();
+}
+
 fn drawPlus(vg: nvg, enabled: bool) void {
     vg.beginPath();
     vg.moveTo(10.5, 7.5);
