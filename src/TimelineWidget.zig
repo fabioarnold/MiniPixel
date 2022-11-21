@@ -9,96 +9,9 @@ const geometry = @import("gui/geometry.zig");
 const Point = geometry.Point;
 const Rect = geometry.Rect;
 const Document = @import("Document.zig");
+const LayerWidget = @import("LayerWidget.zig");
 
 const TimelineWidget = @This();
-
-const LayerWidget = struct {
-    widget: gui.Widget,
-    allocator: Allocator,
-
-    document: *Document, // just a reference
-
-    visible_button: *gui.Button,
-    lock_button: *gui.Button,
-    link_button: *gui.Button,
-
-    fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*LayerWidget {
-        var self = try allocator.create(LayerWidget);
-
-        self.* = LayerWidget{
-            .widget = gui.Widget.init(allocator, rect),
-            .allocator = allocator,
-            .document = document,
-            .visible_button = try gui.Button.init(allocator, Rect(f32).make(1, 1, 20, 20), ""),
-            .lock_button = try gui.Button.init(allocator, Rect(f32).make(22, 1, 20, 20), ""),
-            .link_button = try gui.Button.init(allocator, Rect(f32).make(43, 1, 20, 20), ""),
-        };
-
-        self.visible_button.style = .toolbar;
-        self.visible_button.iconFn = icons.iconEyeOpen;
-        self.visible_button.onClickFn = struct {
-            fn click(button: *gui.Button) void {
-                const layer_widget = @fieldParentPtr(LayerWidget, "widget", button.widget.parent.?);
-                if (layer_widget.visible_button.iconFn == &icons.iconEyeOpen) {
-                    layer_widget.visible_button.iconFn = icons.iconEyeClosed;
-                    layer_widget.visible_button.checked = true;
-                    // layer_widget.document.setLayerVisible(0, false);
-                } else {
-                    layer_widget.visible_button.iconFn = icons.iconEyeOpen;
-                    layer_widget.visible_button.checked = false;
-                    // layer_widget.document.setLayerVisible(0, true);
-                }
-            }
-        }.click;
-        self.lock_button.style = .toolbar;
-        self.lock_button.iconFn = icons.iconLockOpen;
-        self.lock_button.onClickFn = struct {
-            fn click(button: *gui.Button) void {
-                const layer_widget = @fieldParentPtr(LayerWidget, "widget", button.widget.parent.?);
-                if (layer_widget.lock_button.iconFn == &icons.iconLockOpen) {
-                    layer_widget.lock_button.iconFn = icons.iconLockClosed;
-                    layer_widget.lock_button.checked = true;
-                    // layer_widget.document.setLayerVisible(0, false);
-                } else {
-                    layer_widget.lock_button.iconFn = icons.iconLockOpen;
-                    layer_widget.lock_button.checked = false;
-                    // layer_widget.document.setLayerVisible(0, true);
-                }
-            }
-        }.click;
-        self.link_button.style = .toolbar;
-        self.link_button.iconFn = icons.iconUnlinked;
-        self.link_button.onClickFn = struct {
-            fn click(button: *gui.Button) void {
-                const layer_widget = @fieldParentPtr(LayerWidget, "widget", button.widget.parent.?);
-                if (layer_widget.link_button.iconFn == &icons.iconUnlinked) {
-                    layer_widget.link_button.iconFn = icons.iconLinked;
-                    layer_widget.link_button.checked = true;
-                    // layer_widget.document.setLayerVisible(0, false);
-                } else {
-                    layer_widget.link_button.iconFn = icons.iconUnlinked;
-                    layer_widget.link_button.checked = false;
-                    // layer_widget.document.setLayerVisible(0, true);
-                }
-            }
-        }.click;
-
-        try self.widget.addChild(&self.visible_button.widget);
-        try self.widget.addChild(&self.lock_button.widget);
-        try self.widget.addChild(&self.link_button.widget);
-
-        return self;
-    }
-
-    fn deinit(self: *LayerWidget) void {
-        self.visible_button.deinit();
-        self.lock_button.deinit();
-        self.link_button.deinit();
-
-        self.widget.deinit();
-        self.allocator.destroy(self);
-    }
-};
 
 widget: gui.Widget,
 allocator: Allocator,
@@ -116,6 +29,10 @@ delete_frame_button: *gui.Button,
 
 add_layer_button: *gui.Button,
 delete_layer_button: *gui.Button,
+
+visible_button: *gui.Button,
+lock_button: *gui.Button,
+link_button: *gui.Button,
 
 onion_skinning_button: *gui.Button,
 
@@ -142,6 +59,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         .delete_frame_button = try gui.Button.init(allocator, Rect(f32).make(15 + 6 * (tile_w - 1), 5, tile_w, tile_w), ""),
         .add_layer_button = try gui.Button.init(allocator, Rect(f32).make(25 + 7 * (tile_w - 1), 5, tile_w, tile_w), ""),
         .delete_layer_button = try gui.Button.init(allocator, Rect(f32).make(25 + 8 * (tile_w - 1), 5, tile_w, tile_w), ""),
+        .visible_button = try gui.Button.init(allocator, Rect(f32).make(6, 5 + tile_w + 6, 20, 20), ""),
+        .lock_button = try gui.Button.init(allocator, Rect(f32).make(27, 5 + tile_w + 6, 20, 20), ""),
+        .link_button = try gui.Button.init(allocator, Rect(f32).make(48, 5 + tile_w + 6, 20, 20), ""),
         .onion_skinning_button = try gui.Button.init(allocator, Rect(f32).make(5 + 64, 5 + tile_w + 5, 20, 20), ""),
         .layer_widgets = ArrayList(*LayerWidget).init(allocator),
     };
@@ -239,6 +159,13 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         }
     }.click;
 
+    self.visible_button.style = .toolbar;
+    self.visible_button.onClickFn = onVisibleButtonClicked;
+    self.lock_button.style = .toolbar;
+    self.lock_button.onClickFn = onLockButtonClicked;
+    self.link_button.style = .toolbar;
+    self.link_button.onClickFn = onLinkButtonClicked;
+
     self.onion_skinning_button.widget.visible = false;
     self.onion_skinning_button.style = .toolbar;
     self.onion_skinning_button.iconFn = icons.iconOnionSkinning;
@@ -258,6 +185,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     try self.widget.addChild(&self.delete_frame_button.widget);
     try self.widget.addChild(&self.add_layer_button.widget);
     try self.widget.addChild(&self.delete_layer_button.widget);
+    try self.widget.addChild(&self.visible_button.widget);
+    try self.widget.addChild(&self.lock_button.widget);
+    try self.widget.addChild(&self.link_button.widget);
     try self.widget.addChild(&self.onion_skinning_button.widget);
 
     self.onDocumentChanged(); // Sync
@@ -275,6 +205,9 @@ pub fn deinit(self: *Self) void {
     self.delete_frame_button.deinit();
     self.add_layer_button.deinit();
     self.delete_layer_button.deinit();
+    self.visible_button.deinit();
+    self.lock_button.deinit();
+    self.link_button.deinit();
     self.onion_skinning_button.deinit();
     for (self.layer_widgets.items) |layer_widget| {
         layer_widget.deinit();
@@ -301,14 +234,18 @@ pub fn onDocumentChanged(self: *Self) void {
         self.layer_widgets.shrinkRetainingCapacity(layer_count);
         self.widget.children.shrinkRetainingCapacity(self.widget.children.items.len - remove_count);
     } else {
-        var i: usize = self.layer_widgets.items.len;
+        var i: u32 = @truncate(u32, self.layer_widgets.items.len);
         while (i < layer_count) : (i += 1) {
             const rect = Rect(f32).make(5, 53 + @intToFloat(f32, i) * (tile_w - 1), 60, tile_w);
-            const layer_widget = LayerWidget.init(self.allocator, rect, self.document) catch return; // TODO: handle?
+            const layer_widget = LayerWidget.init(self.allocator, rect, self.document, i) catch return; // TODO: handle?
             self.layer_widgets.append(layer_widget) catch return;
             self.widget.addChild(&layer_widget.widget) catch return;
         }
     }
+
+    self.updateVisibleButtons();
+    self.updateLockButtons();
+    self.updateLinkButtons();
 }
 
 fn onResize(widget: *gui.Widget, event: *const gui.ResizeEvent) void {
@@ -330,6 +267,96 @@ fn onMouseMove(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     if (event.isButtonPressed(.left)) {
         self.selectFrameAndLayer(event.x, event.y);
     }
+}
+
+fn onVisibleButtonClicked(button: *gui.Button) void {
+    const self = @fieldParentPtr(Self, "widget", button.widget.parent.?);
+    const layer_count = self.document.getLayerCount();
+    var all_visible: bool = true;
+    var i: u32 = 0;
+    while (i < layer_count) : (i += 1) {
+        if (!self.document.isLayerVisible(i)) {
+            all_visible = false;
+            break;
+        }
+    }
+    i = 0;
+    while (i < layer_count) : (i += 1) {
+        self.document.setLayerVisible(i, !all_visible);
+    }
+    self.updateVisibleButtons();
+}
+
+fn onLockButtonClicked(button: *gui.Button) void {
+    const self = @fieldParentPtr(Self, "widget", button.widget.parent.?);
+    const layer_count = self.document.getLayerCount();
+    var all_unlocked: bool = true;
+    var i: u32 = 0;
+    while (i < layer_count) : (i += 1) {
+        if (self.document.isLayerLocked(i)) {
+            all_unlocked = false;
+            break;
+        }
+    }
+    i = 0;
+    while (i < layer_count) : (i += 1) {
+        self.document.setLayerLocked(i, all_unlocked);
+    }
+    self.updateLockButtons();
+}
+
+fn onLinkButtonClicked(button: *gui.Button) void {
+    const self = @fieldParentPtr(Self, "widget", button.widget.parent.?);
+    const layer_count = self.document.getLayerCount();
+    var all_linked: bool = true;
+    var i: u32 = 0;
+    while (i < layer_count) : (i += 1) {
+        if (!self.document.isLayerLinked(i)) {
+            all_linked = false;
+            break;
+        }
+    }
+    i = 0;
+    while (i < layer_count) : (i += 1) {
+        self.document.setLayerLinked(i, !all_linked);
+    }
+    self.updateLinkButtons();
+}
+
+pub fn updateVisibleButtons(self: *Self) void {
+    var any_visible: bool = false;
+    for (self.layer_widgets.items) |layer_widget, i| {
+        const visible = self.document.isLayerVisible(@truncate(u32, i));
+        if (visible) any_visible = true;
+        layer_widget.visible_button.iconFn = if (visible) icons.iconEyeOpen else icons.iconEyeClosed;
+        layer_widget.visible_button.checked = !visible;
+    }
+    self.visible_button.iconFn = if (any_visible) icons.iconEyeOpen else icons.iconEyeClosed;
+    self.visible_button.checked = !any_visible;
+}
+
+pub fn updateLockButtons(self: *Self) void {
+    var any_unlocked: bool = false;
+    for (self.layer_widgets.items) |layer_widget, i| {
+        const locked = self.document.isLayerLocked(@truncate(u32, i));
+        if (!locked) any_unlocked = true;
+        layer_widget.lock_button.iconFn = if (locked) icons.iconLockClosed else icons.iconLockOpen;
+        layer_widget.lock_button.checked = locked;
+    }
+    self.lock_button.iconFn = if (any_unlocked) icons.iconLockOpen else icons.iconLockClosed;
+    self.lock_button.checked = !any_unlocked;
+}
+
+pub fn updateLinkButtons(self: *Self) void {
+    var any_unlinked: bool = false;
+    for (self.layer_widgets.items) |layer_widget, i| {
+        const linked = self.document.isLayerLinked(@truncate(u32, i));
+        if (!linked) any_unlinked = true;
+        layer_widget.link_button.iconFn = if (linked) icons.iconLinked else icons.iconUnlinked;
+        layer_widget.link_button.checked = linked;
+    }
+    self.link_button.iconFn = if (any_unlinked) icons.iconUnlinked else icons.iconLinked;
+    self.link_button.checked = !any_unlinked;
 }
 
 fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {

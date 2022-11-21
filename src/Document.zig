@@ -43,6 +43,10 @@ const Cel = struct {
 const Layer = struct {
     cels: ArrayListUnmanaged(Cel) = .{},
 
+    visible: bool = true,
+    locked: bool = false,
+    linked: bool = false,
+
     pub fn init(allocator: Allocator, frame_count: u32) !Layer {
         var self = Layer{};
         try self.cels.appendNTimes(allocator, Cel{}, frame_count);
@@ -145,6 +149,8 @@ pub fn init(allocator: Allocator, vg: nvg) !*Self {
     };
 
     // Create initial layer
+    try self.layers.append(try Layer.init(allocator, self.frame_count));
+    try self.layers.append(try Layer.init(allocator, self.frame_count));
     try self.layers.append(try Layer.init(allocator, self.frame_count));
 
     self.preview_bitmap = try Bitmap.init(allocator, self.width, self.height, self.bitmap_type);
@@ -527,7 +533,35 @@ pub fn gotoFrame(self: *Self, frame: u32) void {
 pub fn selectLayer(self: *Self, layer: u32) void {
     if (layer < self.getLayerCount() and layer != self.selected_layer) {
         self.selected_layer = layer;
+        self.last_preview = .full;
+        self.clearPreview();
     }
+}
+
+pub fn setLayerVisible(self: *Self, layer: u32, visible: bool) void {
+    self.layers.items[layer].visible = visible;
+    self.last_preview = .full;
+    self.clearPreview();
+}
+
+pub fn isLayerVisible(self: Self, layer: u32) bool {
+    return self.layers.items[layer].visible;
+}
+
+pub fn setLayerLocked(self: *Self, layer: u32, locked: bool) void {
+    self.layers.items[layer].locked = locked;
+}
+
+pub fn isLayerLocked(self: Self, layer: u32) bool {
+    return self.layers.items[layer].locked;
+}
+
+pub fn setLayerLinked(self: *Self, layer: u32, linked: bool) void {
+    self.layers.items[layer].linked = linked;
+}
+
+pub fn isLayerLinked(self: Self, layer: u32) bool {
+    return self.layers.items[layer].linked;
 }
 
 pub fn gotoNextFrame(self: *Self) void {
