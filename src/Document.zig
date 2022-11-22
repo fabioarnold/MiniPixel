@@ -106,12 +106,13 @@ selected_frame: u32 = 0,
 onion_skinning: bool = false,
 playback_timer: gui.Timer,
 
-texture: nvg.Image, // image for display using nvg
-texture_palette: nvg.Image,
+layer_textures: ArrayList(nvg.Image),
+palette_texture: nvg.Image,
 preview_bitmap: Bitmap, // preview brush and lines
 last_preview: PrimitivePreview = .none,
 need_texture_update: bool = false, // bitmap needs to be uploaded to gpu on next draw call
-need_texture_recreation: bool = false,
+need_texture_update_all: bool = false, // all layers need to be updated
+need_texture_recreation: bool = false, // all textures need to be recreated
 
 selection: ?Selection = null,
 copy_location: ?Pointi = null, // where the source was copied from
@@ -139,8 +140,8 @@ pub fn init(allocator: Allocator, vg: nvg) !*Self {
             .on_elapsed_fn = onPlaybackTimerElapsed,
             .ctx = @ptrToInt(self),
         },
-        .texture = undefined,
-        .texture_palette = undefined,
+        .layer_textures = ArrayList(nvg.Image).init(allocator),
+        .palette_texture = undefined,
         .selection_texture = undefined,
         .layers = ArrayList(Layer).init(allocator),
         .colormap = try allocator.alloc(u8, 4 * 256),
@@ -155,8 +156,7 @@ pub fn init(allocator: Allocator, vg: nvg) !*Self {
 
     self.preview_bitmap = try Bitmap.init(allocator, self.width, self.height, self.bitmap_type);
     self.preview_bitmap.clear();
-    self.texture = self.preview_bitmap.createTexture(vg);
-    self.texture_palette = vg.createImageRGBA(256, 1, .{ .nearest = true }, self.colormap);
+    self.palette_texture = vg.createImageRGBA(256, 1, .{ .nearest = true }, self.colormap);
     self.selection_texture = vg.createImageRGBA(0, 0, .{}, &.{}); // dummy
     try self.history.reset(self);
 
@@ -175,8 +175,11 @@ pub fn deinit(self: *Self, vg: nvg) void {
     self.deinitLayers();
     self.preview_bitmap.deinit(self.allocator);
     self.allocator.free(self.colormap);
-    vg.deleteImage(self.texture);
-    vg.deleteImage(self.texture_palette);
+    for (self.layer_textures.items) |texture| {
+        vg.deleteImage(texture);
+    }
+    self.layer_textures.deinit();
+    vg.deleteImage(self.palette_texture);
     self.freeSelection();
     self.allocator.destroy(self);
 }
@@ -527,6 +530,7 @@ pub fn gotoFrame(self: *Self, frame: u32) void {
         self.selected_frame = frame;
         self.last_preview = .full;
         self.clearPreview();
+        self.need_texture_update_all = true;
     }
 }
 
@@ -535,6 +539,7 @@ pub fn selectLayer(self: *Self, layer: u32) void {
         self.selected_layer = layer;
         self.last_preview = .full;
         self.clearPreview();
+        self.need_texture_update_all = true;
     }
 }
 
@@ -724,64 +729,64 @@ pub fn paste(self: *Self) !void {
 
 pub fn crop(self: *Self, rect: Recti) !void {
     if (false) {
-    if (rect.w <= 0 or rect.h <= 0) return error.InvalidCropRect;
+        if (rect.w <= 0 or rect.h <= 0) return error.InvalidCropRect;
 
-    const width = @intCast(u32, rect.w);
-    const height = @intCast(u32, rect.h);
-    const new_bitmap = try Bitmap.init(self.getBitmapType(), self.allocator, width, height);
-    //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
-    switch (new_bitmap) {
-        .color => |color_bitmap| color_bitmap.fill(self.background_color),
-        .indexed => |indexed_bitmap| indexed_bitmap.fill(self.background_index),
-    }
-
-    const intersection = rect.intersection(.{
-        .x = 0,
-        .y = 0,
-        .w = @intCast(i32, self.getWidth()),
-        .h = @intCast(i32, self.getHeight()),
-    });
-    if (intersection.w > 0 and intersection.h > 0) {
-        const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
-        const oy = if (rect.y < 0) @intCast(u32, -rect.y) else 0;
-        const sx = @intCast(u32, intersection.x);
-        const sy = @intCast(u32, intersection.y);
-        const w = @intCast(u32, intersection.w);
-        const h = @intCast(u32, intersection.h);
-        // blit to source
-        var y: u32 = 0;
-        switch (self.bitmap) {
-            .color => |color_bitmap| {
-                while (y < h) : (y += 1) {
-                    const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
-                    const di = 4 * ((sy + y) * color_bitmap.width + sx);
-                    // copy entire line
-                    std.mem.copy(u8, new_bitmap.color.pixels[si .. si + 4 * w], color_bitmap.pixels[di .. di + 4 * w]);
-                }
-            },
-            .indexed => |indexed_bitmap| {
-                while (y < h) : (y += 1) {
-                    const si = (y + oy) * @intCast(u32, rect.w) + ox;
-                    const di = (sy + y) * indexed_bitmap.width + sx;
-                    // copy entire line
-                    std.mem.copy(u8, new_bitmap.indexed.indices[si .. si + w], indexed_bitmap.indices[di .. di + w]);
-                }
-            },
+        const width = @intCast(u32, rect.w);
+        const height = @intCast(u32, rect.h);
+        const new_bitmap = try Bitmap.init(self.getBitmapType(), self.allocator, width, height);
+        //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
+        switch (new_bitmap) {
+            .color => |color_bitmap| color_bitmap.fill(self.background_color),
+            .indexed => |indexed_bitmap| indexed_bitmap.fill(self.background_index),
         }
-    }
 
-    self.bitmap.deinit(self.allocator);
-    self.bitmap = new_bitmap;
-    self.preview_bitmap.deinit(self.allocator);
-    self.preview_bitmap = try self.bitmap.clone(self.allocator);
+        const intersection = rect.intersection(.{
+            .x = 0,
+            .y = 0,
+            .w = @intCast(i32, self.getWidth()),
+            .h = @intCast(i32, self.getHeight()),
+        });
+        if (intersection.w > 0 and intersection.h > 0) {
+            const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
+            const oy = if (rect.y < 0) @intCast(u32, -rect.y) else 0;
+            const sx = @intCast(u32, intersection.x);
+            const sy = @intCast(u32, intersection.y);
+            const w = @intCast(u32, intersection.w);
+            const h = @intCast(u32, intersection.h);
+            // blit to source
+            var y: u32 = 0;
+            switch (self.bitmap) {
+                .color => |color_bitmap| {
+                    while (y < h) : (y += 1) {
+                        const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
+                        const di = 4 * ((sy + y) * color_bitmap.width + sx);
+                        // copy entire line
+                        std.mem.copy(u8, new_bitmap.color.pixels[si .. si + 4 * w], color_bitmap.pixels[di .. di + 4 * w]);
+                    }
+                },
+                .indexed => |indexed_bitmap| {
+                    while (y < h) : (y += 1) {
+                        const si = (y + oy) * @intCast(u32, rect.w) + ox;
+                        const di = (sy + y) * indexed_bitmap.width + sx;
+                        // copy entire line
+                        std.mem.copy(u8, new_bitmap.indexed.indices[si .. si + w], indexed_bitmap.indices[di .. di + w]);
+                    }
+                },
+            }
+        }
 
-    self.need_texture_recreation = true;
+        self.bitmap.deinit(self.allocator);
+        self.bitmap = new_bitmap;
+        self.preview_bitmap.deinit(self.allocator);
+        self.preview_bitmap = try self.bitmap.clone(self.allocator);
 
-    self.x += rect.x;
-    self.y += rect.y;
-    self.canvas.translateByPixel(rect.x, rect.y);
+        self.need_texture_recreation = true;
 
-    try self.history.pushFrame(self);
+        self.x += rect.x;
+        self.y += rect.y;
+        self.canvas.translateByPixel(rect.x, rect.y);
+
+        try self.history.pushFrame(self);
     }
     @panic("TODO");
 }
@@ -1052,17 +1057,17 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
         }
     } else {
         if (false) {
-        try self.bitmaps.items[0].rotate(self.allocator, clockwise);
-        const d = @divTrunc(@intCast(i32, self.getHeight()) - @intCast(i32, self.getWidth()), 2);
-        if (d != 0) {
-            self.x -= d;
-            self.y += d;
-            self.canvas.translateByPixel(d, -d);
-            self.need_texture_recreation = true;
-        }
-        self.last_preview = .full;
-        self.clearPreview();
-        try self.history.pushFrame(self);
+            try self.bitmaps.items[0].rotate(self.allocator, clockwise);
+            const d = @divTrunc(@intCast(i32, self.getHeight()) - @intCast(i32, self.getWidth()), 2);
+            if (d != 0) {
+                self.x -= d;
+                self.y += d;
+                self.canvas.translateByPixel(d, -d);
+                self.need_texture_recreation = true;
+            }
+            self.last_preview = .full;
+            self.clearPreview();
+            try self.history.pushFrame(self);
         }
         @panic("TODO");
     }
@@ -1169,34 +1174,74 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
 }
 
 pub fn draw(self: *Self, vg: nvg) void {
+    if (self.layer_textures.items.len < self.layers.items.len) {
+        while (self.layer_textures.items.len < self.layers.items.len) {
+            const i = self.layer_textures.items.len;
+            const cel = self.layers.items[i].cels.items[self.selected_frame];
+            const bitmap = if (cel.bitmap) |bitmap| bitmap else self.preview_bitmap;
+            self.layer_textures.append(bitmap.createTexture(vg)) catch {}; // TODO: handle?
+        }
+    } else if (self.layer_textures.items.len > self.layers.items.len) {
+        for (self.layer_textures.items[self.layers.items.len..]) |texture| {
+            vg.deleteImage(texture);
+        }
+        self.layer_textures.shrinkRetainingCapacity(self.layers.items.len);
+    }
+
     if (self.need_texture_recreation) {
-        vg.deleteImage(self.texture);
-        self.texture = self.preview_bitmap.createTexture(vg);
         self.need_texture_recreation = false;
-        vg.updateImage(self.texture_palette, self.colormap);
+        self.need_texture_update_all = false;
         self.need_texture_update = false;
+        for (self.layers.items) |layer, i| {
+            vg.deleteImage(self.layer_textures.items[i]);
+            const cel = layer.cels.items[self.selected_frame];
+            const bitmap = if (cel.bitmap) |bitmap| bitmap else self.preview_bitmap;
+            self.layer_textures.items[i] = bitmap.createTexture(vg);
+        }
+        vg.updateImage(self.palette_texture, self.colormap);
+    } else if (self.need_texture_update_all) {
+        self.need_texture_update_all = false;
+        self.need_texture_update = false;
+        for (self.layer_textures.items) |texture, i| {
+            const layer = self.layers.items[i];
+            const cel = layer.cels.items[self.selected_frame];
+            const bitmap = if (i == self.selected_layer) self.preview_bitmap else cel.bitmap orelse continue;
+            switch (bitmap) {
+                .color => |color_bitmap| vg.updateImage(texture, color_bitmap.pixels),
+                .indexed => |indexed_bitmap| vg.updateImage(texture, indexed_bitmap.indices),
+            }
+        }
+        if (self.getBitmapType() == .indexed) {
+            vg.updateImage(self.palette_texture, self.colormap);
+        }
     } else if (self.need_texture_update) {
+        self.need_texture_update = false;
+        const texture = self.layer_textures.items[self.selected_layer];
         switch (self.preview_bitmap) {
-            .color => |color_preview_bitmap| {
-                vg.updateImage(self.texture, color_preview_bitmap.pixels);
-            },
+            .color => |color_preview_bitmap| vg.updateImage(texture, color_preview_bitmap.pixels),
             .indexed => |indexed_preview_bitmap| {
-                vg.updateImage(self.texture, indexed_preview_bitmap.indices);
-                vg.updateImage(self.texture_palette, self.colormap);
+                vg.updateImage(texture, indexed_preview_bitmap.indices);
+                vg.updateImage(self.palette_texture, self.colormap);
             },
         }
-        self.need_texture_update = false;
     }
+
     const width = @intToFloat(f32, self.getWidth());
     const height = @intToFloat(f32, self.getHeight());
     vg.beginPath();
     vg.rect(0, 0, width, height);
-    const pattern = switch (self.getBitmapType()) {
-        .color => vg.imagePattern(0, 0, width, height, 0, self.texture, 1),
-        .indexed => vg.indexedImagePattern(0, 0, width, height, 0, self.texture, self.texture_palette, 1),
-    };
-    vg.fillPaint(pattern);
-    vg.fill();
+    for (self.layer_textures.items) |texture, i| {
+        const layer = self.layers.items[i];
+        if (!layer.visible) continue;
+        const cel = layer.cels.items[self.selected_frame];
+        if (i != self.selected_layer and cel.bitmap == null) continue;
+        const pattern = switch (self.getBitmapType()) {
+            .color => vg.imagePattern(0, 0, width, height, 0, texture, 1),
+            .indexed => vg.indexedImagePattern(0, 0, width, height, 0, texture, self.palette_texture, 1),
+        };
+        vg.fillPaint(pattern);
+        vg.fill();
+    }
 }
 
 pub fn drawSelection(self: *Self, vg: nvg) void {
@@ -1223,7 +1268,7 @@ pub fn drawSelection(self: *Self, vg: nvg) void {
         vg.rect(rect.x, rect.y, rect.w, rect.h);
         const pattern = switch (self.getBitmapType()) {
             .color => vg.imagePattern(rect.x, rect.y, rect.w, rect.h, 0, self.selection_texture, 1),
-            .indexed => vg.indexedImagePattern(rect.x, rect.y, rect.w, rect.h, 0, self.selection_texture, self.texture_palette, 1),
+            .indexed => vg.indexedImagePattern(rect.x, rect.y, rect.w, rect.h, 0, self.selection_texture, self.palette_texture, 1),
         };
         vg.fillPaint(pattern);
         vg.fill();
