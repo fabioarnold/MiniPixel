@@ -37,8 +37,7 @@ pub const Bitmap = union(BitmapType) {
 
     pub fn deinit(self: Bitmap, allocator: Allocator) void {
         switch (self) {
-            .color => |color_bitmap| color_bitmap.deinit(allocator),
-            .indexed => |indexed_bitmap| indexed_bitmap.deinit(allocator),
+            inline else => |bitmap| bitmap.deinit(allocator),
         }
     }
 
@@ -51,8 +50,7 @@ pub const Bitmap = union(BitmapType) {
 
     pub fn clear(self: Bitmap) void {
         switch (self) {
-            .color => |color_bitmap| color_bitmap.clear(),
-            .indexed => |indexed_bitmap| indexed_bitmap.clear(),
+            inline else => |bitmap| bitmap.clear(),
         }
     }
 
@@ -72,15 +70,13 @@ pub const Bitmap = union(BitmapType) {
 
     pub fn getWidth(self: Bitmap) u32 {
         return switch (self) {
-            .color => |color_bitmap| color_bitmap.width,
-            .indexed => |indexed_bitmap| indexed_bitmap.width,
+            inline else => |bitmap| bitmap.width,
         };
     }
 
     pub fn getHeight(self: Bitmap) u32 {
         return switch (self) {
-            .color => |color_bitmap| color_bitmap.height,
-            .indexed => |indexed_bitmap| indexed_bitmap.height,
+            inline else => |bitmap| bitmap.height,
         };
     }
 
@@ -126,22 +122,19 @@ pub const Bitmap = union(BitmapType) {
 
     pub fn mirrorHorizontally(self: Bitmap) void {
         switch (self) {
-            .color => |color_bitmap| color_bitmap.mirrorHorizontally(),
-            .indexed => |indexed_bitmap| indexed_bitmap.mirrorHorizontally(),
+            inline else => |bitmap| bitmap.mirrorHorizontally(),
         }
     }
 
     pub fn mirrorVertically(self: Bitmap) void {
         switch (self) {
-            .color => |color_bitmap| color_bitmap.mirrorVertically(),
-            .indexed => |indexed_bitmap| indexed_bitmap.mirrorVertically(),
+            inline else => |bitmap| bitmap.mirrorVertically(),
         }
     }
 
     pub fn rotate(self: *Bitmap, allocator: Allocator, clockwise: bool) !void {
         try switch (self.*) {
-            .color => |*color_bitmap| color_bitmap.rotate(allocator, clockwise),
-            .indexed => |*indexed_bitmap| indexed_bitmap.rotate(allocator, clockwise),
+            inline else => |*bitmap| bitmap.rotate(allocator, clockwise),
         };
     }
 };
