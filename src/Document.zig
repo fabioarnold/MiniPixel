@@ -561,6 +561,10 @@ pub fn isLayerLocked(self: Self, layer: u32) bool {
     return self.layers.items[layer].locked;
 }
 
+fn isCurrentLayerLocked(self: Self) bool {
+    return self.isLayerLocked(self.selected_layer);
+}
+
 pub fn setLayerLinked(self: *Self, layer: u32, linked: bool) void {
     self.layers.items[layer].linked = linked;
 }
@@ -645,6 +649,8 @@ pub fn redo(self: *Self) !void {
 }
 
 pub fn cut(self: *Self) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     try self.copy();
 
     if (self.selection != null) {
@@ -792,6 +798,8 @@ pub fn crop(self: *Self, rect: Recti) !void {
 }
 
 pub fn clearSelection(self: *Self) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     const selection = self.selection orelse return;
     const rect = selection.rect;
     const bitmap = selection.bitmap;
@@ -922,6 +930,8 @@ pub fn freeSelection(self: *Self) void {
 }
 
 pub fn previewBrush(self: *Self, x: i32, y: i32) void {
+    if (self.isCurrentLayerLocked()) return;
+
     self.clearPreview();
     var success = false;
     switch (self.preview_bitmap) {
@@ -941,6 +951,8 @@ pub fn previewBrush(self: *Self, x: i32, y: i32) void {
 }
 
 pub fn previewStroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) void {
+    if (self.isCurrentLayerLocked()) return;
+
     self.clearPreview();
     switch (self.preview_bitmap) {
         .color => |preview_color_bitmap| {
@@ -995,6 +1007,8 @@ pub fn clearPreview(self: *Self) void {
 }
 
 pub fn fill(self: *Self, color_layer: ColorLayer) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     const color = if (color_layer == .foreground) self.foreground_color else self.background_color;
     const index = if (color_layer == .foreground) self.foreground_index else self.background_index;
     if (self.selection) |selection| {
@@ -1016,6 +1030,8 @@ pub fn fill(self: *Self, color_layer: ColorLayer) !void {
 }
 
 pub fn mirrorHorizontally(self: *Self) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     if (self.selection) |*selection| {
         selection.bitmap.mirrorHorizontally();
         self.need_selection_texture_update = true;
@@ -1030,6 +1046,8 @@ pub fn mirrorHorizontally(self: *Self) !void {
 }
 
 pub fn mirrorVertically(self: *Self) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     if (self.selection) |*selection| {
         selection.bitmap.mirrorVertically();
         self.need_selection_texture_update = true;
@@ -1044,6 +1062,8 @@ pub fn mirrorVertically(self: *Self) !void {
 }
 
 pub fn rotate(self: *Self, clockwise: bool) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     if (self.selection) |*selection| {
         try selection.bitmap.rotate(self.allocator, clockwise);
         std.mem.swap(i32, &selection.rect.w, &selection.rect.h);
@@ -1074,6 +1094,8 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
 }
 
 pub fn beginStroke(self: *Self, x: i32, y: i32) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     if (x < 0 or y < 0) return;
     const ux = @intCast(u32, x);
     const uy = @intCast(u32, y);
@@ -1096,6 +1118,8 @@ pub fn beginStroke(self: *Self, x: i32, y: i32) !void {
 }
 
 pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     const bitmap = try self.getOrCreateCurrentCelBitmap();
     switch (bitmap) {
         .color => |color_bitmap| {
@@ -1113,6 +1137,8 @@ pub fn stroke(self: *Self, x0: i32, y0: i32, x1: i32, y1: i32) !void {
 }
 
 pub fn endStroke(self: *Self) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     try self.history.pushFrame(self);
 }
 
@@ -1132,8 +1158,12 @@ pub fn pick(self: *Self, x: i32, y: i32) void {
                 }
             },
         }
+    } else {
+        switch (self.getBitmapType()) {
+            .color => self.foreground_index = 0,
+            .indexed => std.mem.set(u8, &self.foreground_color, 0),
+        }
     }
-    // TODO: set colors to transparent when there's no cell?
 }
 
 pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
@@ -1152,6 +1182,8 @@ pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
 }
 
 pub fn floodFill(self: *Self, x: i32, y: i32) !void {
+    if (self.isCurrentLayerLocked()) return;
+
     // TODO: we could optimize this by just filling the cel if it was empty
     const bitmap = try self.getOrCreateCurrentCelBitmap();
     switch (bitmap) {
