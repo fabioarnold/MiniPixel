@@ -42,18 +42,17 @@ pub fn eql(self: ColorBitmap, bitmap: ColorBitmap) bool {
 }
 
 pub fn canLosslesslyConvertToIndexed(self: ColorBitmap, allocator: Allocator, colormap: []const u8) !bool {
-    var color: [4]u8 = undefined;
-    var color_set = std.AutoHashMap(@TypeOf(color), void).init(allocator);
+    var color_set = std.AutoHashMap(Color, void).init(allocator);
     defer color_set.deinit();
     var i: usize = 0;
     while (i < 256) : (i += 1) {
-        std.mem.copy(u8, &color, colormap[4 * i ..][0..4]);
+        const color = colormap[4 * i ..][0..4].*;
         try color_set.put(color, {});
     }
     const pixel_count = self.width * self.height;
     i = 0;
     while (i < pixel_count) : (i += 1) {
-        std.mem.copy(u8, &color, self.pixels[4 * i ..][0..4]);
+        const color = self.pixels[4 * i ..][0..4].*;
         if (!color_set.contains(color)) return false;
     }
     return true;

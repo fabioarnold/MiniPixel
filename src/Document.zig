@@ -61,6 +61,33 @@ const Layer = struct {
     }
 };
 
+const BitmapIterator = struct {
+    document: *Document,
+    index: u32 = 0,
+
+    const Self = @This();
+
+    fn init(document: *Document) BitmapIterator {
+        return BitmapIterator{ .document = document };
+    }
+
+    fn next(it: *BitmapIterator) ?*Bitmap {
+        const layer_count = it.document.getLayerCount();
+        const frame_count = it.document.getFrameCount();
+        const bitmap_count = layer_count * frame_count;
+        while (it.index < bitmap_count) : (it.index += 1) {
+            const layer = it.index / frame_count;
+            const frame = it.index % frame_count;
+            const cel = it.document.getCel(layer, frame);
+            if (cel.bitmap != null) {
+                it.index += 1;
+                return &cel.bitmap.?;
+            }
+        }
+        return null;
+    }
+};
+
 pub const Selection = struct {
     rect: Recti,
     bitmap: Bitmap,
@@ -356,6 +383,10 @@ pub fn deserialize(self: *Document, data: []u8) !void {
     self.clearPreview();
 }
 
+fn getCel(self: *Self, layer: u32, frame: u32) *Cel {
+    return &self.layers.items[layer].cels.items[frame];
+}
+
 fn getCurrentCelBitmap(self: Self) ?Bitmap {
     return self.layers.items[self.selected_layer].cels.items[self.selected_frame].bitmap;
 }
@@ -372,16 +403,13 @@ fn getOrCreateCurrentCelBitmap(self: Self) !Bitmap {
 }
 
 pub fn convertToTruecolor(self: *Self) !void {
-    if (false) {
-    for (self.bitmaps.items) |*bitmap| {
-        switch (bitmap.*) {
-            .color => return, // Nothing to do
-            .indexed => |indexed_bitmap| {
-                const color_bitmap = try indexed_bitmap.convertToTruecolor(self.allocator, self.colormap);
-                bitmap.deinit(self.allocator);
-                bitmap.* = .{ .color = color_bitmap };
-            },
-        }
+    if (self.getBitmapType() == .color) return;
+
+    var it = BitmapIterator.init(self);
+    while (it.next()) |bitmap| {
+        const color_bitmap = try bitmap.indexed.convertToTruecolor(self.allocator, self.colormap);
+        bitmap.deinit(self.allocator);
+        bitmap.* = .{ .color = color_bitmap };
     }
 
     if (self.selection) |*selection| {
@@ -390,46 +418,44 @@ pub fn convertToTruecolor(self: *Self) !void {
         selection.bitmap = .{ .color = selection_bitmap };
         self.need_selection_texture_recreation = true;
     }
+
+    const color_bitmap = try self.preview_bitmap.indexed.convertToTruecolor(self.allocator, self.colormap);
     self.preview_bitmap.deinit(self.allocator);
-    self.preview_bitmap = try self.getSelectedFrameBitmap().clone(self.allocator);
+    self.preview_bitmap = .{ .color = color_bitmap };
+
+    self.bitmap_type = .color;
     self.need_texture_recreation = true;
 
     try self.history.pushFrame(self);
-    }
-    @panic("TODO");
 }
 
-pub fn canLosslesslyConvertToIndexed(self: Self) !bool {
-    if (self.getBitmapType() == .color) {
-        return true;
+pub fn canLosslesslyConvertToIndexed(self: *Self) !bool {
+    if (self.getBitmapType() == .indexed) return true;
+
+    var it = BitmapIterator.init(self);
+    while (it.next()) |bitmap| {
+        if (!try bitmap.color.canLosslesslyConvertToIndexed(self.allocator, self.colormap)) {
+            return false;
+        }
     }
-    if (false) {
-    switch (self.getSelectedFrameBitmap()) {
-        .indexed => return true,
-        .color => |color_bitmap| {
-            if (self.selection) |selection| {
-                if (!try selection.bitmap.color.canLosslesslyConvertToIndexed(self.allocator, self.colormap)) {
-                    return false;
-                }
-            }
-            return try color_bitmap.canLosslesslyConvertToIndexed(self.allocator, self.colormap);
-        },
+
+    if (self.selection) |selection| {
+        if (!try selection.bitmap.color.canLosslesslyConvertToIndexed(self.allocator, self.colormap)) {
+            return false;
+        }
     }
-    }
-    @panic("TODO");
+
+    return true;
 }
 
 pub fn convertToIndexed(self: *Self) !void {
-    if (false) {
-    for (self.bitmaps.items) |*bitmap| {
-        switch (bitmap.*) {
-            .color => |color_bitmap| {
-                const indexed_bitmap = try color_bitmap.convertToIndexed(self.allocator, self.colormap);
-                bitmap.deinit(self.allocator);
-                bitmap.* = .{ .indexed = indexed_bitmap };
-            },
-            .indexed => return, // Nothing to do
-        }
+    if (self.getBitmapType() == .indexed) return;
+
+    var it = BitmapIterator.init(self);
+    while (it.next()) |bitmap| {
+        const indexed_bitmap = try bitmap.color.convertToIndexed(self.allocator, self.colormap);
+        bitmap.deinit(self.allocator);
+        bitmap.* = .{ .indexed = indexed_bitmap };
     }
 
     if (self.selection) |*selection| {
@@ -438,13 +464,15 @@ pub fn convertToIndexed(self: *Self) !void {
         selection.bitmap = .{ .indexed = selection_bitmap };
         self.need_selection_texture_recreation = true;
     }
+
+    const indexed_bitmap = try self.preview_bitmap.color.convertToIndexed(self.allocator, self.colormap);
     self.preview_bitmap.deinit(self.allocator);
-    self.preview_bitmap = try self.getSelectedFrameBitmap().clone(self.allocator);
+    self.preview_bitmap = .{ .indexed = indexed_bitmap };
+
+    self.bitmap_type = .indexed;
     self.need_texture_recreation = true;
 
     try self.history.pushFrame(self);
-    }
-    @panic("TODO");
 }
 
 pub const PaletteUpdateMode = enum {
@@ -458,21 +486,14 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
         for (map) |*m, i| {
             m.* = @truncate(u8, col.findNearest(palette, self.colormap[4 * i ..]));
         }
-        if (false) {
-        for (self.bitmaps.items) |bitmap| {
-            switch (bitmap) {
-                .indexed => |indexed_bitmap| {
-                    for (indexed_bitmap.indices) |*c| {
-                        c.* = map[c.*];
-                    }
-                },
-                .color => {},
+        var iter = BitmapIterator.init(self);
+        while (iter.next()) |bitmap| {
+            for (bitmap.indexed.indices) |*c| {
+                c.* = map[c.*];
             }
         }
         self.last_preview = .full;
         self.clearPreview();
-        }
-        @panic("TODO");
     }
 
     std.mem.copy(u8, self.colormap, palette);
