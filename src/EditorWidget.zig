@@ -551,6 +551,11 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
             .Period => self.fillDocument(.background),
             else => key_event.event.ignore(),
         }
+    } else if (key_event.isModifierPressed(.alt)) {
+        switch (key_event.key) {
+            .N => self.timeline.newFrame(),
+            else => key_event.event.ignore(),
+        }
     } else if (key_event.modifiers == 0) {
         const has_selection = self.document.selection != null;
         if (!has_selection) {
@@ -567,7 +572,7 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
             .B => self.setTool(.fill), // Bucket
             .X => self.color_foreground_background.swap(),
             .Hash => self.togglePixelGrid(),
-            // .Space => self.document.togglePlayback(), // TODO
+            .Space => self.timeline.togglePlayback(),
             else => key_event.event.ignore(),
         }
     } else {

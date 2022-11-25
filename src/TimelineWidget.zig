@@ -94,13 +94,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     self.play_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
             const timeline = @fieldParentPtr(Self, "widget", button.widget.parent.?);
-            if (timeline.play_button.iconFn == &icons.iconTimelinePlay) {
-                timeline.play_button.iconFn = icons.iconTimelinePause;
-                timeline.document.play();
-            } else {
-                timeline.play_button.iconFn = icons.iconTimelinePlay;
-                timeline.document.pause();
-            }
+            timeline.togglePlayback();
         }
     }.click;
     self.right_button.iconFn = icons.iconTimelineRight;
@@ -128,7 +122,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
     self.add_frame_button.onClickFn = struct {
         fn click(button: *gui.Button) void {
             const timeline = @fieldParentPtr(Self, "widget", button.widget.parent.?);
-            timeline.document.addFrame() catch {}; // TODO: handle?
+            timeline.newFrame();
         }
     }.click;
     self.delete_frame_button.iconFn = icons.iconDeleteFrameDisabled;
@@ -147,6 +141,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         fn click(button: *gui.Button) void {
             const timeline = @fieldParentPtr(Self, "widget", button.widget.parent.?);
             timeline.document.addLayer() catch {}; // TODO: handle?
+            timeline.document.selectLayer(timeline.document.getLayerCount() - 1);
         }
     }.click;
     self.delete_layer_button.iconFn = icons.iconDeleteLayerDisabled;
@@ -357,6 +352,22 @@ pub fn updateLinkButtons(self: *Self) void {
     }
     self.link_button.iconFn = if (any_unlinked) icons.iconUnlinked else icons.iconLinked;
     self.link_button.checked = !any_unlinked;
+}
+
+pub fn newFrame(self: *Self) void {
+    self.document.addFrame() catch {}; // TODO: handle?
+    self.document.gotoLastFrame();
+}
+
+pub fn togglePlayback(self: *Self) void {
+    // TODO: store playback state in document
+    if (self.play_button.iconFn == &icons.iconTimelinePlay) {
+        self.play_button.iconFn = icons.iconTimelinePause;
+        self.document.play();
+    } else {
+        self.play_button.iconFn = icons.iconTimelinePlay;
+        self.document.pause();
+    }
 }
 
 fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {
