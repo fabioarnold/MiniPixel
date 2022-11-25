@@ -388,81 +388,90 @@ fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {
 fn draw(widget: *gui.Widget, vg: nvg) void {
     const self = @fieldParentPtr(Self, "widget", widget);
     const rect = widget.relative_rect;
+    vg.save();
+    vg.scissor(rect.x, rect.y, rect.w, rect.h);
+    defer vg.restore();
 
     gui.drawPanel(vg, rect.x, rect.y, rect.w, rect.h, 1, false, false);
 
-    vg.beginPath();
-    const x = rect.x + 5;
-    const y = rect.y + 5 + tile_w + 5;
-    vg.rect(x + 0.5, y + 0.5, rect.w - 1 - 10, rect.h - 1 - 15 - 21);
-    vg.strokeColor(gui.theme_colors.border);
-    vg.stroke();
+    {
+        vg.beginPath();
+        const x = rect.x + 5;
+        const y = rect.y + 5 + tile_w + 5;
+        vg.rect(x + 0.5, y + 0.5, rect.w - 1 - 10, rect.h - 1 - 15 - 21);
+        vg.strokeColor(gui.theme_colors.border);
+        vg.stroke();
 
-    const layer_count = self.document.getLayerCount();
-    const frame_count = self.document.getFrameCount();
+        vg.save();
+        vg.scissor(x + 1, y + 1, rect.w - 12, rect.h - 2 - 15 - 21);
+        defer vg.restore();
 
-    // draw selection
-    const selected_layer = self.document.selected_layer;
-    const selected_frame = self.document.selected_frame;
-    vg.beginPath();
-    vg.rect(x + 1, y + 1 + @intToFloat(f32, 1 + selected_layer) * (tile_w - 1), name_w + @intToFloat(f32, frame_count) * (tile_w - 1), (tile_w - 1));
-    vg.rect(x + 1 + name_w + @intToFloat(f32, selected_frame) * (tile_w - 1), y + 1, (tile_w - 1), @intToFloat(f32, 1 + layer_count) * (tile_w - 1));
-    vg.fillColor(nvg.rgbf(1, 1, 1));
-    vg.fill();
+        const layer_count = self.document.getLayerCount();
+        const frame_count = self.document.getFrameCount();
 
-    // draw grid
-    vg.beginPath();
-    var row: usize = 0;
-    while (row <= layer_count) : (row += 1) {
-        vg.moveTo(x + 1, y + @intToFloat(f32, 1 + row) * (tile_w - 1) + 0.5);
-        vg.lineTo(x + name_w + @intToFloat(f32, frame_count) * (tile_w - 1) + 1, y + @intToFloat(f32, 1 + row) * (tile_w - 1) + 0.5);
-    }
-    var col: usize = 0;
-    while (col < 3) : (col += 1) {
-        vg.moveTo(x + @intToFloat(f32, 1 + col) * (tile_w - 1) + 0.5, y + 1);
-        vg.lineTo(x + @intToFloat(f32, 1 + col) * (tile_w - 1) + 0.5, y + @intToFloat(f32, 1 + layer_count) * (tile_w - 1) + 0.5);
-    }
-    col = 0;
-    while (col <= frame_count) : (col += 1) {
-        vg.moveTo(x + name_w + @intToFloat(f32, col) * (tile_w - 1) + 0.5, y + 1);
-        vg.lineTo(x + name_w + @intToFloat(f32, col) * (tile_w - 1) + 0.5, y + @intToFloat(f32, 1 + layer_count) * (tile_w - 1) + 0.5);
-    }
-    vg.strokeColor(gui.theme_colors.shadow);
-    vg.stroke();
+        // draw selection
+        const selected_layer = self.document.selected_layer;
+        const selected_frame = self.document.selected_frame;
+        vg.beginPath();
+        vg.rect(x + 1, y + 1 + @intToFloat(f32, 1 + selected_layer) * (tile_w - 1), name_w + @intToFloat(f32, frame_count) * (tile_w - 1), (tile_w - 1));
+        vg.rect(x + 1 + name_w + @intToFloat(f32, selected_frame) * (tile_w - 1), y + 1, (tile_w - 1), @intToFloat(f32, 1 + layer_count) * (tile_w - 1));
+        vg.fillColor(nvg.rgbf(1, 1, 1));
+        vg.fill();
 
-    // draw text
-    var buf: [50]u8 = undefined;
-    vg.fontFace("guifont");
-    vg.fontSize(12);
-    vg.textAlign(.{.vertical = .middle});
-    vg.fillColor(nvg.rgb(0, 0, 0));
-    var layer: usize = 1;
-    while (layer <= layer_count) : (layer += 1) {
-        const text = std.fmt.bufPrint(&buf, "Layer #{}", .{layer}) catch unreachable;
-        _ = vg.text(x + 60 + 5, y + (@intToFloat(f32, layer) + 0.5) * (tile_w - 1) + 1, text);
-    }
-    vg.textAlign(.{.horizontal = .center, .vertical = .middle});
-    var frame: usize = 0;
-    while (frame < frame_count) : (frame += 1) {
-        const text = std.fmt.bufPrint(&buf, "{}", .{frame + 1}) catch unreachable;
-        _ = vg.text(x + name_w + (@intToFloat(f32, frame) + 0.5) * (tile_w - 1), y + 0.5 * (tile_w - 1) + 1, text);
-    }
-
-    // draw cel indicators
-    row = 0;
-    while (row < layer_count) : (row += 1) {
+        // draw grid
+        vg.beginPath();
+        var row: usize = 0;
+        while (row <= layer_count) : (row += 1) {
+            vg.moveTo(x + 1, y + @intToFloat(f32, 1 + row) * (tile_w - 1) + 0.5);
+            vg.lineTo(x + name_w + @intToFloat(f32, frame_count) * (tile_w - 1) + 1, y + @intToFloat(f32, 1 + row) * (tile_w - 1) + 0.5);
+        }
+        var col: usize = 0;
+        while (col < 3) : (col += 1) {
+            vg.moveTo(x + @intToFloat(f32, 1 + col) * (tile_w - 1) + 0.5, y + 1);
+            vg.lineTo(x + @intToFloat(f32, 1 + col) * (tile_w - 1) + 0.5, y + @intToFloat(f32, 1 + layer_count) * (tile_w - 1) + 0.5);
+        }
         col = 0;
-        while (col < frame_count) : (col += 1) {
-            if (self.document.layers.items[row].cels.items[col].bitmap == null) {
-                vg.beginPath();
-                vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, 1 + row)) * (tile_w - 1) + 11, 5.5);
-                vg.strokeColor(nvg.rgb(66, 66, 66));
-                vg.stroke();
-            } else {
-                vg.beginPath();
-                vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, 1 + row)) * (tile_w - 1) + 11, 6);
-                vg.fillColor(nvg.rgb(66, 66, 66));
-                vg.fill();
+        while (col <= frame_count) : (col += 1) {
+            vg.moveTo(x + name_w + @intToFloat(f32, col) * (tile_w - 1) + 0.5, y + 1);
+            vg.lineTo(x + name_w + @intToFloat(f32, col) * (tile_w - 1) + 0.5, y + @intToFloat(f32, 1 + layer_count) * (tile_w - 1) + 0.5);
+        }
+        vg.strokeColor(gui.theme_colors.shadow);
+        vg.stroke();
+
+        // draw text
+        var buf: [50]u8 = undefined;
+        vg.fontFace("guifont");
+        vg.fontSize(12);
+        vg.textAlign(.{.vertical = .middle});
+        vg.fillColor(nvg.rgb(0, 0, 0));
+        var layer: usize = 1;
+        while (layer <= layer_count) : (layer += 1) {
+            const text = std.fmt.bufPrint(&buf, "Layer #{}", .{layer}) catch unreachable;
+            _ = vg.text(x + 60 + 5, y + (@intToFloat(f32, layer) + 0.5) * (tile_w - 1) + 1, text);
+        }
+        vg.textAlign(.{.horizontal = .center, .vertical = .middle});
+        var frame: usize = 0;
+        while (frame < frame_count) : (frame += 1) {
+            const text = std.fmt.bufPrint(&buf, "{}", .{frame + 1}) catch unreachable;
+            _ = vg.text(x + name_w + (@intToFloat(f32, frame) + 0.5) * (tile_w - 1), y + 0.5 * (tile_w - 1) + 1, text);
+        }
+
+        // draw cel indicators
+        row = 0;
+        while (row < layer_count) : (row += 1) {
+            col = 0;
+            while (col < frame_count) : (col += 1) {
+                if (self.document.layers.items[row].cels.items[col].bitmap == null) {
+                    vg.beginPath();
+                    vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, 1 + row)) * (tile_w - 1) + 11, 5.5);
+                    vg.strokeColor(nvg.rgb(66, 66, 66));
+                    vg.stroke();
+                } else {
+                    vg.beginPath();
+                    vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, 1 + row)) * (tile_w - 1) + 11, 6);
+                    vg.fillColor(nvg.rgb(66, 66, 66));
+                    vg.fill();
+                }
             }
         }
     }
