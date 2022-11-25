@@ -588,7 +588,7 @@ const DrawTool = struct {
                         last_point.y,
                         self.edit_point.x,
                         self.edit_point.y,
-                    );
+                    ) catch {}; // TODO: handle
                 }
             }
             self.last_point = self.edit_point;
@@ -617,10 +617,10 @@ const DrawTool = struct {
                         last_point.y,
                         self.edit_point.x,
                         self.edit_point.y,
-                    );
+                    ) catch {}; // TODO: handle
                 }
             } else {
-                canvas.document.beginStroke(self.edit_point.x, self.edit_point.y);
+                canvas.document.beginStroke(self.edit_point.x, self.edit_point.y) catch {}; // TODO: handle?
             }
             self.last_point = self.edit_point;
             self.drawing = true;
@@ -682,7 +682,7 @@ const DrawTool = struct {
 
     fn onLeave(self: *DrawTool, canvas: *CanvasWidget) void {
         _ = self;
-        canvas.document.clearPreview();
+        canvas.document.clearPreview(); // TODO: handle?
     }
 
     fn updateMousePreview(self: *DrawTool, canvas: *CanvasWidget, mouse_x: f32, mouse_y: f32) void {

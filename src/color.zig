@@ -29,7 +29,7 @@ fn div8(a: u8, b: u8) u8 {
 // blend color a over b (Porter Duff)
 // a_out = a_a + a_b * (1 - a_a)
 // c_out = (c_a * a_a + c_b * a_b * (1 - a_a)) / a_out
-pub fn blend(a: []const u8, b: []const u8) Color {
+pub fn blend(a: Color, b: Color) Color {
     var out: Color = [_]u8{0} ** 4;
     const fac = mul8(b[3], 0xff - a[3]);
     out[3] = a[3] + fac;
@@ -41,7 +41,7 @@ pub fn blend(a: []const u8, b: []const u8) Color {
     return out;
 }
 
-pub fn distanceSqr(a: []const u8, b: []const u8) f32 {
+pub fn distanceSqr(a: Color, b: Color) f32 {
     const d = [_]f32{
         @intToFloat(f32, a[0]) - @intToFloat(f32, b[0]),
         @intToFloat(f32, a[1]) - @intToFloat(f32, b[1]),
@@ -51,12 +51,12 @@ pub fn distanceSqr(a: []const u8, b: []const u8) f32 {
     return d[0] * d[0] + d[1] * d[1] + d[2] * d[2] + d[3] * d[3];
 }
 
-pub fn findNearest(colors: []const u8, color: []const u8) usize {
+pub fn findNearest(colors: []const u8, color: Color) usize {
     var nearest: f32 = std.math.f32_max;
     var nearest_i: usize = 0;
     var i: usize = 0;
     while (i < colors.len and nearest > 0) : (i += 4) {
-        const distance = distanceSqr(colors[i..], color);
+        const distance = distanceSqr(colors[i..][0..4].*, color);
         if (distance < nearest) {
             nearest = distance;
             nearest_i = i;
