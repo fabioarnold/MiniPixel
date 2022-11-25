@@ -387,6 +387,10 @@ fn getCel(self: *Self, layer: u32, frame: u32) *Cel {
     return &self.layers.items[layer].cels.items[frame];
 }
 
+fn getCurrentCel(self: *Self) *Cel {
+    return self.getCel(self.selected_layer, self.selected_frame);
+}
+
 fn getCurrentCelBitmap(self: Self) ?Bitmap {
     return self.layers.items[self.selected_layer].cels.items[self.selected_frame].bitmap;
 }
@@ -1096,20 +1100,21 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
             self.need_selection_texture_update = true;
         }
     } else {
-        if (false) {
-            try self.bitmaps.items[0].rotate(self.allocator, clockwise);
-            const d = @divTrunc(@intCast(i32, self.getHeight()) - @intCast(i32, self.getWidth()), 2);
-            if (d != 0) {
-                self.x -= d;
-                self.y += d;
-                self.canvas.translateByPixel(d, -d);
-                self.need_texture_recreation = true;
+        if (self.getCurrentCel().bitmap) |*bitmap| {
+            if (bitmap.getWidth() == bitmap.getHeight()) {
+                try bitmap.rotate(self.allocator, clockwise);
+                const d = @divTrunc(@intCast(i32, bitmap.getHeight()) - @intCast(i32, bitmap.getWidth()), 2);
+                if (d != 0) {
+                    self.x -= d;
+                    self.y += d;
+                    self.canvas.translateByPixel(d, -d);
+                    self.need_texture_recreation = true;
+                }
+                self.last_preview = .full;
+                self.clearPreview();
+                try self.history.pushFrame(self);
             }
-            self.last_preview = .full;
-            self.clearPreview();
-            try self.history.pushFrame(self);
         }
-        @panic("TODO");
     }
 }
 
