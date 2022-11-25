@@ -755,13 +755,14 @@ pub fn paste(self: *Self) !void {
 }
 
 pub fn crop(self: *Self, rect: Recti) !void {
-    if (false) {
-        if (rect.w <= 0 or rect.h <= 0) return error.InvalidCropRect;
+    if (rect.w <= 0 or rect.h <= 0) return error.InvalidCropRect;
 
-        const width = @intCast(u32, rect.w);
-        const height = @intCast(u32, rect.h);
-        const new_bitmap = try Bitmap.init(self.getBitmapType(), self.allocator, width, height);
-        //errdefer self.allocator.free(new_bitmap); // TODO: bad because tries for undo stuff at the bottom
+    self.width = @intCast(u32, rect.w);
+    self.height = @intCast(u32, rect.h);
+
+    var it = BitmapIterator.init(self);
+    while (it.next()) |bitmap| {
+        const new_bitmap = try Bitmap.init(self.allocator, self.getWidth(), self.getHeight(), self.getBitmapType());
         switch (new_bitmap) {
             .color => |color_bitmap| color_bitmap.fill(self.background_color),
             .indexed => |indexed_bitmap| indexed_bitmap.fill(self.background_index),
@@ -770,8 +771,8 @@ pub fn crop(self: *Self, rect: Recti) !void {
         const intersection = rect.intersection(.{
             .x = 0,
             .y = 0,
-            .w = @intCast(i32, self.getWidth()),
-            .h = @intCast(i32, self.getHeight()),
+            .w = @intCast(i32, bitmap.getWidth()),
+            .h = @intCast(i32, bitmap.getHeight()),
         });
         if (intersection.w > 0 and intersection.h > 0) {
             const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
@@ -782,7 +783,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
             const h = @intCast(u32, intersection.h);
             // blit to source
             var y: u32 = 0;
-            switch (self.bitmap) {
+            switch (bitmap.*) {
                 .color => |color_bitmap| {
                     while (y < h) : (y += 1) {
                         const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
@@ -802,20 +803,22 @@ pub fn crop(self: *Self, rect: Recti) !void {
             }
         }
 
-        self.bitmap.deinit(self.allocator);
-        self.bitmap = new_bitmap;
-        self.preview_bitmap.deinit(self.allocator);
-        self.preview_bitmap = try self.bitmap.clone(self.allocator);
-
-        self.need_texture_recreation = true;
-
-        self.x += rect.x;
-        self.y += rect.y;
-        self.canvas.translateByPixel(rect.x, rect.y);
-
-        try self.history.pushFrame(self);
+        bitmap.deinit(self.allocator);
+        bitmap.* = new_bitmap;
     }
-    @panic("TODO");
+
+    self.preview_bitmap.deinit(self.allocator);
+    self.preview_bitmap = try Bitmap.init(self.allocator, self.getWidth(), self.getHeight(), self.getBitmapType());
+    self.last_preview = .full;
+    self.clearPreview();
+
+    self.need_texture_recreation = true;
+
+    self.x += rect.x;
+    self.y += rect.y;
+    self.canvas.translateByPixel(rect.x, rect.y);
+
+    try self.history.pushFrame(self);
 }
 
 pub fn clearSelection(self: *Self) !void {
@@ -994,8 +997,8 @@ pub fn clearPreview(self: *Self) void {
         .brush => |brush| {
             if (self.getCurrentCelBitmap()) |bitmap| {
                 switch (bitmap) {
-                    .color => |color_bitmap| color_bitmap.copyPixelUnchecked(self.preview_bitmap.color, brush.x, brush.y),
-                    .indexed => |indexed_bitmap| indexed_bitmap.copyIndexUnchecked(self.preview_bitmap.indexed, brush.x, brush.y),
+                    .color => |color_bitmap| color_bitmap.copyPixelToUnchecked(self.preview_bitmap.color, brush.x, brush.y),
+                    .indexed => |indexed_bitmap| indexed_bitmap.copyIndexToUnchecked(self.preview_bitmap.indexed, brush.x, brush.y),
                 }
             } else {
                 self.preview_bitmap.clearPixelUnchecked(brush.x, brush.y);
@@ -1003,10 +1006,7 @@ pub fn clearPreview(self: *Self) void {
         },
         .line => |line| {
             if (self.getCurrentCelBitmap()) |bitmap| {
-                switch (bitmap) {
-                    .color => |color_bitmap| color_bitmap.copyLine(self.preview_bitmap.color, line.x0, line.y0, line.x1, line.y1),
-                    .indexed => |indexed_bitmap| indexed_bitmap.copyLine(self.preview_bitmap.indexed, line.x0, line.y0, line.x1, line.y1),
-                }
+                bitmap.copyLineTo(self.preview_bitmap, line.x0, line.y0, line.x1, line.y1);
             } else {
                 self.preview_bitmap.clearLine(line.x0, line.y0, line.x1, line.y1);
             }

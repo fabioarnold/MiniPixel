@@ -90,7 +90,7 @@ pub fn getIndexUnchecked(self: IndexedBitmap, x: u32, y: u32) u8 {
     return self.indices[i];
 }
 
-pub fn copyIndexUnchecked(self: IndexedBitmap, dst: IndexedBitmap, x: u32, y: u32) void {
+pub fn copyIndexToUnchecked(self: IndexedBitmap, dst: IndexedBitmap, x: u32, y: u32) void {
     const src_index = self.getIndexUnchecked(x, y);
     dst.setIndexUnchecked(x, y, src_index);
 }
@@ -122,7 +122,7 @@ pub fn drawLine(self: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32, index: 
     }
 }
 
-pub fn copyLine(self: IndexedBitmap, dst: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
+pub fn copyLineTo(self: IndexedBitmap, dst: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
     const dx = std.math.absInt(x1 - x0) catch unreachable;
     const sx: i32 = if (x0 < x1) 1 else -1;
     const dy = -(std.math.absInt(y1 - y0) catch unreachable);

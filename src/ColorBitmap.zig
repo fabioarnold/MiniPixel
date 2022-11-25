@@ -118,7 +118,7 @@ pub fn getPixelUnchecked(self: ColorBitmap, x: u32, y: u32) Color {
     return self.pixels[4 * (y * self.width + x) ..][0..4].*;
 }
 
-pub fn copyPixelUnchecked(self: ColorBitmap, dst: ColorBitmap, x: u32, y: u32) void {
+pub fn copyPixelToUnchecked(self: ColorBitmap, dst: ColorBitmap, x: u32, y: u32) void {
     const src_color = self.getPixelUnchecked(x, y);
     dst.setPixelUnchecked(x, y, src_color);
 }
@@ -177,7 +177,7 @@ pub fn blendLine(self: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32, color: C
     }
 }
 
-pub fn copyLine(self: ColorBitmap, dst: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
+pub fn copyLineTo(self: ColorBitmap, dst: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
     const dx = std.math.absInt(x1 - x0) catch unreachable;
     const sx: i32 = if (x0 < x1) 1 else -1;
     const dy = -(std.math.absInt(y1 - y0) catch unreachable);

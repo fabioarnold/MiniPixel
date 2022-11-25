@@ -54,20 +54,6 @@ pub const Bitmap = union(BitmapType) {
         }
     }
 
-    pub fn clearPixelUnchecked(self: Bitmap, x: u32, y: u32) void {
-        switch (self) {
-            .color => |color_bitmap| color_bitmap.setPixelUnchecked(x, y, .{0, 0, 0, 0}),
-            .indexed => |indexed_bitmap| indexed_bitmap.setIndexUnchecked(x, y, 0),
-        }
-    }
-
-    pub fn clearLine(self: Bitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
-        switch (self) {
-            .color => |color_bitmap| color_bitmap.drawLine(x0, y0, x1, y1, .{0, 0, 0, 0}, false),
-            .indexed => |indexed_bitmap| indexed_bitmap.drawLine(x0, y0, x1, y1, 0, false),
-        }
-    }
-
     pub fn getWidth(self: Bitmap) u32 {
         return switch (self) {
             inline else => |bitmap| bitmap.width,
@@ -118,6 +104,27 @@ pub const Bitmap = union(BitmapType) {
                 .pixels = indexed_bitmap.indices,
             },
         };
+    }
+
+    pub fn clearPixelUnchecked(self: Bitmap, x: u32, y: u32) void {
+        switch (self) {
+            .color => |color_bitmap| color_bitmap.setPixelUnchecked(x, y, .{0, 0, 0, 0}),
+            .indexed => |indexed_bitmap| indexed_bitmap.setIndexUnchecked(x, y, 0),
+        }
+    }
+
+    pub fn clearLine(self: Bitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
+        switch (self) {
+            .color => |color_bitmap| color_bitmap.drawLine(x0, y0, x1, y1, .{0, 0, 0, 0}, false),
+            .indexed => |indexed_bitmap| indexed_bitmap.drawLine(x0, y0, x1, y1, 0, false),
+        }
+    }
+
+    pub fn copyLineTo(self: Bitmap, dst: Bitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
+        switch (self) {
+            .color => |color_bitmap| color_bitmap.copyLineTo(dst.color, x0, y0, x1, y1),
+            .indexed => |indexed_bitmap| indexed_bitmap.copyLineTo(dst.indexed, x0, y0, x1, y1),
+        }
     }
 
     pub fn mirrorHorizontally(self: Bitmap) void {
