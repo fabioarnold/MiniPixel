@@ -63,7 +63,7 @@ pub fn convertToIndexed(self: ColorBitmap, allocator: Allocator, colormap: []con
     const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
     var i: usize = 0;
     while (i < pixel_count) : (i += 1) {
-        indexed_bitmap.indices[i] = @truncate(u8, col.findNearest(colormap, self.pixels[4 * i ..]));
+        indexed_bitmap.indices[i] = @truncate(u8, col.findNearest(colormap, self.pixels[4 * i ..][0..4].*));
     }
     return indexed_bitmap;
 }
@@ -82,7 +82,7 @@ pub fn setPixel(self: ColorBitmap, x: i32, y: i32, color: Color) bool {
 
 pub fn blendPixel(self: ColorBitmap, x: i32, y: i32, color: Color) bool {
     if (self.getPixel(x, y)) |dst| {
-        const blended = col.blend(color[0..], dst[0..]);
+        const blended = col.blend(color, dst);
         self.setPixelUnchecked(@intCast(u32, x), @intCast(u32, y), blended);
         return true;
     }
@@ -92,12 +92,12 @@ pub fn blendPixel(self: ColorBitmap, x: i32, y: i32, color: Color) bool {
 pub fn setPixelUnchecked(self: ColorBitmap, x: u32, y: u32, color: Color) void {
     @setRuntimeSafety(false);
     std.debug.assert(x < self.width);
-    std.mem.copy(u8, self.pixels[4 * (y * self.width + x) ..][0..4], &color);
+    self.pixels[4 * (y * self.width + x) ..][0..4].* = color;
 }
 
 pub fn blendPixelUnchecked(self: ColorBitmap, x: u32, y: u32, color: Color) void {
     const dst = self.getPixelUnchecked(x, y);
-    const blended = col.blend(color[0..], dst[0..]);
+    const blended = col.blend(color, dst);
     self.setPixelUnchecked(x, y, blended);
 }
 
@@ -115,8 +115,7 @@ pub fn getPixel(self: ColorBitmap, x: i32, y: i32) ?Color {
 pub fn getPixelUnchecked(self: ColorBitmap, x: u32, y: u32) Color {
     @setRuntimeSafety(false);
     std.debug.assert(x < self.width);
-    const c = self.pixels[4 * (y * self.width + x) ..];
-    return Color{ c[0], c[1], c[2], c[3] };
+    return self.pixels[4 * (y * self.width + x) ..][0..4].*;
 }
 
 pub fn copyPixelUnchecked(self: ColorBitmap, dst: ColorBitmap, x: u32, y: u32) void {

@@ -484,7 +484,7 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
     if (mode == .map and self.getBitmapType() == .indexed) {
         var map: [256]u8 = undefined; // colormap -> palette
         for (map) |*m, i| {
-            m.* = @truncate(u8, col.findNearest(palette, self.colormap[4 * i ..]));
+            m.* = @truncate(u8, col.findNearest(palette, self.colormap[4 * i ..][0..4].*));
         }
         var iter = BitmapIterator.init(self);
         while (iter.next()) |bitmap| {
@@ -849,10 +849,9 @@ pub fn clearSelection(self: *Self) !void {
                         .alpha => {
                             var x: u32 = 0;
                             while (x < w) : (x += 1) {
-                                const src = bitmap.color.pixels[si + 4 * x .. si + 4 * x + 4];
-                                const dst = color_bitmap.pixels[di + 4 * x .. di + 4 * x + 4];
-                                const out = col.blend(src, dst);
-                                std.mem.copy(u8, dst, &out);
+                                const src = bitmap.color.pixels[si + 4 * x ..][0..4];
+                                const dst = color_bitmap.pixels[di + 4 * x ..][0..4];
+                                dst.* = col.blend(src.*, dst.*);
                             }
                         },
                         .replace => std.mem.copy(u8, color_bitmap.pixels[di .. di + 4 * w], bitmap.color.pixels[si .. si + 4 * w]),
@@ -1212,7 +1211,7 @@ pub fn floodFill(self: *Self, x: i32, y: i32) !void {
             switch (self.blend_mode) {
                 .alpha => {
                     if (color_bitmap.getPixel(x, y)) |dst| {
-                        const blended = col.blend(self.foreground_color[0..], dst[0..]);
+                        const blended = col.blend(self.foreground_color, dst);
                         try color_bitmap.floodFill(self.allocator, x, y, blended);
                     }
                 },

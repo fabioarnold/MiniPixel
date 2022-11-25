@@ -1036,14 +1036,14 @@ fn onDocumentChanged(self: *Self) void {
             const fgc = self.color_foreground_background.getRgba(.foreground);
             var dfgc = self.document.colormap[4 * @as(usize, self.document.foreground_index) ..][0..4];
             if (!std.mem.eql(u8, &fgc, dfgc)) {
-                self.document.foreground_index = @truncate(u8, col.findNearest(self.document.colormap, &fgc));
+                self.document.foreground_index = @truncate(u8, col.findNearest(self.document.colormap, fgc));
                 dfgc = self.document.colormap[4 * @as(usize, self.document.foreground_index) ..][0..4];
                 self.color_foreground_background.setRgba(.foreground, dfgc);
             }
             const bgc = self.color_foreground_background.getRgba(.background);
             var dbgc = self.document.colormap[4 * @as(usize, self.document.background_index) ..][0..4];
             if (!std.mem.eql(u8, &bgc, dbgc)) {
-                self.document.background_index = @truncate(u8, col.findNearest(self.document.colormap, &bgc));
+                self.document.background_index = @truncate(u8, col.findNearest(self.document.colormap, bgc));
                 dbgc = self.document.colormap[4 * @as(usize, self.document.background_index) ..][0..4];
                 self.color_foreground_background.setRgba(.background, dbgc);
             }
