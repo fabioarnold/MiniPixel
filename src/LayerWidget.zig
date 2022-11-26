@@ -18,11 +18,14 @@ layer_index: u32,
 visible_button: *gui.Button,
 lock_button: *gui.Button,
 link_button: *gui.Button,
+name_label: *gui.Label,
 
 const Self = @This();
 
 pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document, layer_index: u32) !*Self {
     var self = try allocator.create(Self);
+
+    const layer_name = try std.fmt.allocPrint(allocator, "Layer {}", .{layer_index + 1});
 
     self.* = Self{
         .widget = gui.Widget.init(allocator, rect),
@@ -32,6 +35,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document, layer_in
         .visible_button = try gui.Button.init(allocator, Rect(f32).make(1, 1, 20, 20), ""),
         .lock_button = try gui.Button.init(allocator, Rect(f32).make(22, 1, 20, 20), ""),
         .link_button = try gui.Button.init(allocator, Rect(f32).make(43, 1, 20, 20), ""),
+        .name_label = try gui.Label.init(allocator, Rect(f32).make(64, 1, 95, 20), layer_name),
     };
 
     self.visible_button.style = .toolbar;
@@ -40,18 +44,22 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document, layer_in
     self.lock_button.onClickFn = onLockButtonClicked;
     self.link_button.style = .toolbar;
     self.link_button.onClickFn = onLinkButtonClicked;
+    self.name_label.padding = 4;
 
     try self.widget.addChild(&self.visible_button.widget);
     try self.widget.addChild(&self.lock_button.widget);
     try self.widget.addChild(&self.link_button.widget);
+    try self.widget.addChild(&self.name_label.widget);
 
     return self;
 }
 
 pub fn deinit(self: *Self) void {
+    self.allocator.free(self.name_label.text);
     self.visible_button.deinit();
     self.lock_button.deinit();
     self.link_button.deinit();
+    self.name_label.deinit();
 
     self.widget.deinit();
     self.allocator.destroy(self);

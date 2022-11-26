@@ -231,11 +231,15 @@ pub fn onDocumentChanged(self: *Self) void {
     } else {
         var i: u32 = @truncate(u32, self.layer_widgets.items.len);
         while (i < layer_count) : (i += 1) {
-            const rect = Rect(f32).make(5, 53 + @intToFloat(f32, i) * (tile_w - 1), 60, tile_w);
+            const rect = Rect(f32).make(5, 53 + @intToFloat(f32, layer_count - 1 - i) * (tile_w - 1), 3 * (tile_w - 1), tile_w);
             const layer_widget = LayerWidget.init(self.allocator, rect, self.document, i) catch return; // TODO: handle?
             self.layer_widgets.append(layer_widget) catch return;
             self.widget.addChild(&layer_widget.widget) catch return;
         }
+    }
+    const y = 5 + 21 + 5 + 21 + 1;
+    for (self.layer_widgets.items) |layer_widget, i| {
+        layer_widget.widget.relative_rect.y = y + @intToFloat(f32, layer_count - 1 - i) * (tile_w - 1);
     }
 
     self.updateVisibleButtons();
@@ -371,16 +375,20 @@ pub fn togglePlayback(self: *Self) void {
 }
 
 fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {
-    const x = 5 + name_w;
-    const y = 5 + tile_w + 5;
-    if (mouse_x >= x and mouse_y >= y) {
-        const frame = @floatToInt(u32, (mouse_x - x) / (tile_w - 1));
-        if (frame < self.document.frame_count) {
+    const frame_x = 5 + name_w;
+    const frame_y = 5 + tile_w + 5;
+    if (mouse_x >= frame_x and mouse_y >= frame_y) {
+        const frame = @floatToInt(u32, (mouse_x - frame_x) / (tile_w - 1));
+        if (frame < self.document.getFrameCount()) {
             self.document.gotoFrame(frame);
         }
-        const layer = @floatToInt(u32, (mouse_y - y) / (tile_w - 1));
-        if (layer > 0 and layer - 1 < self.document.getLayerCount()) {
-            self.document.selectLayer(layer - 1);
+    }
+    const layer_x = 5 + 3 * (tile_w - 1);
+    const layer_y = frame_y + tile_w - 1;
+    if (mouse_x >= layer_x and mouse_y >= layer_y) {
+        const layer = @floatToInt(u32, (mouse_y - layer_y) / (tile_w - 1));
+        if (layer < self.document.getLayerCount()) {
+            self.document.selectLayer(self.document.getLayerCount() - 1 - layer);
         }
     }
 }
@@ -413,7 +421,7 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
         const selected_layer = self.document.selected_layer;
         const selected_frame = self.document.selected_frame;
         vg.beginPath();
-        vg.rect(x + 1, y + 1 + @intToFloat(f32, 1 + selected_layer) * (tile_w - 1), name_w + @intToFloat(f32, frame_count) * (tile_w - 1), (tile_w - 1));
+        vg.rect(x + 1, y + 1 + @intToFloat(f32, layer_count - selected_layer) * (tile_w - 1), name_w + @intToFloat(f32, frame_count) * (tile_w - 1), (tile_w - 1));
         vg.rect(x + 1 + name_w + @intToFloat(f32, selected_frame) * (tile_w - 1), y + 1, (tile_w - 1), @intToFloat(f32, 1 + layer_count) * (tile_w - 1));
         vg.fillColor(nvg.rgbf(1, 1, 1));
         vg.fill();
@@ -442,13 +450,7 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
         var buf: [50]u8 = undefined;
         vg.fontFace("guifont");
         vg.fontSize(12);
-        vg.textAlign(.{.vertical = .middle});
         vg.fillColor(nvg.rgb(0, 0, 0));
-        var layer: usize = 1;
-        while (layer <= layer_count) : (layer += 1) {
-            const text = std.fmt.bufPrint(&buf, "Layer #{}", .{layer}) catch unreachable;
-            _ = vg.text(x + 60 + 5, y + (@intToFloat(f32, layer) + 0.5) * (tile_w - 1) + 1, text);
-        }
         vg.textAlign(.{.horizontal = .center, .vertical = .middle});
         var frame: usize = 0;
         while (frame < frame_count) : (frame += 1) {
@@ -463,12 +465,12 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
             while (col < frame_count) : (col += 1) {
                 if (self.document.layers.items[row].cels.items[col].bitmap == null) {
                     vg.beginPath();
-                    vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, 1 + row)) * (tile_w - 1) + 11, 5.5);
+                    vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, layer_count - row)) * (tile_w - 1) + 11, 5.5);
                     vg.strokeColor(nvg.rgb(66, 66, 66));
                     vg.stroke();
                 } else {
                     vg.beginPath();
-                    vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, 1 + row)) * (tile_w - 1) + 11, 6);
+                    vg.circle(x + name_w + (@intToFloat(f32, col)) * (tile_w - 1) + 11, y + (@intToFloat(f32, layer_count - row)) * (tile_w - 1) + 11, 6);
                     vg.fillColor(nvg.rgb(66, 66, 66));
                     vg.fill();
                 }
