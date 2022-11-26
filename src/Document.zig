@@ -178,8 +178,6 @@ pub fn init(allocator: Allocator, vg: nvg) !*Self {
 
     // Create initial layer
     try self.layers.append(try Layer.init(allocator, self.frame_count));
-    try self.layers.append(try Layer.init(allocator, self.frame_count));
-    try self.layers.append(try Layer.init(allocator, self.frame_count));
 
     self.preview_bitmap = try Bitmap.init(allocator, self.width, self.height, self.bitmap_type);
     self.preview_bitmap.clear();
@@ -1197,8 +1195,7 @@ pub fn getColorAt(self: *Self, x: i32, y: i32) ?[4]u8 {
             .color => |color_bitmap| return color_bitmap.getPixel(x, y),
             .indexed => |indexed_bitmap| {
                 if (indexed_bitmap.getIndex(x, y)) |index| {
-                    const c = self.colormap[4 * @as(usize, index) ..];
-                    return [4]u8{ c[0], c[1], c[2], c[3] };
+                    return self.colormap[4 * @as(usize, index) ..][0..4].*;
                 }
             },
         }
