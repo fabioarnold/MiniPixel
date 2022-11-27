@@ -94,6 +94,8 @@ preview: *PreviewWidget,
 panel_right: *gui.Panel,
 timeline: *TimelineWidget,
 
+timeline_on_resize_base_fn: std.meta.FnPtr(fn (*gui.Widget, *gui.ResizeEvent) void) = undefined,
+
 const Self = @This();
 
 pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
@@ -180,7 +182,6 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
     try self.status_bar.addWidget(&self.memory_status_label.widget);
 
     // add main widgets
-    try self.widget.addChild(&self.menu_bar.widget);
     try self.widget.addChild(&self.canvas.widget);
     try self.widget.addChild(&self.palette_bar.widget);
     try self.palette_bar.addButton(self.palette_open_button);
@@ -197,6 +198,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
     try self.widget.addChild(&self.preview.widget);
     try self.widget.addChild(&self.panel_right.widget);
     try self.widget.addChild(&self.timeline.widget);
+    try self.widget.addChild(&self.menu_bar.widget);
     try self.widget.addChild(&self.status_bar.widget);
 
     configureToolbarButton(self.palette_open_button, icons.iconOpen, tryOpenPalette, "Open Palette");
@@ -319,6 +321,17 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
             }
         }
     }.changed;
+
+    self.timeline_on_resize_base_fn = self.timeline.widget.onResizeFn;
+    self.timeline.widget.onResizeFn = struct {
+        fn onResize(widget: *gui.Widget, event: *gui.ResizeEvent) void {
+            if (widget.parent) |parent| {
+                const editor = @fieldParentPtr(Self, "widget", parent);
+                editor.timeline_on_resize_base_fn(widget, event);
+                editor.updateLayout();
+            }
+        }
+    }.onResize;
 
     self.document.history.editor = self; // Register for updates
 

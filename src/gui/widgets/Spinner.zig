@@ -25,7 +25,7 @@ pub fn Spinner(comptime T: type) type {
         step_value: T = 1,
         step_mode: StepMode = .linear,
 
-        baseTextBoxBlurFn: std.meta.FnPtr(fn (*gui.Widget, *gui.FocusEvent) void),
+        baseTextBoxBlurFn: std.meta.FnPtr(fn (*gui.Widget, *gui.FocusEvent) void) = undefined,
 
         onChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
 
@@ -36,7 +36,6 @@ pub fn Spinner(comptime T: type) type {
             self.* = Self{
                 .widget = gui.Widget.init(allocator, rect),
                 .text_box = try gui.TextBox.init(allocator, Rect(f32).make(0, 0, 0, 0)),
-                .baseTextBoxBlurFn = undefined,
                 .up_button = try gui.Button.init(allocator, Rect(f32).make(0, 0, 0, 0), ""),
                 .down_button = try gui.Button.init(allocator, Rect(f32).make(0, 0, 0, 0), ""),
                 .allocator = allocator,

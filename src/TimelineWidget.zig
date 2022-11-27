@@ -35,6 +35,8 @@ onion_skinning_button: *gui.Button,
 
 layer_list_widget: *LayerListWidget,
 
+drag_y: ?f32 = null,
+
 const Self = @This();
 
 const padding: f32 = 5;
@@ -60,6 +62,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32), document: *Document) !*Self {
         .onion_skinning_button = try gui.Button.init(allocator, Rect(f32).make(5 + 64, 5 + button_size + 5, 20, 20), ""),
         .layer_list_widget = try LayerListWidget.init(allocator, Rect(f32).make(padding, header_h, rect.w - 2 * padding, rect.h - header_h - padding), document),
     };
+    self.widget.onMouseDownFn = onMouseDown;
+    self.widget.onMouseMoveFn = onMouseMove;
     self.widget.onResizeFn = onResize;
     self.widget.drawFn = draw;
 
@@ -198,6 +202,54 @@ pub fn onDocumentChanged(self: *Self) void {
     self.delete_layer_button.widget.enabled = layer_count > 1;
     self.delete_layer_button.iconFn = if (self.delete_layer_button.widget.enabled) icons.iconDeleteLayer else icons.iconDeleteLayerDisabled;
     self.layer_list_widget.onDocumentChanged();
+}
+
+fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    if (event.button == .left and event.y < header_h) {
+        self.drag_y = event.y;
+    }
+}
+
+fn onMouseUp(widget: *gui.Widget, event: *const gui.MouseEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    if (event.button == .left) {
+        self.drag_y = null;
+    }
+}
+
+fn onMouseMove(widget: *gui.Widget, event: *const gui.MouseEvent) void {
+    const self = @fieldParentPtr(Self, "widget", widget);
+    if (event.isButtonPressed(.left)) {
+        if (self.drag_y) |drag_y| {
+            const min_y = 16 + 24;
+            const min_h = header_h;
+            const rect = widget.relative_rect;
+            const delta_y = event.y - drag_y;
+            if (delta_y < 0) {
+                const new_y = rect.y + delta_y;
+                if (new_y < min_y) {
+                    if (rect.y > min_y) {
+                        const new_delta_y = min_y - rect.y;
+                        widget.setSize(rect.w, rect.h - new_delta_y);
+                    }
+                } else {
+                    widget.setSize(rect.w, rect.h - delta_y);
+                }
+            } else if (delta_y > 0) {
+                const new_h = rect.h - delta_y;
+                if (new_h < min_h) {
+                    if (rect.h > min_h) {
+                        widget.setSize(rect.w, min_h);
+                    }
+                } else {
+                    widget.setSize(rect.w, new_h);
+                }
+            }
+        }
+    } else {
+        self.drag_y = null;
+    }
 }
 
 fn onResize(widget: *gui.Widget, event: *const gui.ResizeEvent) void {
