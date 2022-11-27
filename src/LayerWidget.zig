@@ -7,7 +7,7 @@ const geometry = @import("gui/geometry.zig");
 const Rect = geometry.Rect;
 
 const Document = @import("Document.zig");
-const TimelineWidget = @import("TimelineWidget.zig");
+const LayerListWidget = @import("LayerListWidget.zig");
 
 widget: gui.Widget,
 allocator: Allocator,
@@ -69,22 +69,22 @@ pub fn onVisibleButtonClicked(button: *gui.Button) void {
     const self = @fieldParentPtr(Self, "widget", button.widget.parent.?);
     const visible = self.document.isLayerVisible(self.layer_index);
     self.document.setLayerVisible(self.layer_index, !visible);
-    const timeline = @fieldParentPtr(TimelineWidget, "widget", self.widget.parent.?);
-    timeline.updateVisibleButtons();
+    const layer_list = @fieldParentPtr(LayerListWidget, "widget", self.widget.parent.?);
+    layer_list.updateVisibleButtons();
 }
 
 pub fn onLockButtonClicked(button: *gui.Button) void {
     const self = @fieldParentPtr(Self, "widget", button.widget.parent.?);
     const locked = self.document.isLayerLocked(self.layer_index);
     self.document.setLayerLocked(self.layer_index, !locked);
-    const timeline = @fieldParentPtr(TimelineWidget, "widget", self.widget.parent.?);
-    timeline.updateLockButtons();
+    const layer_list = @fieldParentPtr(LayerListWidget, "widget", self.widget.parent.?);
+    layer_list.updateLockButtons();
 }
 
 pub fn onLinkButtonClicked(button: *gui.Button) void {
     const self = @fieldParentPtr(Self, "widget", button.widget.parent.?);
     const linked = self.document.isLayerLinked(self.layer_index);
     self.document.setLayerLinked(self.layer_index, !linked);
-    const timeline = @fieldParentPtr(TimelineWidget, "widget", self.widget.parent.?);
-    timeline.updateLinkButtons();
+    const layer_list = @fieldParentPtr(LayerListWidget, "widget", self.widget.parent.?);
+    layer_list.updateLinkButtons();
 }
