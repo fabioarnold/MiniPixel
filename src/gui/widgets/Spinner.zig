@@ -25,9 +25,9 @@ pub fn Spinner(comptime T: type) type {
         step_value: T = 1,
         step_mode: StepMode = .linear,
 
-        baseTextBoxBlurFn: std.meta.FnPtr(fn (*gui.Widget, *gui.FocusEvent) void) = undefined,
+        baseTextBoxBlurFn: *const fn (*gui.Widget, *gui.FocusEvent) void = undefined,
 
-        onChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+        onChangedFn: ?*const fn (*Self) void = null,
 
         const Self = @This();
 

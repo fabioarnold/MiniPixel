@@ -17,7 +17,7 @@ widget: gui.Widget,
 allocator: Allocator,
 text: [:0]const u8,
 font_size: f32 = 12,
-iconFn: ?std.meta.FnPtr(fn (vg: nvg) void) = null,
+iconFn: ?*const fn (vg: nvg) void = null,
 icon_x: f32 = 2,
 icon_y: f32 = 2,
 style: ButtonStyle = .default,
@@ -30,9 +30,9 @@ checked: bool = false,
 auto_repeat_timer: gui.Timer,
 auto_repeat_interval: u32 = 0, // in milliseconds
 
-onClickFn: ?std.meta.FnPtr(fn (*Self) void) = null,
-onEnterFn: ?std.meta.FnPtr(fn (*Self) void) = null,
-onLeaveFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onClickFn: ?*const fn (*Self) void = null,
+onEnterFn: ?*const fn (*Self) void = null,
+onLeaveFn: ?*const fn (*Self) void = null,
 
 const Self = @This();
 

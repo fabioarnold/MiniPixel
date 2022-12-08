@@ -17,7 +17,7 @@ focused: bool = false,
 pressed: bool = false,
 checked: bool = false,
 
-onClickFn: ?std.meta.FnPtr(fn (*RadioButton) void) = null,
+onClickFn: ?*const fn (*RadioButton) void = null,
 
 pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*RadioButton {
     var self = try allocator.create(RadioButton);

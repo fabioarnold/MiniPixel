@@ -3,7 +3,7 @@ const gui = @import("gui.zig");
 
 const Timer = @This();
 
-on_elapsed_fn: ?std.meta.FnPtr(fn (usize) void) = null,
+on_elapsed_fn: ?*const fn (usize) void = null,
 ctx: usize, // passed to elapsed function
 id: ?u32 = null,
 

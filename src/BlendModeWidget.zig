@@ -19,7 +19,7 @@ image_alpha: nvg.Image,
 image_replace: nvg.Image,
 rects: [2]Rect(f32),
 
-onChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onChangedFn: ?*const fn (*Self) void = null,
 
 const pad = 5;
 

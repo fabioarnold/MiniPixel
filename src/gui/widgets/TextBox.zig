@@ -13,7 +13,7 @@ text: std.ArrayList(u8),
 text_alignment: gui.TextAlignment = .left,
 background_color: nvg.Color,
 
-onChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onChangedFn: ?*const fn (*Self) void = null,
 
 hovered: bool = false,
 
@@ -26,7 +26,7 @@ selection_end: usize = 0,
 
 glyph_positions: std.ArrayList(nvg.GlyphPosition), // cache
 
-base_key_down_fn: std.meta.FnPtr(fn (*gui.Widget, *gui.KeyEvent) void),
+base_key_down_fn: *const fn (*gui.Widget, *gui.KeyEvent) void,
 
 blink: bool = false,
 blink_timer: gui.Timer,

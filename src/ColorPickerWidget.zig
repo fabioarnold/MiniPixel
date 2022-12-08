@@ -14,7 +14,7 @@ sliders: [5]*gui.Slider(f32) = undefined,
 
 color: [4]u8 = [_]u8{ 0, 0, 0, 0xff },
 
-onChangedFn: ?std.meta.FnPtr(fn (*ColorPickerWidget) void) = null,
+onChangedFn: ?*const fn (*ColorPickerWidget) void = null,
 
 const Self = @This();
 

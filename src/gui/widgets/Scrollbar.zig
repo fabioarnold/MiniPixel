@@ -21,7 +21,7 @@ decrement_button: *gui.Button,
 increment_button: *gui.Button,
 thumb_button: *gui.Button,
 
-onChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onChangedFn: ?*const fn (*Self) void = null,
 
 pub const button_size = 16;
 const scroll_speed = 5;

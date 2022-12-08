@@ -17,7 +17,7 @@ pub fn Slider(comptime T: type) type {
         max_value: T = 100,
         pressed: bool = false,
 
-        onChangedFn: std.meta.FnPtr(fn (*Self) void) = onChanged,
+        onChangedFn: *const fn (*Self) void = onChanged,
 
         const Self = @This();
 

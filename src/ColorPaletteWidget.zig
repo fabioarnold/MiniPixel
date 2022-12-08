@@ -14,7 +14,7 @@ colors: [4 * 256]u8 = undefined,
 selected: ?usize = null,
 selection_locked: bool = false,
 
-onSelectionChangedFn: ?std.meta.FnPtr(fn (*Self) void) = null,
+onSelectionChangedFn: ?*const fn (*Self) void = null,
 
 const Self = @This();
 

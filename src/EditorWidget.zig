@@ -75,7 +75,7 @@ memory_text: [100]u8 = .{0} ** 100,
 
 message_box_widget: *MessageBoxWidget,
 message_box_result_context: usize = 0,
-onMessageBoxResultFn: ?std.meta.FnPtr(fn (usize, MessageBoxWidget.Result) void) = null,
+onMessageBoxResultFn: ?*const fn (usize, MessageBoxWidget.Result) void = null,
 
 new_document_widget: *NewDocumentWidget,
 about_dialog_widget: *AboutDialogWidget,
@@ -94,7 +94,7 @@ preview: *PreviewWidget,
 panel_right: *gui.Panel,
 timeline: *TimelineWidget,
 
-timeline_on_resize_base_fn: std.meta.FnPtr(fn (*gui.Widget, *gui.ResizeEvent) void) = undefined,
+timeline_on_resize_base_fn: *const fn (*gui.Widget, *gui.ResizeEvent) void = undefined,
 
 const Self = @This();
 
@@ -346,7 +346,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
 
 fn configureToolbarButton(
     button: *gui.Button,
-    iconFn: std.meta.FnPtr(fn (nvg) void),
+    iconFn: *const fn (nvg) void,
     comptime onEditorClick: fn (*Self) void,
     comptime help_text: []const u8,
 ) void {
@@ -690,7 +690,7 @@ pub fn showErrorMessageBox(self: *Self, title: [:0]const u8, message: []const u8
     self.showMessageBox(title);
 }
 
-pub fn showUnsavedChangesDialog(self: *Self, onResultFn: ?std.meta.FnPtr(fn (usize, MessageBoxWidget.Result) void), result_context: usize) void {
+pub fn showUnsavedChangesDialog(self: *Self, onResultFn: ?*const fn (usize, MessageBoxWidget.Result) void, result_context: usize) void {
     self.message_box_widget.setSize(280, 100);
     self.message_box_widget.configure(.question, .yes_no_cancel, "This file has been changed.\nWould you like to save those changes?");
     self.message_box_widget.yes_button.text = "Save";
