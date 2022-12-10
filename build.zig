@@ -60,7 +60,6 @@ pub fn build(b: *Builder) !void {
             return error.FileNotFound;
         };
         exe.addObjectFile("minipixel.o"); // add icon
-        exe.want_lto = false; // workaround for https://github.com/ziglang/zig/issues/8531
     } else if (exe.target.isDarwin()) {
         exe.addCSourceFile("src/c/sdl_hacks.m", &.{});
     }
