@@ -13,15 +13,6 @@ const nanovg = Pkg{ .name = "nanovg", .source = FileSource.relative("deps/nanovg
 const s2s = Pkg{ .name = "s2s", .source = FileSource.relative("deps/s2s/s2s.zig") };
 const gui = Pkg{ .name = "gui", .source = FileSource.relative("src/gui/gui.zig"), .dependencies = &.{nanovg} };
 
-fn printError(str: []const u8) void {
-    var stderr = std.io.getStdErr().writer();
-    var tty_config = std.debug.detectTTYConfig();
-    tty_config.setColor(stderr, .Red);
-    _ = stderr.write("ERROR: ") catch {};
-    tty_config.setColor(stderr, .Reset);
-    _ = stderr.write(str) catch {};
-}
-
 fn installPalFiles(b: *Builder) void {
     const pals = [_][]const u8{ "arne16.pal", "arne32.pal", "db32.pal", "default.pal", "famicube.pal", "pico-8.pal" };
     inline for (pals) |pal| {
@@ -55,8 +46,8 @@ pub fn build(b: *Builder) !void {
         exe.subsystem = .Windows;
         exe.linkSystemLibrary("shell32");
         std.fs.cwd().access("minipixel.o", .{}) catch {
-            printError("minipixel.o not found. Please use VS Developer Prompt and run\n\n" ++
-                "\trc /fo minipixel.o minipixel.rc\n\nbefore continuing\n");
+            std.log.err("minipixel.o not found. Please use VS Developer Prompt and run\n\n" ++
+                "\trc /fo minipixel.o minipixel.rc\n\nbefore continuing\n", .{});
             return error.FileNotFound;
         };
         exe.addObjectFile("minipixel.o"); // add icon
