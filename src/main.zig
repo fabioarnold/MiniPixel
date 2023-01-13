@@ -131,6 +131,10 @@ const SdlWindow = struct {
         return c.SDL_GetWindowDisplayIndex(self.handle);
     }
 
+    fn isMinimized(self: SdlWindow) bool {
+        return c.SDL_GetWindowFlags(self.handle) & c.SDL_WINDOW_MINIMIZED != 0;
+    }
+
     fn isMaximized(self: SdlWindow) bool {
         return c.SDL_GetWindowFlags(self.handle) & c.SDL_WINDOW_MAXIMIZED != 0;
     }
@@ -875,6 +879,7 @@ pub fn main() !void {
 
         editor_widget.setMemoryUsageInfo(gpa.total_requested_bytes);
         for (sdl_windows.items) |*sdl_window| {
+            if (sdl_window.isMinimized()) continue;
             if (sdl_window.dirty or mainloop_type == .regular_interval) sdl_window.draw();
         }
     }
