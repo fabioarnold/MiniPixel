@@ -31,6 +31,7 @@ const Document = @This();
 
 const Cel = struct {
     bitmap: ?Bitmap = null,
+    linked_frame: ?u32 = null,
 
     pub fn deinit(self: *Cel, allocator: Allocator) void {
         if (self.bitmap) |bitmap| {
@@ -382,19 +383,23 @@ pub fn deserialize(self: *Document, data: []u8) !void {
 }
 
 fn getCel(self: *Self, layer: u32, frame: u32) *Cel {
-    return &self.layers.items[layer].cels.items[frame];
+    const cel = &self.layers.items[layer].cels.items[frame];
+    if (cel.linked_frame) |linked_frame| {
+        return &self.layers.items[layer].cels.items[linked_frame];
+    }
+    return cel;
 }
 
 fn getCurrentCel(self: *Self) *Cel {
     return self.getCel(self.selected_layer, self.selected_frame);
 }
 
-fn getCurrentCelBitmap(self: Self) ?Bitmap {
-    return self.layers.items[self.selected_layer].cels.items[self.selected_frame].bitmap;
+fn getCurrentCelBitmap(self: *Self) ?Bitmap {
+    return self.getCurrentCel().bitmap;
 }
 
-fn getOrCreateCurrentCelBitmap(self: Self) !Bitmap {
-    const cel = &self.layers.items[self.selected_layer].cels.items[self.selected_frame];
+fn getOrCreateCurrentCelBitmap(self: *Self) !Bitmap {
+    const cel = self.getCurrentCel();
     if (cel.bitmap) |bitmap| {
         return bitmap;
     }
@@ -618,7 +623,18 @@ pub fn gotoLastFrame(self: *Self) void {
 
 pub fn addFrame(self: *Self) !void {
     for (self.layers.items) |*layer| {
-        try layer.cels.append(self.allocator, Cel{});
+        var linked_frame: ?u32 = null;
+        if (layer.linked) {
+            var i: u32 = @intCast(u32, layer.cels.items.len);
+            while (i != 0) {
+                i -= 1;
+                if (layer.cels.items[i].bitmap != null) {
+                    linked_frame = i;
+                    break;
+                }
+            }
+        }
+        try layer.cels.append(self.allocator, Cel{.linked_frame = linked_frame});
     }
     self.frame_count += 1;
     try self.history.pushFrame(self);
