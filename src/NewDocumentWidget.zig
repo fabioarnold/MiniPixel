@@ -3,9 +3,8 @@ const Allocator = std.mem.Allocator;
 
 const gui = @import("gui");
 const nvg = @import("nanovg");
-const geometry = @import("gui/geometry.zig");
-const Point = geometry.Point;
-const Rect = geometry.Rect;
+const Point = gui.geometry.Point;
+const Rect = gui.geometry.Rect;
 
 const EditorWidget = @import("EditorWidget.zig");
 

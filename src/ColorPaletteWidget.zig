@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 
 const gui = @import("gui");
 const nvg = @import("nanovg");
-const Rect = @import("gui/geometry.zig").Rect;
+const Rect = gui.geometry.Rect;
 const col = @import("color.zig");
 
 const ColorPaletteWidget = @This();

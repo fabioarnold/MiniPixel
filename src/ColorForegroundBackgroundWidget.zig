@@ -3,8 +3,8 @@ const Allocator = std.mem.Allocator;
 
 const gui = @import("gui");
 const nvg = @import("nanovg");
-const Rect = @import("gui/geometry.zig").Rect;
-const Point = @import("gui/geometry.zig").Point;
+const Rect = gui.geometry.Rect;
+const Point = gui.geometry.Point;
 const ColorLayer = @import("color.zig").ColorLayer;
 
 pub const ChangeType = enum {

@@ -3,8 +3,7 @@ const Allocator = std.mem.Allocator;
 
 const gui = @import("gui");
 const nvg = @import("nanovg");
-const geometry = @import("gui/geometry.zig");
-const Rect = geometry.Rect;
+const Rect = gui.geometry.Rect;
 
 pub const Buttons = enum {
     ok,

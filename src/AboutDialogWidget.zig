@@ -5,9 +5,8 @@ const builtin = @import("builtin");
 const c = @import("c.zig");
 const gui = @import("gui");
 const nvg = @import("nanovg");
-const geometry = @import("gui/geometry.zig");
-const Point = geometry.Point;
-const Rect = geometry.Rect;
+const Point = gui.geometry.Point;
+const Rect = gui.geometry.Rect;
 const info = @import("info.zig");
 
 const AboutDialogWidget = @This();

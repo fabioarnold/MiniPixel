@@ -8,11 +8,10 @@ const ArrayListUnmanaged = std.ArrayListUnmanaged;
 const nvg = @import("nanovg");
 const s2s = @import("s2s");
 const gui = @import("gui");
-const geometry = gui.geometry;
-const Point = geometry.Point;
+const Point = gui.geometry.Point;
 const Pointi = Point(i32);
 const Pointu = Point(u32);
-const Rect = geometry.Rect;
+const Rect = gui.geometry.Rect;
 const Recti = Rect(i32);
 
 const CanvasWidget = @import("CanvasWidget.zig");

@@ -3,8 +3,7 @@ const Allocator = std.mem.Allocator;
 
 const gui = @import("gui");
 const icons = @import("icons.zig");
-const geometry = @import("gui/geometry.zig");
-const Rect = geometry.Rect;
+const Rect = gui.geometry.Rect;
 
 const Document = @import("Document.zig");
 const LayerListWidget = @import("LayerListWidget.zig");

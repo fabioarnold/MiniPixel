@@ -6,9 +6,8 @@ const nfd = @import("nfd");
 const nvg = @import("nanovg");
 const gui = @import("gui");
 const icons = @import("icons.zig");
-const geometry = @import("gui/geometry.zig");
-const Point = geometry.Point;
-const Rect = geometry.Rect;
+const Point = gui.geometry.Point;
+const Rect = gui.geometry.Rect;
 const col = @import("color.zig");
 const ColorLayer = col.ColorLayer;
 
