@@ -535,7 +535,7 @@ var first_surrogate_half: ?u16 = null;
 fn sdlProcessTextInput(text_event: c.SDL_TextInputEvent) void {
     if (findSdlWindow(text_event.windowID)) |sdl_window| {
         sdl_window.dirty = true;
-        const text = mem.sliceTo(std.meta.assumeSentinel(&text_event.text, 0), 0);
+        const text = mem.sliceTo(&text_event.text, 0);
 
         if (std.unicode.utf8ValidateSlice(text)) {
             var te = gui.TextInputEvent{
