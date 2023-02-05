@@ -1,15 +1,8 @@
 const std = @import("std");
 const fs = std.fs;
 const mem = std.mem;
-const Pkg = std.build.Pkg;
 
 const nanovg_build = @import("deps/nanovg-zig/build.zig");
-
-const win32 = Pkg{ .name = "win32", .source = .{ .path = "deps/zigwin32/win32.zig" } };
-const nfd = Pkg{ .name = "nfd", .source = .{ .path = "deps/nfd-zig/src/lib.zig" } };
-const nanovg = Pkg{ .name = "nanovg", .source = .{ .path = "deps/nanovg-zig/src/nanovg.zig" } };
-const s2s = Pkg{ .name = "s2s", .source = .{ .path = "deps/s2s/s2s.zig" } };
-const gui = Pkg{ .name = "gui", .source = .{ .path = "src/gui/gui.zig" }, .dependencies = &.{nanovg} };
 
 fn installPalFiles(b: *std.Build) void {
     const pals = [_][]const u8{ "arne16.pal", "arne32.pal", "db32.pal", "default.pal", "famicube.pal", "pico-8.pal" };
@@ -22,6 +15,12 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const automated_testing = b.option(bool, "automated-testing", "Enable automated testing") orelse false;
+
+    const win32 = b.createModule(.{ .source_file = .{ .path = "deps/zigwin32/win32.zig" } });
+    const nfd = b.createModule(.{ .source_file = .{ .path = "deps/nfd-zig/src/lib.zig" } });
+    const nanovg = b.createModule(.{ .source_file = .{ .path = "deps/nanovg-zig/src/nanovg.zig" } });
+    const s2s = b.createModule(.{ .source_file = .{ .path = "deps/s2s/s2s.zig" } });
+    const gui = b.createModule(.{ .source_file = .{ .path = "src/gui/gui.zig" }, .dependencies = &.{.{ .name = "nanovg", .module = nanovg }} });
 
     const exe = b.addExecutable(.{
         .name = "minipixel",
@@ -61,11 +60,11 @@ pub fn build(b: *std.Build) !void {
         &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS" };
     exe.addCSourceFile("src/c/png_image.c", &.{"-std=c99"});
     exe.addCSourceFile("lib/gl2/src/glad.c", c_flags);
-    exe.addPackage(win32);
-    exe.addPackage(nfd);
-    nanovg_build.addNanoVGPackage(exe);
-    exe.addPackage(s2s);
-    exe.addPackage(gui);
+    exe.addModule("win32", win32);
+    exe.addModule("nfd", nfd);
+    nanovg_build.addNanoVGModule(b, exe);
+    exe.addModule("s2s", s2s);
+    exe.addModule("gui", gui);
     const nfd_lib = @import("deps/nfd-zig/build.zig").makeLib(b, target, optimize);
     exe.linkLibrary(nfd_lib);
     exe.linkSystemLibrary("SDL2");
