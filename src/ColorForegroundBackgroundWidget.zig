@@ -105,7 +105,7 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     if (event.button == .left) {
         var self = @fieldParentPtr(Self, "widget", widget);
         const point = Point(f32).make(event.x, event.y);
-        for (self.rects) |rect, i| {
+        for (self.rects, 0..) |rect, i| {
             if (rect.contains(point)) {
                 self.setActive(@intToEnum(ColorLayer, @intCast(u1, i)));
                 break;
@@ -118,7 +118,7 @@ fn onMouseUp(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     if (event.button == .left) {
         var self = @fieldParentPtr(Self, "widget", widget);
         const point = Point(f32).make(event.x, event.y);
-        const swap_rect = Rect(f32).make(10,42,14,14);
+        const swap_rect = Rect(f32).make(10, 42, 14, 14);
         if (swap_rect.contains(point)) {
             self.swap();
         }

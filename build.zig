@@ -62,7 +62,8 @@ pub fn build(b: *std.Build) !void {
     exe.addCSourceFile("lib/gl2/src/glad.c", c_flags);
     exe.addModule("win32", win32);
     exe.addModule("nfd", nfd);
-    nanovg_build.addNanoVGModule(b, exe);
+    exe.addModule("nanovg", nanovg);
+    nanovg_build.addCSourceFiles(exe);
     exe.addModule("s2s", s2s);
     exe.addModule("gui", gui);
     const nfd_lib = @import("deps/nfd-zig/build.zig").makeLib(b, target, optimize);

@@ -64,7 +64,7 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     if (event.button == .left) {
         var self = @fieldParentPtr(Self, "widget", widget);
         const point = Point(f32).make(event.x, event.y);
-        for (self.rects) |rect, i| {
+        for (self.rects, 0..) |rect, i| {
             if (rect.contains(point)) {
                 self.setActive(@intToEnum(BlendMode, @intCast(u1, i)));
                 break;

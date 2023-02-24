@@ -58,7 +58,7 @@ pub fn deinit(self: *Self) void {
 
 pub fn setRgba(self: *Self, color: []const u8) void {
     std.debug.assert(color.len == 4);
-    for (color) |c, i| {
+    for (color, 0..) |c, i| {
         self.color[i] = c;
         self.sliders[i].setValue(@intToFloat(f32, c) / 255.0);
         self.spinners[i].setValue(color[i]);
@@ -67,7 +67,7 @@ pub fn setRgba(self: *Self, color: []const u8) void {
 
 pub fn setRgb(self: *Self, color: []const u8) void {
     std.debug.assert(color.len == 3);
-    for (color) |c, i| {
+    for (color, 0..) |c, i| {
         self.color[i] = c;
         self.sliders[i].setValue(@intToFloat(f32, c) / 255.0);
         self.spinners[i].setValue(color[i]);

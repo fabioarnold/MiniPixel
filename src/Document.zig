@@ -489,7 +489,7 @@ pub const PaletteUpdateMode = enum {
 pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
     if (mode == .map and self.getBitmapType() == .indexed) {
         var map: [256]u8 = undefined; // colormap -> palette
-        for (map) |*m, i| {
+        for (&map, 0..) |*m, i| {
             m.* = @truncate(u8, col.findNearest(palette, self.colormap[4 * i ..][0..4].*));
         }
         var iter = BitmapIterator.init(self);
@@ -633,7 +633,7 @@ pub fn addFrame(self: *Self) !void {
                 }
             }
         }
-        try layer.cels.append(self.allocator, Cel{.linked_frame = linked_frame});
+        try layer.cels.append(self.allocator, Cel{ .linked_frame = linked_frame });
     }
     self.frame_count += 1;
     try self.history.pushFrame(self);
@@ -1261,7 +1261,7 @@ pub fn draw(self: *Self, vg: nvg) void {
         self.need_texture_recreation = false;
         self.need_texture_update_all = false;
         self.need_texture_update = false;
-        for (self.layers.items) |layer, i| {
+        for (self.layers.items, 0..) |layer, i| {
             vg.deleteImage(self.layer_textures.items[i]);
             const cel = layer.cels.items[self.selected_frame];
             const bitmap = if (cel.bitmap) |bitmap| bitmap else self.preview_bitmap;
@@ -1271,7 +1271,7 @@ pub fn draw(self: *Self, vg: nvg) void {
     } else if (self.need_texture_update_all) {
         self.need_texture_update_all = false;
         self.need_texture_update = false;
-        for (self.layer_textures.items) |texture, i| {
+        for (self.layer_textures.items, 0..) |texture, i| {
             const layer = self.layers.items[i];
             const cel = layer.cels.items[self.selected_frame];
             const bitmap = if (i == self.selected_layer) self.preview_bitmap else cel.bitmap orelse continue;
@@ -1299,7 +1299,7 @@ pub fn draw(self: *Self, vg: nvg) void {
     const height = @intToFloat(f32, self.getHeight());
     vg.beginPath();
     vg.rect(0, 0, width, height);
-    for (self.layer_textures.items) |texture, i| {
+    for (self.layer_textures.items, 0..) |texture, i| {
         const layer = self.layers.items[i];
         if (!layer.visible) continue;
         const cel = layer.cels.items[self.selected_frame];

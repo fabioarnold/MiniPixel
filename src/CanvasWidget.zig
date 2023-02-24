@@ -134,7 +134,7 @@ const CropTool = struct {
                 } else {
                     const gui_point = Pointf.make(event.x, event.y);
                     const gui_rect = canvas.rectFromDocumentSpace(ritof(rect), false);
-                    for (makeZones(gui_rect)) |zone, i| {
+                    for (makeZones(gui_rect), 0..) |zone, i| {
                         if (zone.contains(gui_point)) {
                             self.drag_zone = @intCast(u3, i);
                             self.drag_offset = point.subtracted(Pointf.make(itof(rect.x), itof(rect.y)));
@@ -326,7 +326,7 @@ const CropTool = struct {
                 } else {
                     if (self.mouse_point) |mouse_point| {
                         const gui_rect = canvas.rectFromDocumentSpace(ritof(rect), true);
-                        for (makeZones(gui_rect)) |zone, i| {
+                        for (makeZones(gui_rect), 0..) |zone, i| {
                             if (zone.contains(mouse_point)) {
                                 return getZoneCursor(@intCast(u3, i));
                             }

@@ -77,7 +77,7 @@ fn onChanged(self: *Self) void {
 
 fn getCursorPositionFromMousePosition(self: Self, mouse_position_x: f32) usize {
     const x = mouse_position_x + self.widget.relative_rect.x;
-    for (self.glyph_positions.items) |glyph_position, i| {
+    for (self.glyph_positions.items, 0..) |glyph_position, i| {
         const glyph_center = 0.5 * (glyph_position.minx + glyph_position.maxx);
         if (x < glyph_center) {
             return i;

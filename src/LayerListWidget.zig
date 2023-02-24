@@ -91,7 +91,7 @@ pub fn onDocumentChanged(self: *Self) void {
             self.widget.addChild(&layer_widget.widget) catch return;
         }
     }
-    for (self.layer_widgets.items) |layer_widget, i| {
+    for (self.layer_widgets.items, 0..) |layer_widget, i| {
         layer_widget.widget.relative_rect.y = @intToFloat(f32, layer_count - i) * tile_size;
     }
 
@@ -170,7 +170,7 @@ fn onLinkButtonClicked(button: *gui.Button) void {
 
 pub fn updateVisibleButtons(self: *Self) void {
     var any_visible: bool = false;
-    for (self.layer_widgets.items) |layer_widget, i| {
+    for (self.layer_widgets.items, 0..) |layer_widget, i| {
         const visible = self.document.isLayerVisible(@truncate(u32, i));
         if (visible) any_visible = true;
         layer_widget.visible_button.iconFn = if (visible) icons.iconEyeOpen else icons.iconEyeClosed;
@@ -182,7 +182,7 @@ pub fn updateVisibleButtons(self: *Self) void {
 
 pub fn updateLockButtons(self: *Self) void {
     var any_unlocked: bool = false;
-    for (self.layer_widgets.items) |layer_widget, i| {
+    for (self.layer_widgets.items, 0..) |layer_widget, i| {
         const locked = self.document.isLayerLocked(@truncate(u32, i));
         if (!locked) any_unlocked = true;
         layer_widget.lock_button.iconFn = if (locked) icons.iconLockClosed else icons.iconLockOpen;
@@ -194,7 +194,7 @@ pub fn updateLockButtons(self: *Self) void {
 
 pub fn updateLinkButtons(self: *Self) void {
     var any_unlinked: bool = false;
-    for (self.layer_widgets.items) |layer_widget, i| {
+    for (self.layer_widgets.items, 0..) |layer_widget, i| {
         const linked = self.document.isLayerLinked(@truncate(u32, i));
         if (!linked) any_unlinked = true;
         layer_widget.link_button.iconFn = if (linked) icons.iconLinked else icons.iconUnlinked;
