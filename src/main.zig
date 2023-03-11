@@ -261,12 +261,12 @@ const SdlWindow = struct {
         self.window.draw(vg);
         vg.endFrame();
 
-        c.glFlush();
+        // c.glFlush();
         if (c.SDL_GetWindowFlags(self.handle) & c.SDL_WINDOW_HIDDEN != 0) {
             c.SDL_ShowWindow(self.handle);
         }
         c.SDL_GL_SwapWindow(self.handle);
-        c.glFinish();
+        // c.glFinish();
         self.dirty = false;
     }
 };
@@ -819,8 +819,8 @@ pub fn main() !void {
     //     c.SDL_SetWindowMinimumSize(main_sdl_window.handle, 400, 200);
     // }
 
-    mainloop_type = .regular_interval;
-    _ = c.SDL_GL_SetSwapInterval(1); // enable VSync
+    mainloop_type = .wait_event;
+    _ = c.SDL_GL_SetSwapInterval(0); // VSync off
 
     _ = gladLoadGL();
 
