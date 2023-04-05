@@ -1,15 +1,48 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+const Recti = @import("gui").geometry.Rect(i32);
 
 const EditorWidget = @import("EditorWidget.zig");
 const Document = @import("Document.zig");
+const Bitmap = @import("Bitmap.zig");
 
 const Snapshot = []u8;
 
+pub const EditType = enum(u8) {
+    snapshot,
+    region,
+};
+
+pub const SnapshotEdit = struct {
+    document: Document,
+};
+
+pub const RegionEdit = struct {
+    bitmap: Document.Bitmap,
+    region: Recti,
+};
+
+pub const Edit = union(EditType) {
+    snapshot: SnapshotEdit,
+    region: RegionEdit,
+
+    fn undo(self: Edit, document: *Document) void {
+        switch (self) {
+            inline else => |edit| edit.undo(document),
+        }
+    }
+
+    fn redo(self: Edit, document: *Document) void {
+        switch (self) {
+            inline else => |edit| edit.redo(document),
+        }
+    }
+};
+
 pub const Buffer = struct {
     allocator: Allocator,
-    stack: ArrayList(Snapshot),
+    stack: ArrayList(Edit),
     index: usize = 0,
 
     editor: ?*EditorWidget = null,
@@ -18,7 +51,7 @@ pub const Buffer = struct {
         var self = try allocator.create(Buffer);
         self.* = Buffer{
             .allocator = allocator,
-            .stack = ArrayList(Snapshot).init(allocator),
+            .stack = ArrayList(Edit).init(allocator),
         };
         return self;
     }
@@ -73,7 +106,15 @@ pub const Buffer = struct {
         self.notifyChanged(document);
     }
 
-    pub fn pushFrame(self: *Buffer, document: *Document) !void { // TODO: handle error cases
+    fn clearRedoStack(self: *Buffer, allocator: *Allocator) void {
+        // clear redo stack
+        for (self.stack.items[self.index..self.stack.items.len]) |snap| {
+            allocator.free(snap);
+        }
+        self.stack.shrinkRetainingCapacity(self.index);
+    }
+
+    pub fn pushSnapshot(self: *Buffer, document: *Document) !void { // TODO: handle error cases
         // do comparison
         const top = self.stack.items[self.index];
         const snapshot = try document.serialize();
@@ -83,13 +124,29 @@ pub const Buffer = struct {
         }
 
         self.index += 1;
-        // clear redo stack
-        for (self.stack.items[self.index..self.stack.items.len]) |snap| {
-            document.allocator.free(snap);
-        }
-        self.stack.shrinkRetainingCapacity(self.index);
+        self.clearRedoStack(document.allocator);
 
         try self.stack.append(snapshot);
+        self.notifyChanged(document);
+    }
+
+    pub fn pushRegion(self: *Buffer, document: *Document, layer: u32, frame: u32, region: Recti) !void {
+        _ = frame;
+        _ = layer;
+        const allocator = document.allocator;
+        self.index += 1;
+        self.clearRedoStack(allocator);
+
+        const bitmap = try Bitmap.init(allocator, region.w, region.h, document.bitmap_type);
+        bitmap.copyRegion();
+
+        const edit = Edit{
+            .region = .{
+                .bitmap = bitmap,
+                .region = region,
+            }
+        };
+        try self.stack.append(edit);
         self.notifyChanged(document);
     }
 };

@@ -123,6 +123,10 @@ pub fn copyPixelToUnchecked(self: ColorBitmap, dst: ColorBitmap, x: u32, y: u32)
     dst.setPixelUnchecked(x, y, src_color);
 }
 
+pub fn copyRegion(self: ColorBitmap, dst: ColorBitmap, src_rect: Rectu, dst: Pointu) void {
+    
+}
+
 pub fn drawLine(self: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32, color: Color, skip_first: bool) void {
     const dx = std.math.absInt(x1 - x0) catch unreachable;
     const sx: i32 = if (x0 < x1) 1 else -1;
