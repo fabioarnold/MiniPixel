@@ -87,7 +87,7 @@ pub fn build(b: *std.Build) !void {
         exe.linkSystemLibrary("X11");
     }
     exe.linkLibC();
-    exe.install();
+    b.installArtifact(exe);
 
     installPalFiles(b);
 
@@ -98,7 +98,7 @@ pub fn build(b: *std.Build) !void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&test_cmd.step);
 
-    const run_cmd = exe.run();
+    const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     const run_step = b.step("run", "Run Mini Pixel");
     run_step.dependOn(&run_cmd.step);
