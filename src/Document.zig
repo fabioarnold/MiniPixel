@@ -325,6 +325,7 @@ pub fn serialize(self: Document) ![]u8 {
         try s2s.serialize(output.writer(), Snapshot, snapshot);
     }
 
+    output.shrinkAndFree(output.items.len);
     return output.items;
 }
 
