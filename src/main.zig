@@ -758,8 +758,8 @@ var gpa = std.heap.GeneralPurposeAllocator(.{
 pub fn main() !void {
     defer {
         if (builtin.mode == .Debug) {
-            const leaked = gpa.deinit();
-            if (leaked) @panic("Memory leak :(");
+            const check = gpa.deinit();
+            if (check == .leak) @panic("Memory leak :(");
         }
     }
     const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.c_allocator;
