@@ -934,7 +934,7 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
                 const si = (sy + y) * indexed_bitmap.width + sx;
                 std.mem.copy(u8, bitmap.indexed.indices[di .. di + w], indexed_bitmap.indices[si .. si + w]);
                 const dst_line = indexed_bitmap.indices[si .. si + w];
-                std.mem.set(u8, dst_line, self.background_index);
+                @memset(dst_line, self.background_index);
             }
         },
     }
@@ -1200,7 +1200,7 @@ pub fn pick(self: *Self, x: i32, y: i32) void {
     } else {
         switch (self.getBitmapType()) {
             .color => self.foreground_index = 0,
-            .indexed => std.mem.set(u8, &self.foreground_color, 0),
+            .indexed => @memset(&self.foreground_color, 0),
         }
     }
 }

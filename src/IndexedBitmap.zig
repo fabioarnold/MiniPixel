@@ -149,11 +149,11 @@ pub fn copyLineTo(self: IndexedBitmap, dst: IndexedBitmap, x0: i32, y0: i32, x1:
 }
 
 pub fn clear(self: IndexedBitmap) void {
-    std.mem.set(u8, self.indices, 0);
+    @memset(self.indices, 0);
 }
 
 pub fn fill(self: IndexedBitmap, index: u8) void {
-    std.mem.set(u8, self.indices, index);
+    @memset(self.indices, index);
 }
 
 pub fn floodFill(self: IndexedBitmap, allocator: Allocator, x: i32, y: i32, index: u8) !void {

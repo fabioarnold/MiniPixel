@@ -20,7 +20,7 @@ pub fn initEmptyRgba(allocator: Allocator, width: u32, height: u32) !Image {
         .pixels = try allocator.alloc(u8, 4 * width * height),
         .allocator = allocator,
     };
-    std.mem.set(u8, self.pixels, 0);
+    @memset(self.pixels, 0);
     return self;
 }
 

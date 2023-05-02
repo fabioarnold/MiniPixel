@@ -204,7 +204,7 @@ pub fn copyLineTo(self: ColorBitmap, dst: ColorBitmap, x0: i32, y0: i32, x1: i32
 }
 
 pub fn clear(self: ColorBitmap) void {
-    std.mem.set(u8, self.pixels, 0);
+    @memset(self.pixels, 0);
 }
 
 pub fn fill(self: ColorBitmap, color: Color) void {
