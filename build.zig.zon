@@ -19,8 +19,8 @@
             .hash = "122037145d96670bcd62b87a00a1d0924053760c73bca6ea6daabfcf9a94855395ef",
         },
         .nanovg = .{
-            .url = "https://github.com/fabioarnold/nanovg-zig/archive/f9db8b0dfde5d85b477ac8e56c170dd20c391dac.tar.gz",
-            .hash = "12209d94117fa94a99be3e516d434a5031483889f332a72d07c3b03f68c421068e96",
+            .url = "https://github.com/fabioarnold/nanovg-zig/archive/dd92f323ad465dfe30a4810a79ed2a486c6576e2.tar.gz",
+            .hash = "12209b9865ffdb6fe47d6fa248c64ba11dd42b2ddeb6d607faabbed20eb0fe729046",
         },
     },
 }
