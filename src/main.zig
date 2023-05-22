@@ -945,8 +945,7 @@ fn loadAndApplyWindowConfig(allocator: std.mem.Allocator, window: *gui.Window, f
     defer file.close();
     const json = try file.readToEndAlloc(allocator, 1_000_000);
     defer allocator.free(json);
-    var stream = std.json.TokenStream.init(json);
-    const config = try std.json.parse(WindowConfig, &stream, .{});
+    const config = try std.json.parseFromSlice(WindowConfig, allocator, json, .{});
 
     sdl_window.setSize(config.windowed_width, config.windowed_height);
     sdl_window.setDisplay(config.display_index);
