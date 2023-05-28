@@ -7,8 +7,8 @@
             .hash = "122089e0f5ab5e4729a09aed48d721b98ed2b362923ead797c6af3b54ef9a725203f",
         },
         .s2s = .{
-            .url = "https://github.com/ziglibs/s2s/archive/b39cb2a75eb4b695f36dfbb8ee26bc5688987399.tar.gz",
-            .hash = "122024f870a6d0e9b45667d16b3ef5d86cc0c5c12786151e139dd7eaa45afba2d1ba",
+            .url = "https://github.com/ziglibs/s2s/archive/5e9e655bff25caf1355f68a6d4907212fbf7dfdf.tar.gz",
+            .hash = "122056bfa6716ebde6de4fbbd535b6fc5e9ac266198d63c006689da252ae803bb39f",
         },
         .sdl = .{
             .url = "https://github.com/andrewrk/SDL/archive/aef95740310154ebd491bc35e0fdcd118b16ade0.tar.gz",
