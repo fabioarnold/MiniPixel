@@ -56,8 +56,8 @@ pub fn convertToTruecolor(self: IndexedBitmap, allocator: Allocator, colormap: [
 
 pub fn setIndex(self: IndexedBitmap, x: i32, y: i32, index: u8) bool {
     if (x >= 0 and y >= 0) {
-        const ux = @intCast(u32, x);
-        const uy = @intCast(u32, y);
+        const ux = @as(u32, @intCast(x));
+        const uy = @as(u32, @intCast(y));
         if (ux < self.width and uy < self.height) {
             self.setIndexUnchecked(ux, uy, index);
             return true;
@@ -74,8 +74,8 @@ pub fn setIndexUnchecked(self: IndexedBitmap, x: u32, y: u32, index: u8) void {
 
 pub fn getIndex(self: IndexedBitmap, x: i32, y: i32) ?u8 {
     if (x >= 0 and y >= 0) {
-        const ux = @intCast(u32, x);
-        const uy = @intCast(u32, y);
+        const ux = @as(u32, @intCast(x));
+        const uy = @as(u32, @intCast(y));
         if (ux < self.width and uy < self.height) {
             return self.getIndexUnchecked(ux, uy);
         }
@@ -96,9 +96,9 @@ pub fn copyIndexToUnchecked(self: IndexedBitmap, dst: IndexedBitmap, x: u32, y: 
 }
 
 pub fn drawLine(self: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32, index: u8, skip_first: bool) void {
-    const dx = std.math.absInt(x1 - x0) catch unreachable;
+    const dx: i32 = @intCast(@abs(x1 - x0));
     const sx: i32 = if (x0 < x1) 1 else -1;
-    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
+    const dy = -@as(i32, @intCast(@abs(y1 - y0)));
     const sy: i32 = if (y0 < y1) 1 else -1;
     var err = dx + dy;
 
@@ -123,9 +123,9 @@ pub fn drawLine(self: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32, index: 
 }
 
 pub fn copyLineTo(self: IndexedBitmap, dst: IndexedBitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
-    const dx = std.math.absInt(x1 - x0) catch unreachable;
+    const dx: i32 = @intCast(@abs(x1 - x0));
     const sx: i32 = if (x0 < x1) 1 else -1;
-    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
+    const dy = -@as(i32, @intCast(@abs(y1 - y0)));
     const sy: i32 = if (y0 < y1) 1 else -1;
     var err = dx + dy;
 
@@ -133,7 +133,7 @@ pub fn copyLineTo(self: IndexedBitmap, dst: IndexedBitmap, x0: i32, y0: i32, x1:
     var y = y0;
     while (true) {
         if (self.getIndex(x, y)) |src_index| {
-            dst.setIndexUnchecked(@intCast(u32, x), @intCast(u32, y), src_index);
+            dst.setIndexUnchecked(@as(u32, @intCast(x)), @as(u32, @intCast(y)), src_index);
         }
         if (x == x1 and y == y1) break;
         const e2 = 2 * err;
@@ -160,7 +160,7 @@ pub fn floodFill(self: IndexedBitmap, allocator: Allocator, x: i32, y: i32, inde
     const old_index = self.getIndex(x, y) orelse return;
     if (old_index == index) return;
 
-    const start_coords = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) };
+    const start_coords = .{ .x = @as(u32, @intCast(x)), .y = @as(u32, @intCast(y)) };
     self.setIndexUnchecked(start_coords.x, start_coords.y, index);
 
     var stack = std.ArrayList(struct { x: u32, y: u32 }).init(allocator);

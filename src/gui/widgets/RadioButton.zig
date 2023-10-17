@@ -85,7 +85,7 @@ fn onKeyDown(widget: *gui.Widget, key_event: *gui.KeyEvent) void {
     }
 }
 
-fn onFocus(widget: *gui.Widget, focus_event : *gui.FocusEvent) void {
+fn onFocus(widget: *gui.Widget, focus_event: *gui.FocusEvent) void {
     const self = @fieldParentPtr(RadioButton, "widget", widget);
     self.focused = focus_event.source == .keyboard;
 }

@@ -165,7 +165,7 @@ pub fn init(allocator: Allocator, vg: nvg) !*Self {
         .allocator = allocator,
         .playback_timer = gui.Timer{
             .on_elapsed_fn = onPlaybackTimerElapsed,
-            .ctx = @ptrToInt(self),
+            .ctx = @intFromPtr(self),
         },
         .layer_textures = ArrayList(nvg.Image).init(allocator),
         .palette_texture = undefined,
@@ -491,7 +491,7 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
     if (mode == .map and self.getBitmapType() == .indexed) {
         var map: [256]u8 = undefined; // colormap -> palette
         for (&map, 0..) |*m, i| {
-            m.* = @truncate(u8, col.findNearest(palette, self.colormap[4 * i ..][0..4].*));
+            m.* = @as(u8, @truncate(col.findNearest(palette, self.colormap[4 * i ..][0..4].*)));
         }
         var iter = BitmapIterator.init(self);
         while (iter.next()) |bitmap| {
@@ -529,7 +529,7 @@ pub fn getColorDepth(self: Self) u32 {
 }
 
 pub fn getLayerCount(self: Self) u32 {
-    return @intCast(u32, self.layers.items.len);
+    return @as(u32, @intCast(self.layers.items.len));
 }
 
 pub fn getFrameCount(self: Self) u32 {
@@ -537,7 +537,7 @@ pub fn getFrameCount(self: Self) u32 {
 }
 
 fn onPlaybackTimerElapsed(context: usize) void {
-    var self = @intToPtr(*Self, context);
+    var self = @as(*Self, @ptrFromInt(context));
     if (self.selected_frame == self.frame_count - 1) {
         self.gotoFirstFrame();
     } else {
@@ -625,7 +625,7 @@ pub fn addFrame(self: *Self) !void {
     for (self.layers.items) |*layer| {
         var linked_frame: ?u32 = null;
         if (layer.linked) {
-            var i: u32 = @intCast(u32, layer.cels.items.len);
+            var i: u32 = @as(u32, @intCast(layer.cels.items.len));
             while (i != 0) {
                 i -= 1;
                 if (layer.cels.items[i].bitmap != null) {
@@ -744,13 +744,13 @@ pub fn paste(self: *Self) !void {
         try self.clearSelection();
     }
 
-    var selection_rect = Recti.make(0, 0, @intCast(i32, image.width), @intCast(i32, image.height));
+    var selection_rect = Recti.make(0, 0, @as(i32, @intCast(image.width)), @as(i32, @intCast(image.height)));
     if (self.copy_location) |copy_location| {
         selection_rect.x = copy_location.x;
         selection_rect.y = copy_location.y;
     } else {
-        selection_rect.x = @intCast(i32, self.getWidth() / 2) - @intCast(i32, image.width / 2);
-        selection_rect.y = @intCast(i32, self.getHeight() / 2) - @intCast(i32, image.height / 2);
+        selection_rect.x = @as(i32, @intCast(self.getWidth() / 2)) - @as(i32, @intCast(image.width / 2));
+        selection_rect.y = @as(i32, @intCast(self.getHeight() / 2)) - @as(i32, @intCast(image.height / 2));
     }
 
     var bitmap = Bitmap.initFromImage(image);
@@ -775,8 +775,8 @@ pub fn paste(self: *Self) !void {
 pub fn crop(self: *Self, rect: Recti) !void {
     if (rect.w <= 0 or rect.h <= 0) return error.InvalidCropRect;
 
-    self.width = @intCast(u32, rect.w);
-    self.height = @intCast(u32, rect.h);
+    self.width = @as(u32, @intCast(rect.w));
+    self.height = @as(u32, @intCast(rect.h));
 
     var it = BitmapIterator.init(self);
     while (it.next()) |bitmap| {
@@ -789,22 +789,22 @@ pub fn crop(self: *Self, rect: Recti) !void {
         const intersection = rect.intersection(.{
             .x = 0,
             .y = 0,
-            .w = @intCast(i32, bitmap.getWidth()),
-            .h = @intCast(i32, bitmap.getHeight()),
+            .w = @as(i32, @intCast(bitmap.getWidth())),
+            .h = @as(i32, @intCast(bitmap.getHeight())),
         });
         if (intersection.w > 0 and intersection.h > 0) {
-            const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
-            const oy = if (rect.y < 0) @intCast(u32, -rect.y) else 0;
-            const sx = @intCast(u32, intersection.x);
-            const sy = @intCast(u32, intersection.y);
-            const w = @intCast(u32, intersection.w);
-            const h = @intCast(u32, intersection.h);
+            const ox = if (rect.x < 0) @as(u32, @intCast(-rect.x)) else 0;
+            const oy = if (rect.y < 0) @as(u32, @intCast(-rect.y)) else 0;
+            const sx = @as(u32, @intCast(intersection.x));
+            const sy = @as(u32, @intCast(intersection.y));
+            const w = @as(u32, @intCast(intersection.w));
+            const h = @as(u32, @intCast(intersection.h));
             // blit to source
             var y: u32 = 0;
             switch (bitmap.*) {
                 .color => |color_bitmap| {
                     while (y < h) : (y += 1) {
-                        const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
+                        const si = 4 * ((y + oy) * @as(u32, @intCast(rect.w)) + ox);
                         const di = 4 * ((sy + y) * color_bitmap.width + sx);
                         // copy entire line
                         std.mem.copy(u8, new_bitmap.color.pixels[si .. si + 4 * w], color_bitmap.pixels[di .. di + 4 * w]);
@@ -812,7 +812,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
                 },
                 .indexed => |indexed_bitmap| {
                     while (y < h) : (y += 1) {
-                        const si = (y + oy) * @intCast(u32, rect.w) + ox;
+                        const si = (y + oy) * @as(u32, @intCast(rect.w)) + ox;
                         const di = (sy + y) * indexed_bitmap.width + sx;
                         // copy entire line
                         std.mem.copy(u8, new_bitmap.indexed.indices[si .. si + w], indexed_bitmap.indices[di .. di + w]);
@@ -849,22 +849,22 @@ pub fn clearSelection(self: *Self) !void {
     const intersection = rect.intersection(.{
         .x = 0,
         .y = 0,
-        .w = @intCast(i32, self.getWidth()),
-        .h = @intCast(i32, self.getHeight()),
+        .w = @as(i32, @intCast(self.getWidth())),
+        .h = @as(i32, @intCast(self.getHeight())),
     });
     if (intersection.w > 0 and intersection.h > 0) {
-        const ox = if (rect.x < 0) @intCast(u32, -rect.x) else 0;
-        const oy = if (rect.y < 0) @intCast(u32, -rect.y) else 0;
-        const sx = @intCast(u32, intersection.x);
-        const sy = @intCast(u32, intersection.y);
-        const w = @intCast(u32, intersection.w);
-        const h = @intCast(u32, intersection.h);
+        const ox = if (rect.x < 0) @as(u32, @intCast(-rect.x)) else 0;
+        const oy = if (rect.y < 0) @as(u32, @intCast(-rect.y)) else 0;
+        const sx = @as(u32, @intCast(intersection.x));
+        const sy = @as(u32, @intCast(intersection.y));
+        const w = @as(u32, @intCast(intersection.w));
+        const h = @as(u32, @intCast(intersection.h));
         // blit to source
         var y: u32 = 0;
         switch (try self.getOrCreateCurrentCelBitmap()) {
             .color => |color_bitmap| {
                 while (y < h) : (y += 1) {
-                    const si = 4 * ((y + oy) * @intCast(u32, rect.w) + ox);
+                    const si = 4 * ((y + oy) * @as(u32, @intCast(rect.w)) + ox);
                     const di = 4 * ((sy + y) * color_bitmap.width + sx);
                     switch (self.blend_mode) {
                         .alpha => {
@@ -881,7 +881,7 @@ pub fn clearSelection(self: *Self) !void {
             },
             .indexed => |indexed_bitmap| {
                 while (y < h) : (y += 1) {
-                    const si = (y + oy) * @intCast(u32, rect.w) + ox;
+                    const si = (y + oy) * @as(u32, @intCast(rect.w)) + ox;
                     const di = (sy + y) * indexed_bitmap.width + sx;
                     std.mem.copy(u8, indexed_bitmap.indices[di .. di + w], bitmap.indexed.indices[si .. si + w]);
                 }
@@ -902,15 +902,15 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
     const intersection = rect.intersection(.{
         .x = 0,
         .y = 0,
-        .w = @intCast(i32, self.getWidth()),
-        .h = @intCast(i32, self.getHeight()),
+        .w = @as(i32, @intCast(self.getWidth())),
+        .h = @as(i32, @intCast(self.getHeight())),
     });
     if (intersection.w <= 0 or intersection.h <= 0) return;
 
-    const sx = @intCast(u32, intersection.x);
-    const sy = @intCast(u32, intersection.y);
-    const w = @intCast(u32, intersection.w);
-    const h = @intCast(u32, intersection.h);
+    const sx = @as(u32, @intCast(intersection.x));
+    const sy = @as(u32, @intCast(intersection.y));
+    const w = @as(u32, @intCast(intersection.w));
+    const h = @as(u32, @intCast(intersection.h));
     const bitmap = try Bitmap.init(self.allocator, w, h, self.getBitmapType());
 
     // move pixels
@@ -987,7 +987,7 @@ pub fn previewBrush(self: *Self, x: i32, y: i32) void {
         },
     }
     if (success) {
-        self.last_preview = PrimitivePreview{ .brush = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) } };
+        self.last_preview = PrimitivePreview{ .brush = .{ .x = @as(u32, @intCast(x)), .y = @as(u32, @intCast(y)) } };
     }
 }
 
@@ -1117,7 +1117,7 @@ pub fn rotate(self: *Self, clockwise: bool) !void {
         if (self.getCurrentCel().bitmap) |*bitmap| {
             if (bitmap.getWidth() == bitmap.getHeight()) {
                 try bitmap.rotate(self.allocator, clockwise);
-                const d = @divTrunc(@intCast(i32, bitmap.getHeight()) - @intCast(i32, bitmap.getWidth()), 2);
+                const d = @divTrunc(@as(i32, @intCast(bitmap.getHeight())) - @as(i32, @intCast(bitmap.getWidth())), 2);
                 if (d != 0) {
                     self.x -= d;
                     self.y += d;
@@ -1136,8 +1136,8 @@ pub fn beginStroke(self: *Self, x: i32, y: i32) !void {
     if (self.isCurrentLayerLocked()) return;
 
     if (x < 0 or y < 0) return;
-    const ux = @intCast(u32, x);
-    const uy = @intCast(u32, y);
+    const ux = @as(u32, @intCast(x));
+    const uy = @as(u32, @intCast(y));
     if (ux >= self.width or uy >= self.height) return;
 
     const bitmap = try self.getOrCreateCurrentCelBitmap();
@@ -1296,8 +1296,8 @@ pub fn draw(self: *Self, vg: nvg) void {
         }
     }
 
-    const width = @intToFloat(f32, self.getWidth());
-    const height = @intToFloat(f32, self.getHeight());
+    const width = @as(f32, @floatFromInt(self.getWidth()));
+    const height = @as(f32, @floatFromInt(self.getHeight()));
     vg.beginPath();
     vg.rect(0, 0, width, height);
     for (self.layer_textures.items, 0..) |texture, i| {
@@ -1329,10 +1329,10 @@ pub fn drawSelection(self: *Self, vg: nvg) void {
             self.need_selection_texture_update = false;
         }
         const rect = Rect(f32).make(
-            @intToFloat(f32, selection.rect.x),
-            @intToFloat(f32, selection.rect.y),
-            @intToFloat(f32, selection.rect.w),
-            @intToFloat(f32, selection.rect.h),
+            @as(f32, @floatFromInt(selection.rect.x)),
+            @as(f32, @floatFromInt(selection.rect.y)),
+            @as(f32, @floatFromInt(selection.rect.w)),
+            @as(f32, @floatFromInt(selection.rect.h)),
         );
         vg.beginPath();
         vg.rect(rect.x, rect.y, rect.w, rect.h);

@@ -139,9 +139,9 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         .memory_status_label = try gui.Label.init(allocator, Rect(f32).make(0, 0, 80, 20), ""),
 
         .message_box_widget = try MessageBoxWidget.init(allocator, ""),
-        .new_document_widget = try NewDocumentWidget.init(allocator, self),
+        .new_document_widget = undefined,
         .about_dialog_widget = try AboutDialogWidget.init(allocator),
-        .canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document, vg),
+        .canvas = undefined,
         .palette_bar = try gui.Toolbar.init(allocator, Rect(f32).make(0, 0, 163, 24)),
         .palette_open_button = try gui.Button.init(allocator, rect, ""),
         .palette_save_button = try gui.Button.init(allocator, rect, ""),
@@ -152,10 +152,16 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
         .color_picker = try ColorPickerWidget.init(allocator, Rect(f32).make(0, 0, 163, 117)),
         .color_foreground_background = try ColorForegroundBackgroundWidget.init(allocator, Rect(f32).make(0, 0, 66, 66), vg),
         .blend_mode = try BlendModeWidget.init(allocator, Rect(f32).make(66, 0, 163 - 66, 66), vg),
-        .preview = try PreviewWidget.init(allocator, Rect(f32).make(0, 0, 163, 120), self.document, vg),
+        .preview = undefined,
         .panel_right = try gui.Panel.init(allocator, Rect(f32).make(0, 0, 163, 200)),
-        .timeline = try TimelineWidget.init(allocator, Rect(f32).make(0, 0, 100, 140), self.document),
+        .timeline = undefined,
     };
+
+    self.new_document_widget = try NewDocumentWidget.init(allocator, self);
+    self.canvas = try CanvasWidget.init(allocator, Rect(f32).make(0, 24, rect.w, rect.h), self.document, vg);
+    self.preview = try PreviewWidget.init(allocator, Rect(f32).make(0, 0, 163, 120), self.document, vg);
+    self.timeline = try TimelineWidget.init(allocator, Rect(f32).make(0, 0, 100, 140), self.document);
+
     self.widget.onResizeFn = onResize;
     self.widget.onKeyDownFn = onKeyDown;
     self.widget.onClipboardUpdateFn = onClipboardUpdate;
@@ -222,11 +228,11 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
                     switch (editor.color_foreground_background.active) {
                         .foreground => {
                             editor.document.foreground_color = editor.color_picker.color;
-                            editor.document.foreground_index = @truncate(u8, selected);
+                            editor.document.foreground_index = @as(u8, @truncate(selected));
                         },
                         .background => {
                             editor.document.background_color = editor.color_picker.color;
-                            editor.document.background_index = @truncate(u8, selected);
+                            editor.document.background_index = @as(u8, @truncate(selected));
                         },
                     }
                 }
@@ -396,14 +402,14 @@ fn initMenubar(self: *Self) !void {
     self.custom_grid_x_spinner.min_value = 2;
     self.custom_grid_x_spinner.max_value = 512;
     self.custom_grid_x_spinner.step_mode = .exponential;
-    self.custom_grid_x_spinner.setValue(@intCast(i32, self.canvas.custom_grid_spacing_x));
+    self.custom_grid_x_spinner.setValue(@as(i32, @intCast(self.canvas.custom_grid_spacing_x)));
     self.custom_grid_x_spinner.widget.enabled = false;
     self.custom_grid_x_spinner.onChangedFn = struct {
         fn changed(spinner: *gui.Spinner(i32)) void {
             if (spinner.widget.parent) |menu_bar_widget| {
                 if (menu_bar_widget.parent) |parent| {
                     var editor = @fieldParentPtr(EditorWidget, "widget", parent);
-                    editor.canvas.custom_grid_spacing_x = @intCast(u32, spinner.value);
+                    editor.canvas.custom_grid_spacing_x = @as(u32, @intCast(spinner.value));
                 }
             }
         }
@@ -411,14 +417,14 @@ fn initMenubar(self: *Self) !void {
     self.custom_grid_y_spinner.min_value = 2;
     self.custom_grid_y_spinner.max_value = 512;
     self.custom_grid_y_spinner.step_mode = .exponential;
-    self.custom_grid_y_spinner.setValue(@intCast(i32, self.canvas.custom_grid_spacing_y));
+    self.custom_grid_y_spinner.setValue(@as(i32, @intCast(self.canvas.custom_grid_spacing_y)));
     self.custom_grid_y_spinner.widget.enabled = false;
     self.custom_grid_y_spinner.onChangedFn = struct {
         fn changed(spinner: *gui.Spinner(i32)) void {
             if (spinner.widget.parent) |menu_bar_widget| {
                 if (menu_bar_widget.parent) |parent| {
                     var editor = @fieldParentPtr(EditorWidget, "widget", parent);
-                    editor.canvas.custom_grid_spacing_y = @intCast(u32, spinner.value);
+                    editor.canvas.custom_grid_spacing_y = @as(u32, @intCast(spinner.value));
                 }
             }
         }
@@ -676,7 +682,7 @@ fn updateLayout(self: *Self) void {
     self.status_bar.widget.relative_rect.y = rect.h - status_bar_h;
 
     self.menu_bar.widget.setSize(rect.w, menu_bar_h);
-    self.panel_right.widget.setSize(right_col_w, std.math.max(0, rect.h - self.panel_right.widget.relative_rect.y - status_bar_h));
+    self.panel_right.widget.setSize(right_col_w, @max(0, rect.h - self.panel_right.widget.relative_rect.y - status_bar_h));
     self.canvas.widget.setSize(canvas_w, canvas_h);
     self.timeline.widget.setSize(canvas_w, timeline_h);
     self.status_bar.widget.setSize(rect.w, menu_bar_h);
@@ -712,14 +718,14 @@ fn showMessageBox(self: *Self, title: [:0]const u8) void {
             window.setMainWidget(&self.message_box_widget.widget);
             self.message_box_widget.ok_button.widget.setFocus(true, .programmatic);
             self.message_box_widget.yes_button.widget.setFocus(true, .programmatic);
-            window.closed_context = @ptrToInt(self);
+            window.closed_context = @intFromPtr(self);
             window.onClosedFn = onMessageBoxClosed;
         } else |_| {}
     }
 }
 
 fn onMessageBoxClosed(context: usize) void {
-    const editor = @intToPtr(*EditorWidget, context);
+    const editor = @as(*EditorWidget, @ptrFromInt(context));
     if (editor.onMessageBoxResultFn) |onMessageBoxResult| {
         onMessageBoxResult(editor.message_box_result_context, editor.message_box_widget.result);
     }
@@ -844,8 +850,8 @@ fn selectAll(self: *Self) void {
     if (self.document.selection) |_| {
         self.document.clearSelection() catch {}; // TODO
     }
-    const w = @intCast(i32, self.document.getWidth());
-    const h = @intCast(i32, self.document.getHeight());
+    const w = @as(i32, @intCast(self.document.getWidth()));
+    const h = @as(i32, @intCast(self.document.getHeight()));
     self.document.makeSelection(Rect(i32).make(0, 0, w, h)) catch {}; // TODO
 }
 
@@ -1017,12 +1023,12 @@ fn togglePalette(self: *Self) !void {
             self.onMessageBoxResultFn = struct {
                 fn onResult(context: usize, result: MessageBoxWidget.Result) void {
                     if (result == .ok) {
-                        var editor = @intToPtr(*Self, context);
+                        var editor = @as(*Self, @ptrFromInt(context));
                         editor.document.convertToIndexed() catch {}; // TODO: Can't show message box because the widget is in use
                     }
                 }
             }.onResult;
-            self.message_box_result_context = @ptrToInt(self);
+            self.message_box_result_context = @intFromPtr(self);
             std.debug.print("context {}\n", .{self.message_box_result_context});
             self.showMessageBox("Toggle color mode");
         }
@@ -1053,14 +1059,14 @@ fn onDocumentChanged(self: *Self) void {
             const fgc = self.color_foreground_background.getRgba(.foreground);
             var dfgc = self.document.colormap[4 * @as(usize, self.document.foreground_index) ..][0..4];
             if (!std.mem.eql(u8, &fgc, dfgc)) {
-                self.document.foreground_index = @truncate(u8, col.findNearest(self.document.colormap, fgc));
+                self.document.foreground_index = @as(u8, @truncate(col.findNearest(self.document.colormap, fgc)));
                 dfgc = self.document.colormap[4 * @as(usize, self.document.foreground_index) ..][0..4];
                 self.color_foreground_background.setRgba(.foreground, dfgc);
             }
             const bgc = self.color_foreground_background.getRgba(.background);
             var dbgc = self.document.colormap[4 * @as(usize, self.document.background_index) ..][0..4];
             if (!std.mem.eql(u8, &bgc, dbgc)) {
-                self.document.background_index = @truncate(u8, col.findNearest(self.document.colormap, bgc));
+                self.document.background_index = @as(u8, @truncate(col.findNearest(self.document.colormap, bgc)));
                 dbgc = self.document.colormap[4 * @as(usize, self.document.background_index) ..][0..4];
                 self.color_foreground_background.setRgba(.background, dbgc);
             }
@@ -1139,7 +1145,7 @@ pub fn updateImageStatus(self: *Self) void {
 
 pub fn setMemoryUsageInfo(self: *Self, bytes: usize) void {
     var unit = "KiB";
-    var fb = @intToFloat(f32, bytes) / 1024.0;
+    var fb = @as(f32, @floatFromInt(bytes)) / 1024.0;
     if (bytes > 1 << 20) {
         unit = "MiB";
         fb /= 1024.0;

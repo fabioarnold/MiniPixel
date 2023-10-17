@@ -15,10 +15,10 @@ const EditorWidget = @import("EditorWidget.zig");
 const Document = @import("Document.zig");
 
 fn itof(i: i32) f32 {
-    return @intToFloat(f32, i);
+    return @as(f32, @floatFromInt(i));
 }
 fn ftoi(f: f32) i32 {
-    return @floatToInt(i32, f);
+    return @as(i32, @intFromFloat(f));
 }
 fn ritof(rect: Recti) Rectf {
     return Rectf.make(itof(rect.x), itof(rect.y), itof(rect.w), itof(rect.h));
@@ -136,7 +136,7 @@ const CropTool = struct {
                     const gui_rect = canvas.rectFromDocumentSpace(ritof(rect), false);
                     for (makeZones(gui_rect), 0..) |zone, i| {
                         if (zone.contains(gui_point)) {
-                            self.drag_zone = @intCast(u3, i);
+                            self.drag_zone = @as(u3, @intCast(i));
                             self.drag_offset = point.subtracted(Pointf.make(itof(rect.x), itof(rect.y)));
                             if (i == 2 or i == 4 or i == 7) self.drag_offset.?.x -= itof(rect.w); // drag outer edges
                             if (i == 5 or i == 6 or i == 7) self.drag_offset.?.y -= itof(rect.h);
@@ -292,8 +292,8 @@ const CropTool = struct {
             const edit_point = self.edit_point orelse return;
 
             var center = canvas.fromDocumentSpace(
-                @intToFloat(f32, edit_point.x),
-                @intToFloat(f32, edit_point.y),
+                @as(f32, @floatFromInt(edit_point.x)),
+                @as(f32, @floatFromInt(edit_point.y)),
             );
 
             vg.beginPath();
@@ -302,8 +302,8 @@ const CropTool = struct {
 
             if (self.begin_point) |begin_point| {
                 center = canvas.fromDocumentSpace(
-                    @intToFloat(f32, begin_point.x),
-                    @intToFloat(f32, begin_point.y),
+                    @as(f32, @floatFromInt(begin_point.x)),
+                    @as(f32, @floatFromInt(begin_point.y)),
                 );
                 vg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
                 vg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
@@ -328,7 +328,7 @@ const CropTool = struct {
                         const gui_rect = canvas.rectFromDocumentSpace(ritof(rect), true);
                         for (makeZones(gui_rect), 0..) |zone, i| {
                             if (zone.contains(mouse_point)) {
-                                return getZoneCursor(@intCast(u3, i));
+                                return getZoneCursor(@as(u3, @intCast(i)));
                             }
                         }
                     }
@@ -414,7 +414,7 @@ const SelectTool = struct {
         if (canvas.document.selection) |selection| {
             if (event.button == .left) {
                 const point = canvas.toDocumentSpace(event.x, event.y);
-                const pointi = Pointi.make(@floatToInt(i32, point.x), @floatToInt(i32, point.y));
+                const pointi = Pointi.make(@as(i32, @intFromFloat(point.x)), @as(i32, @intFromFloat(point.y)));
                 if (selection.rect.contains(pointi)) {
                     self.drag_offset = point.subtracted(Pointf.make(itof(selection.rect.x), itof(selection.rect.y)));
                 }
@@ -485,8 +485,8 @@ const SelectTool = struct {
         const edit_point = self.edit_point orelse return;
 
         var center = canvas.fromDocumentSpace(
-            @intToFloat(f32, edit_point.x),
-            @intToFloat(f32, edit_point.y),
+            @as(f32, @floatFromInt(edit_point.x)),
+            @as(f32, @floatFromInt(edit_point.y)),
         );
 
         vg.beginPath();
@@ -495,8 +495,8 @@ const SelectTool = struct {
 
         if (self.begin_point) |begin_point| {
             center = canvas.fromDocumentSpace(
-                @intToFloat(f32, begin_point.x),
-                @intToFloat(f32, begin_point.y),
+                @as(f32, @floatFromInt(begin_point.x)),
+                @as(f32, @floatFromInt(begin_point.y)),
             );
             vg.rect(@trunc(center.x), 0, 1, canvas.widget.relative_rect.h);
             vg.rect(0, @trunc(center.y), canvas.widget.relative_rect.w, 1);
@@ -572,8 +572,8 @@ const DrawTool = struct {
 
     fn updateEditPoint(self: *DrawTool, canvas: *CanvasWidget, event_x: f32, event_y: f32) void {
         const point = canvas.toDocumentSpace(event_x, event_y);
-        self.edit_point.x = @floatToInt(i32, @floor(point.x));
-        self.edit_point.y = @floatToInt(i32, @floor(point.y));
+        self.edit_point.x = @as(i32, @intFromFloat(@floor(point.x)));
+        self.edit_point.y = @as(i32, @intFromFloat(@floor(point.y)));
     }
 
     fn onMouseMove(self: *DrawTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
@@ -724,8 +724,8 @@ const FillTool = struct {
 
     fn onMouseMove(self: *FillTool, canvas: *CanvasWidget, event: *const gui.MouseEvent) void {
         const point = canvas.toDocumentSpace(event.x, event.y);
-        self.edit_point.x = @floatToInt(i32, @floor(point.x));
-        self.edit_point.y = @floatToInt(i32, @floor(point.y));
+        self.edit_point.x = @as(i32, @intFromFloat(@floor(point.x)));
+        self.edit_point.y = @as(i32, @intFromFloat(@floor(point.y)));
     }
 
     fn onMouseDown(self: *FillTool, event: *const gui.MouseEvent) void {
@@ -907,8 +907,8 @@ fn getClientRect(self: Self) Rectf {
 
 fn setTranslation(self: *Self, x: f32, y: f32) void {
     const client_rect = self.getClientRect();
-    const document_w = self.scale * @intToFloat(f32, self.document.getWidth());
-    const document_h = self.scale * @intToFloat(f32, self.document.getHeight());
+    const document_w = self.scale * @as(f32, @floatFromInt(self.document.getWidth()));
+    const document_h = self.scale * @as(f32, @floatFromInt(self.document.getHeight()));
     const min_x = 0.5 * client_rect.w - document_w;
     const min_y = 0.5 * client_rect.h - document_h;
     const max_x = 0.5 * client_rect.w;
@@ -926,8 +926,8 @@ pub fn translateByPixel(self: *Self, x: i32, y: i32) void {
 
 fn updateScrollbars(self: *Self) void {
     const client_rect = self.getClientRect();
-    const document_w = self.scale * @intToFloat(f32, self.document.getWidth());
-    const document_h = self.scale * @intToFloat(f32, self.document.getHeight());
+    const document_w = self.scale * @as(f32, @floatFromInt(self.document.getWidth()));
+    const document_h = self.scale * @as(f32, @floatFromInt(self.document.getHeight()));
     const translation = self.translation;
     self.horizontal_scrollbar.setMaxValue(document_w);
     self.horizontal_scrollbar.setValue(0.5 * client_rect.w - translation.x);
@@ -938,19 +938,19 @@ fn updateScrollbars(self: *Self) void {
 pub fn centerDocument(self: *Self) void {
     const rect = self.widget.relative_rect;
     self.setTranslation(
-        0.5 * (rect.w - self.scale * @intToFloat(f32, self.document.getWidth())),
-        0.5 * (rect.h - self.scale * @intToFloat(f32, self.document.getHeight())),
+        0.5 * (rect.w - self.scale * @as(f32, @floatFromInt(self.document.getWidth()))),
+        0.5 * (rect.h - self.scale * @as(f32, @floatFromInt(self.document.getHeight()))),
     );
 }
 
 pub fn centerAndZoomDocument(self: *Self) void {
     const rect = self.widget.relative_rect;
 
-    const fx = rect.w / @intToFloat(f32, self.document.getWidth());
-    const fy = rect.h / @intToFloat(f32, self.document.getWidth());
+    const fx = rect.w / @as(f32, @floatFromInt(self.document.getWidth()));
+    const fy = rect.h / @as(f32, @floatFromInt(self.document.getWidth()));
 
     const visible_portion = 0.8;
-    self.scale = visible_portion * std.math.min(fx, fy);
+    self.scale = visible_portion * @min(fx, fy);
     self.scale = std.math.clamp(self.scale, min_scale, max_scale);
     self.notifyScaleChanged();
 
@@ -1133,15 +1133,15 @@ fn zoom(self: *Self, factor: f32, center_x: f32, center_y: f32) void {
 }
 
 pub fn zoomToDocumentCenter(self: *Self, factor: f32) void {
-    const center_x = self.translation.x + self.scale * 0.5 * @intToFloat(f32, self.document.getWidth());
-    const center_y = self.translation.y + self.scale * 0.5 * @intToFloat(f32, self.document.getHeight());
+    const center_x = self.translation.x + self.scale * 0.5 * @as(f32, @floatFromInt(self.document.getWidth()));
+    const center_y = self.translation.y + self.scale * 0.5 * @as(f32, @floatFromInt(self.document.getHeight()));
     self.zoom(factor, center_x, center_y);
 }
 
 fn snap(self: Self, x: *f32, y: *f32) void {
     if (self.custom_grid_enabled and self.grid_snapping_enabled) {
-        const fx = @intToFloat(f32, self.custom_grid_spacing_x);
-        const fy = @intToFloat(f32, self.custom_grid_spacing_y);
+        const fx = @as(f32, @floatFromInt(self.custom_grid_spacing_x));
+        const fy = @as(f32, @floatFromInt(self.custom_grid_spacing_y));
         x.* = @round(x.* / fx) * fx;
         y.* = @round(y.* / fy) * fy;
     }
@@ -1197,8 +1197,8 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
             self.drawDocumentBackground(Rectf.make(
                 0,
                 0,
-                self.scale * @intToFloat(f32, self.document.getWidth()),
-                self.scale * @intToFloat(f32, self.document.getHeight()),
+                self.scale * @as(f32, @floatFromInt(self.document.getWidth())),
+                self.scale * @as(f32, @floatFromInt(self.document.getHeight())),
             ), vg);
             {
                 // draw document
@@ -1255,13 +1255,13 @@ fn drawGrids(self: Self, vg: nvg) void {
         vg.beginPath();
         var x: u32 = 0;
         while (x <= self.document.getWidth()) : (x += 1) {
-            const fx = @trunc(@intToFloat(f32, x) * self.scale);
-            vg.rect(fx, 0, 1, @intToFloat(f32, self.document.getHeight()) * self.scale);
+            const fx = @trunc(@as(f32, @floatFromInt(x)) * self.scale);
+            vg.rect(fx, 0, 1, @as(f32, @floatFromInt(self.document.getHeight())) * self.scale);
         }
         var y: u32 = 0;
         while (y <= self.document.getHeight()) : (y += 1) {
-            const fy = @trunc(@intToFloat(f32, y) * self.scale);
-            vg.rect(0, fy, @intToFloat(f32, self.document.getWidth()) * self.scale, 1);
+            const fy = @trunc(@as(f32, @floatFromInt(y)) * self.scale);
+            vg.rect(0, fy, @as(f32, @floatFromInt(self.document.getWidth())) * self.scale, 1);
         }
         vg.fillPaint(vg.imagePattern(0, 0, 2, 2, 0, self.grid_image, 0.5));
         vg.fill();
@@ -1269,18 +1269,18 @@ fn drawGrids(self: Self, vg: nvg) void {
 
     if (self.custom_grid_enabled) {
         vg.beginPath();
-        if (self.scale * @intToFloat(f32, self.custom_grid_spacing_x) > 3) {
+        if (self.scale * @as(f32, @floatFromInt(self.custom_grid_spacing_x)) > 3) {
             var x: u32 = 0;
             while (x <= self.document.getWidth()) : (x += self.custom_grid_spacing_x) {
-                const fx = @trunc(@intToFloat(f32, x) * self.scale);
-                vg.rect(fx, 0, 1, @intToFloat(f32, self.document.getHeight()) * self.scale);
+                const fx = @trunc(@as(f32, @floatFromInt(x)) * self.scale);
+                vg.rect(fx, 0, 1, @as(f32, @floatFromInt(self.document.getHeight())) * self.scale);
             }
         }
-        if (self.scale * @intToFloat(f32, self.custom_grid_spacing_y) > 3) {
+        if (self.scale * @as(f32, @floatFromInt(self.custom_grid_spacing_y)) > 3) {
             var y: u32 = 0;
             while (y <= self.document.getHeight()) : (y += self.custom_grid_spacing_y) {
-                const fy = @trunc(@intToFloat(f32, y) * self.scale);
-                vg.rect(0, fy, @intToFloat(f32, self.document.getWidth()) * self.scale, 1);
+                const fy = @trunc(@as(f32, @floatFromInt(y)) * self.scale);
+                vg.rect(0, fy, @as(f32, @floatFromInt(self.document.getWidth())) * self.scale, 1);
             }
         }
         vg.fillPaint(vg.imagePattern(0, 0, 2, 2, 0, self.blue_grid_image, 0.5));
@@ -1289,12 +1289,12 @@ fn drawGrids(self: Self, vg: nvg) void {
 }
 
 fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32), vg: nvg) void {
-    const document_rect = Rectf.make(0, 0, @intToFloat(f32, self.document.getWidth()), @intToFloat(f32, self.document.getHeight()));
+    const document_rect = Rectf.make(0, 0, @as(f32, @floatFromInt(self.document.getWidth())), @as(f32, @floatFromInt(self.document.getHeight())));
     const selection_rect = Rectf.make(
-        @intToFloat(f32, selection.rect.x),
-        @intToFloat(f32, selection.rect.y),
-        @intToFloat(f32, selection.rect.w),
-        @intToFloat(f32, selection.rect.h),
+        @as(f32, @floatFromInt(selection.rect.x)),
+        @as(f32, @floatFromInt(selection.rect.y)),
+        @as(f32, @floatFromInt(selection.rect.w)),
+        @as(f32, @floatFromInt(selection.rect.h)),
     );
     const s = self.scale;
     const x0 = @trunc(selection_rect.x * s);

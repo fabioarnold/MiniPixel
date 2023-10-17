@@ -63,15 +63,15 @@ pub fn convertToIndexed(self: ColorBitmap, allocator: Allocator, colormap: []con
     const pixel_count = indexed_bitmap.width * indexed_bitmap.height;
     var i: usize = 0;
     while (i < pixel_count) : (i += 1) {
-        indexed_bitmap.indices[i] = @truncate(u8, col.findNearest(colormap, self.pixels[4 * i ..][0..4].*));
+        indexed_bitmap.indices[i] = @as(u8, @truncate(col.findNearest(colormap, self.pixels[4 * i ..][0..4].*)));
     }
     return indexed_bitmap;
 }
 
 pub fn setPixel(self: ColorBitmap, x: i32, y: i32, color: Color) bool {
     if (x >= 0 and y >= 0) {
-        const ux = @intCast(u32, x);
-        const uy = @intCast(u32, y);
+        const ux = @as(u32, @intCast(x));
+        const uy = @as(u32, @intCast(y));
         if (ux < self.width and uy < self.height) {
             self.setPixelUnchecked(ux, uy, color);
             return true;
@@ -83,7 +83,7 @@ pub fn setPixel(self: ColorBitmap, x: i32, y: i32, color: Color) bool {
 pub fn blendPixel(self: ColorBitmap, x: i32, y: i32, color: Color) bool {
     if (self.getPixel(x, y)) |dst| {
         const blended = col.blend(color, dst);
-        self.setPixelUnchecked(@intCast(u32, x), @intCast(u32, y), blended);
+        self.setPixelUnchecked(@as(u32, @intCast(x)), @as(u32, @intCast(y)), blended);
         return true;
     }
     return false;
@@ -103,8 +103,8 @@ pub fn blendPixelUnchecked(self: ColorBitmap, x: u32, y: u32, color: Color) void
 
 pub fn getPixel(self: ColorBitmap, x: i32, y: i32) ?Color {
     if (x >= 0 and y >= 0) {
-        const ux = @intCast(u32, x);
-        const uy = @intCast(u32, y);
+        const ux = @as(u32, @intCast(x));
+        const uy = @as(u32, @intCast(y));
         if (ux < self.width and uy < self.height) {
             return self.getPixelUnchecked(ux, uy);
         }
@@ -124,9 +124,9 @@ pub fn copyPixelToUnchecked(self: ColorBitmap, dst: ColorBitmap, x: u32, y: u32)
 }
 
 pub fn drawLine(self: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32, color: Color, skip_first: bool) void {
-    const dx = std.math.absInt(x1 - x0) catch unreachable;
+    const dx: i32 = @intCast(@abs(x1 - x0));
     const sx: i32 = if (x0 < x1) 1 else -1;
-    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
+    const dy = -@as(i32, @intCast(@abs(y1 - y0)));
     const sy: i32 = if (y0 < y1) 1 else -1;
     var err = dx + dy;
 
@@ -151,9 +151,9 @@ pub fn drawLine(self: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32, color: Co
 }
 
 pub fn blendLine(self: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32, color: Color, skip_first: bool) void {
-    const dx = std.math.absInt(x1 - x0) catch unreachable;
+    const dx: i32 = @intCast(@abs(x1 - x0));
     const sx: i32 = if (x0 < x1) 1 else -1;
-    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
+    const dy: i32 = -@as(i32, @intCast(@abs(y1 - y0)));
     const sy: i32 = if (y0 < y1) 1 else -1;
     var err = dx + dy;
 
@@ -178,9 +178,9 @@ pub fn blendLine(self: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32, color: C
 }
 
 pub fn copyLineTo(self: ColorBitmap, dst: ColorBitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
-    const dx = std.math.absInt(x1 - x0) catch unreachable;
+    const dx: i32 = @intCast(@abs(x1 - x0));
     const sx: i32 = if (x0 < x1) 1 else -1;
-    const dy = -(std.math.absInt(y1 - y0) catch unreachable);
+    const dy = -@as(i32, @intCast(@abs(y1 - y0)));
     const sy: i32 = if (y0 < y1) 1 else -1;
     var err = dx + dy;
 
@@ -188,7 +188,7 @@ pub fn copyLineTo(self: ColorBitmap, dst: ColorBitmap, x0: i32, y0: i32, x1: i32
     var y = y0;
     while (true) {
         if (self.getPixel(x, y)) |src_color| {
-            dst.setPixelUnchecked(@intCast(u32, x), @intCast(u32, y), src_color);
+            dst.setPixelUnchecked(@as(u32, @intCast(x)), @as(u32, @intCast(y)), src_color);
         }
         if (x == x1 and y == y1) break;
         const e2 = 2 * err;
@@ -218,7 +218,7 @@ pub fn floodFill(self: ColorBitmap, allocator: Allocator, x: i32, y: i32, color:
     const old_color = self.getPixel(x, y) orelse return;
     if (col.eql(old_color, color)) return;
 
-    const start_coords = .{ .x = @intCast(u32, x), .y = @intCast(u32, y) };
+    const start_coords = .{ .x = @as(u32, @intCast(x)), .y = @as(u32, @intCast(y)) };
     self.setPixelUnchecked(start_coords.x, start_coords.y, color);
 
     var stack = std.ArrayList(struct { x: u32, y: u32 }).init(allocator);

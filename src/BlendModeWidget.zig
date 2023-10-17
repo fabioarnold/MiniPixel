@@ -66,7 +66,7 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
         const point = Point(f32).make(event.x, event.y);
         for (self.rects, 0..) |rect, i| {
             if (rect.contains(point)) {
-                self.setActive(@intToEnum(BlendMode, @intCast(u1, i)));
+                self.setActive(@as(BlendMode, @enumFromInt(@as(u1, @intCast(i)))));
                 break;
             }
         }
@@ -84,7 +84,7 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     gui.drawPanel(vg, 0, 0, rect.w, rect.h, 1, false, false);
     gui.drawPanelInset(vg, pad, pad, rect.w - 2 * pad, rect.h - 2 * pad, 1);
 
-    const active_rect = self.rects[@enumToInt(self.active)];
+    const active_rect = self.rects[@intFromEnum(self.active)];
     vg.beginPath();
     vg.rect(active_rect.x, active_rect.y, active_rect.w, active_rect.h);
     vg.fillColor(if (widget.enabled) gui.theme_colors.focus else gui.theme_colors.shadow);

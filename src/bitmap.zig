@@ -108,14 +108,14 @@ pub const Bitmap = union(BitmapType) {
 
     pub fn clearPixelUnchecked(self: Bitmap, x: u32, y: u32) void {
         switch (self) {
-            .color => |color_bitmap| color_bitmap.setPixelUnchecked(x, y, .{0, 0, 0, 0}),
+            .color => |color_bitmap| color_bitmap.setPixelUnchecked(x, y, .{ 0, 0, 0, 0 }),
             .indexed => |indexed_bitmap| indexed_bitmap.setIndexUnchecked(x, y, 0),
         }
     }
 
     pub fn clearLine(self: Bitmap, x0: i32, y0: i32, x1: i32, y1: i32) void {
         switch (self) {
-            .color => |color_bitmap| color_bitmap.drawLine(x0, y0, x1, y1, .{0, 0, 0, 0}, false),
+            .color => |color_bitmap| color_bitmap.drawLine(x0, y0, x1, y1, .{ 0, 0, 0, 0 }, false),
             .indexed => |indexed_bitmap| indexed_bitmap.drawLine(x0, y0, x1, y1, 0, false),
         }
     }

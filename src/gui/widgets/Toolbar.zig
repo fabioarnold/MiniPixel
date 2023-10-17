@@ -60,7 +60,7 @@ fn updateLayout(self: Self) void {
     for (self.widget.children.items) |child| {
         child.relative_rect.x = x;
         if (child.layout.grow) {
-            child.relative_rect.w = @round(rem / @intToFloat(f32, grow_count) - pad);
+            child.relative_rect.w = @round(rem / @as(f32, @floatFromInt(grow_count)) - pad);
             rem -= child.relative_rect.w + pad;
             grow_count -= 1;
         }

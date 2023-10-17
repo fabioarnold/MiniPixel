@@ -28,7 +28,7 @@ pub fn initFromFile(allocator: Allocator, file_path: []const u8) !Image {
     var image_width: u32 = undefined;
     var image_height: u32 = undefined;
     var colormap_entries: u32 = undefined;
-    const c_file_path = try std.cstr.addNullByte(allocator, file_path);
+    const c_file_path = try allocator.dupeZ(u8, file_path);
     defer allocator.free(c_file_path);
     var err = readPngFileInfo(c_file_path.ptr, &image_width, &image_height, &colormap_entries);
     if (err != 0) return error.ReadInfoFail;
@@ -112,9 +112,9 @@ pub fn writeToFile(self: Image, file_path: []const u8) !void {
     var colormap_ptr: [*c]const u8 = null;
     if (self.colormap) |colormap| {
         colormap_ptr = colormap.ptr;
-        colormap_entries = @truncate(u32, colormap.len / 4);
+        colormap_entries = @as(u32, @truncate(colormap.len / 4));
     }
-    const c_file_path = try std.cstr.addNullByte(self.allocator, file_path);
+    const c_file_path = try self.allocator.dupeZ(u8, file_path);
     defer self.allocator.free(c_file_path);
     const err = writePngFile(c_file_path.ptr, self.width, self.height, self.pixels.ptr, colormap_ptr, colormap_entries);
     if (err != 0) return error.WritePngFail;
@@ -125,7 +125,7 @@ pub fn writeToMemory(self: Image, allocator: Allocator) ![]const u8 {
     var colormap_ptr: [*c]const u8 = null;
     if (self.colormap) |colormap| {
         colormap_ptr = colormap.ptr;
-        colormap_entries = @truncate(u32, colormap.len / 4);
+        colormap_entries = @as(u32, @truncate(colormap.len / 4));
     }
     var mem_len: usize = undefined;
     var err = writePngMemory(null, &mem_len, self.width, self.height, self.pixels.ptr, colormap_ptr, colormap_entries);
@@ -143,7 +143,7 @@ fn convertIndexedToRgba(allocator: Allocator, indexed_image: Image) !Image {
     const pixel_count = indexed_image.width * indexed_image.height;
     var i: usize = 0;
     while (i < pixel_count) : (i += 1) {
-        const index = @intCast(usize, indexed_image.pixels[i]);
+        const index = @as(usize, @intCast(indexed_image.pixels[i]));
         std.mem.copy(u8, image.pixels[4 * i ..][0..4], colormap[4 * index ..][0..4]);
     }
     return image;

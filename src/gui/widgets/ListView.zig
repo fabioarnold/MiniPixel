@@ -89,7 +89,7 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     if (event.button == .left) {
         const self = @fieldParentPtr(Self, "widget", widget);
         //const rect = widget.getRect();
-        const i = @floatToInt(usize, event.y / item_h);
+        const i = @as(usize, @intFromFloat(event.y / item_h));
         self.model.selectFn(self.model.ctx, i);
     }
 }
@@ -113,16 +113,16 @@ fn draw(widget: *gui.Widget) void {
 
     nvg.fontFace("guifont");
     nvg.fontSize(gui.pixelsToPoints(9));
-    var text_align = @enumToInt(nvg.TextAlign.middle);
+    var text_align = @intFromEnum(nvg.TextAlign.middle);
     var x = rect.x;
-    text_align |= @enumToInt(nvg.TextAlign.left);
+    text_align |= @intFromEnum(nvg.TextAlign.left);
     x += 5;
-    nvg.textAlign(@intToEnum(nvg.TextAlign, text_align));
+    nvg.textAlign(@as(nvg.TextAlign, @enumFromInt(text_align)));
     nvg.fillColor(nvg.rgb(0, 0, 0));
     const len = self.model.countFn(self.model.ctx);
     var i: usize = 0;
     while (i < len) : (i += 1) {
-        const y = rect.y + 1 + @intToFloat(f32, i) * item_h;
+        const y = rect.y + 1 + @as(f32, @floatFromInt(i)) * item_h;
         const is_selected = self.model.isSelectedFn(self.model.ctx, i);
         if (is_selected) {
             nvg.beginPath();

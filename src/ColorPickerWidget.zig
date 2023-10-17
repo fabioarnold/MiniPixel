@@ -28,7 +28,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
 
     const pad = 5;
     inline for ([_]u2{ 0, 1, 2, 3 }) |i| {
-        const y = @intToFloat(f32, i) * 28;
+        const y = @as(f32, @floatFromInt(i)) * 28;
         self.sliders[i] = try gui.Slider(f32).init(allocator, Rect(f32).make(pad, y + pad, rect.w - 50 - 2 * pad, 23));
         self.sliders[i].max_value = 1;
         self.sliders[i].onChangedFn = SliderChangedFn(i).changed;
@@ -60,7 +60,7 @@ pub fn setRgba(self: *Self, color: []const u8) void {
     std.debug.assert(color.len == 4);
     for (color, 0..) |c, i| {
         self.color[i] = c;
-        self.sliders[i].setValue(@intToFloat(f32, c) / 255.0);
+        self.sliders[i].setValue(@as(f32, @floatFromInt(c)) / 255.0);
         self.spinners[i].setValue(color[i]);
     }
 }
@@ -69,7 +69,7 @@ pub fn setRgb(self: *Self, color: []const u8) void {
     std.debug.assert(color.len == 3);
     for (color, 0..) |c, i| {
         self.color[i] = c;
-        self.sliders[i].setValue(@intToFloat(f32, c) / 255.0);
+        self.sliders[i].setValue(@as(f32, @floatFromInt(c)) / 255.0);
         self.spinners[i].setValue(color[i]);
     }
 }
@@ -79,7 +79,7 @@ fn SliderChangedFn(comptime color_index: comptime_int) type {
         fn changed(slider: *gui.Slider(f32)) void {
             if (slider.widget.parent) |parent| {
                 var picker = @fieldParentPtr(Self, "widget", parent);
-                const value = @floatToInt(u8, slider.value * 255.0);
+                const value = @as(u8, @intFromFloat(slider.value * 255.0));
                 if (picker.color[color_index] != value) {
                     picker.color[color_index] = value;
                     picker.spinners[color_index].setValue(value);
@@ -96,8 +96,8 @@ fn SpinnerChangedFn(comptime color_index: comptime_int) type {
             if (spinner.widget.parent) |parent| {
                 var picker = @fieldParentPtr(Self, "widget", parent);
                 if (picker.color[color_index] != spinner.value) {
-                    picker.color[color_index] = @intCast(u8, spinner.value);
-                    picker.sliders[color_index].setValue(@intToFloat(f32, spinner.value) / 255.0);
+                    picker.color[color_index] = @as(u8, @intCast(spinner.value));
+                    picker.sliders[color_index].setValue(@as(f32, @floatFromInt(spinner.value)) / 255.0);
                     if (picker.onChangedFn) |onChanged| onChanged(picker);
                 }
             }
@@ -132,7 +132,7 @@ fn SliderDrawFn(comptime color_index: u2) type {
                 const gradient = vg.linearGradient(rect.x, 0, rect.x + rect.w, 0, icol, ocol);
                 vg.fillPaint(gradient);
                 vg.fill();
-                const x = @intToFloat(f32, picker.color[color_index]) / 255.0;
+                const x = @as(f32, @floatFromInt(picker.color[color_index])) / 255.0;
                 drawColorPickerIndicator(vg, rect.x + x * rect.w, rect.y + 4);
             }
         }

@@ -21,7 +21,7 @@ pub fn getImage(allocator: std.mem.Allocator) !Image {
             const size = c.GlobalSize(png_handle);
             if (c.GlobalLock(png_handle)) |local_mem| {
                 defer _ = c.GlobalUnlock(png_handle);
-                const data = @ptrCast([*]const u8, local_mem);
+                const data = @as([*]const u8, @ptrCast(local_mem));
                 return try Image.initFromMemory(allocator, data[0..size]);
             }
         }
@@ -34,7 +34,7 @@ pub fn getImage(allocator: std.mem.Allocator) !Image {
             const size = c.GlobalSize(handle);
             if (c.GlobalLock(handle)) |local_mem| {
                 defer _ = c.GlobalUnlock(handle);
-                const data = @ptrCast([*]const u8, local_mem);
+                const data = @as([*]const u8, @ptrCast(local_mem));
                 return try loadBitmapV5Image(allocator, data[0..size]);
             }
         }
@@ -72,7 +72,7 @@ pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
 
     if (c.GlobalLock(global_handle)) |local_mem| {
         defer _ = c.GlobalUnlock(global_handle);
-        const data = @ptrCast([*]u8, local_mem);
+        const data = @as([*]u8, @ptrCast(local_mem));
         std.mem.copy(u8, data[0..png_data.len], png_data);
 
         _ = c.SetClipboardData(png_format, global_handle);
@@ -81,22 +81,21 @@ pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
 
 // https://docs.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapv5header
 fn loadBitmapV5Image(allocator: std.mem.Allocator, mem: []const u8) !Image {
-    const ptr = @alignCast(@alignOf(*c.BITMAPV5HEADER), mem);
-    const header = @ptrCast(*const c.BITMAPV5HEADER, ptr);
-    const src = @ptrCast([*]const u8, ptr)[header.bV5Size .. header.bV5Size + header.bV5SizeImage];
+    const header: *const c.BITMAPV5HEADER = @alignCast(@ptrCast(mem.ptr));
+    const src = mem[header.bV5Size .. header.bV5Size + header.bV5SizeImage];
 
     var image: Image = undefined;
-    image.width = @intCast(u32, header.bV5Width);
+    image.width = @as(u32, @intCast(header.bV5Width));
 
     // If the value of bV5Height is positive, the bitmap is a bottom-up DIB
     // and its origin is the lower-left corner. If bV5Height value is negative,
     // the bitmap is a top-down DIB and its origin is the upper-left corner.
     var origin_top: bool = false;
     if (header.bV5Height < 0) {
-        image.height = @intCast(u32, -header.bV5Height);
+        image.height = @as(u32, @intCast(-header.bV5Height));
         origin_top = true;
     } else {
-        image.height = @intCast(u32, header.bV5Height);
+        image.height = @as(u32, @intCast(header.bV5Height));
     }
 
     std.debug.assert(header.bV5Planes == 1); // Must be 1

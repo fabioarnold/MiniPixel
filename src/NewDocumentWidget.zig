@@ -46,8 +46,8 @@ pub fn init(allocator: Allocator, editor_widget: *EditorWidget) !*Self {
     };
     self.widget.onKeyDownFn = onKeyDown;
 
-    self.width_spinner.setValue(@intCast(i32, editor_widget.document.getWidth()));
-    self.height_spinner.setValue(@intCast(i32, editor_widget.document.getHeight()));
+    self.width_spinner.setValue(@as(i32, @intCast(editor_widget.document.getWidth())));
+    self.height_spinner.setValue(@as(i32, @intCast(editor_widget.document.getHeight())));
     self.width_spinner.min_value = 1;
     self.height_spinner.min_value = 1;
     self.width_spinner.max_value = 1 << 14; // 16k
@@ -129,8 +129,8 @@ fn onCancelButtonClick(button: *gui.Button) void {
 
 fn accept(self: *Self) void {
     self.editor_widget.createNewDocument(
-        @intCast(u32, self.width_spinner.value),
-        @intCast(u32, self.height_spinner.value),
+        @as(u32, @intCast(self.width_spinner.value)),
+        @as(u32, @intCast(self.height_spinner.value)),
         if (self.truecolor_radio.checked) .color else .indexed,
     ) catch {
         // TODO: error dialog

@@ -50,10 +50,10 @@ const SdlWindow = struct {
 
     fn create(title: [:0]const u8, width: u32, height: u32, options: gui.Window.CreateOptions, window: *gui.Window) !SdlWindow {
         var self: SdlWindow = SdlWindow{
-            .windowed_width = @intToFloat(f32, width),
-            .windowed_height = @intToFloat(f32, height),
-            .video_width = @intToFloat(f32, width),
-            .video_height = @intToFloat(f32, height),
+            .windowed_width = @as(f32, @floatFromInt(width)),
+            .windowed_height = @as(f32, @floatFromInt(height)),
+            .video_width = @as(f32, @floatFromInt(width)),
+            .video_height = @as(f32, @floatFromInt(height)),
             .handle = undefined,
             .context = undefined,
             .window = window,
@@ -64,7 +64,7 @@ const SdlWindow = struct {
             const parent_window = c.SDL_GetWindowFromID(parent_id);
             const result = c.SDL_GetWindowDisplayIndex(parent_window);
             if (result >= 0) {
-                display_index = @intCast(c_uint, result);
+                display_index = @as(c_uint, @intCast(result));
             }
         }
 
@@ -73,16 +73,16 @@ const SdlWindow = struct {
         var window_width: c_int = undefined;
         var window_height: c_int = undefined;
         if (builtin.os.tag == .macos) {
-            window_width = @floatToInt(c_int, self.video_width);
-            window_height = @floatToInt(c_int, self.video_height);
+            window_width = @as(c_int, @intFromFloat(self.video_width));
+            window_height = @as(c_int, @intFromFloat(self.video_height));
         } else {
-            window_width = @floatToInt(c_int, self.video_scale * self.video_width);
-            window_height = @floatToInt(c_int, self.video_scale * self.video_height);
+            window_width = @as(c_int, @intFromFloat(self.video_scale * self.video_width));
+            window_height = @as(c_int, @intFromFloat(self.video_scale * self.video_height));
         }
         const maybe_window = c.SDL_CreateWindow(
             title.ptr,
-            @bitCast(c_int, c.SDL_WINDOWPOS_UNDEFINED_DISPLAY(display_index)),
-            @bitCast(c_int, c.SDL_WINDOWPOS_UNDEFINED_DISPLAY(display_index)),
+            @as(c_int, @bitCast(c.SDL_WINDOWPOS_UNDEFINED_DISPLAY(display_index))),
+            @as(c_int, @bitCast(c.SDL_WINDOWPOS_UNDEFINED_DISPLAY(display_index))),
             window_width,
             window_height,
             window_flags,
@@ -107,9 +107,9 @@ const SdlWindow = struct {
             _ = c.SDL_GetWindowWMInfo(self.handle, &sys_info);
             if (builtin.os.tag == .windows) {
                 if (sys_info.subsystem == c.SDL_SYSWM_WINDOWS) {
-                    const hwnd = @ptrCast(foundation.HWND, sys_info.info.win.window);
+                    const hwnd = @as(foundation.HWND, @ptrCast(sys_info.info.win.window));
                     const style = windows.GetWindowLong(hwnd, windows.GWL_STYLE);
-                    const no_minimizebox = ~@bitCast(i32, @enumToInt(windows.WS_MINIMIZEBOX));
+                    const no_minimizebox = ~@as(i32, @bitCast(@intFromEnum(windows.WS_MINIMIZEBOX)));
                     _ = windows.SetWindowLong(hwnd, windows.GWL_STYLE, style & no_minimizebox);
                 }
             }
@@ -144,15 +144,15 @@ const SdlWindow = struct {
     }
 
     fn setSize(self: *SdlWindow, width: i32, height: i32) void {
-        self.video_width = @intToFloat(f32, width);
-        self.video_height = @intToFloat(f32, height);
+        self.video_width = @as(f32, @floatFromInt(width));
+        self.video_height = @as(f32, @floatFromInt(height));
         self.window.setSize(self.video_width, self.video_height);
         switch (builtin.os.tag) {
             .windows, .linux => {
                 self.updateVideoScale();
                 const scaled_width = self.video_scale * self.video_width;
                 const scaled_height = self.video_scale * self.video_height;
-                c.SDL_SetWindowSize(self.handle, @floatToInt(c_int, scaled_width), @floatToInt(c_int, scaled_height));
+                c.SDL_SetWindowSize(self.handle, @as(c_int, @intFromFloat(scaled_width)), @as(c_int, @intFromFloat(scaled_height)));
             },
             .macos => c.SDL_SetWindowSize(self.handle, width, height),
             else => unreachable, // unsupported
@@ -160,7 +160,7 @@ const SdlWindow = struct {
     }
 
     fn setDisplay(self: SdlWindow, display_index: i32) void {
-        const pos = @bitCast(i32, c.SDL_WINDOWPOS_CENTERED_DISPLAY(@bitCast(u32, display_index)));
+        const pos = @as(i32, @bitCast(c.SDL_WINDOWPOS_CENTERED_DISPLAY(@as(u32, @bitCast(display_index)))));
         c.SDL_SetWindowPosition(self.handle, pos, pos);
     }
 
@@ -183,7 +183,7 @@ const SdlWindow = struct {
                 var window_width: i32 = undefined;
                 var window_height: i32 = undefined;
                 c.SDL_GetWindowSize(self.handle, &window_width, &window_height);
-                self.video_scale = @intToFloat(f32, drawable_width) / @intToFloat(f32, window_width);
+                self.video_scale = @as(f32, @floatFromInt(drawable_width)) / @as(f32, @floatFromInt(window_width));
             },
             else => unreachable,
         }
@@ -227,8 +227,8 @@ const SdlWindow = struct {
                 if (new_video_scale != self.video_scale) { // detect DPI change
                     //std.debug.print("new_video_scale {} {}\n", .{ new_video_scale, dpi });
                     self.video_scale = new_video_scale;
-                    const window_width = @floatToInt(i32, self.video_scale * self.video_width);
-                    const window_height = @floatToInt(i32, self.video_scale * self.video_height);
+                    const window_width = @as(i32, @intFromFloat(self.video_scale * self.video_width));
+                    const window_height = @as(i32, @intFromFloat(self.video_scale * self.video_height));
                     c.SDL_SetWindowSize(self.handle, window_width, window_height);
                     c.SDL_GL_GetDrawableSize(self.handle, &drawable_width, &drawable_height);
                 }
@@ -237,7 +237,7 @@ const SdlWindow = struct {
                 var window_width: i32 = undefined;
                 var window_height: i32 = undefined;
                 c.SDL_GetWindowSize(self.handle, &window_width, &window_height);
-                self.video_scale = @intToFloat(f32, drawable_width) / @intToFloat(f32, window_width);
+                self.video_scale = @as(f32, @floatFromInt(drawable_width)) / @as(f32, @floatFromInt(window_width));
             },
             else => unreachable, // unsupported
         }
@@ -245,8 +245,8 @@ const SdlWindow = struct {
         c.glViewport(0, 0, drawable_width, drawable_height);
 
         // only when window is resizable
-        self.video_width = @intToFloat(f32, drawable_width) / self.video_scale;
-        self.video_height = @intToFloat(f32, drawable_height) / self.video_scale;
+        self.video_width = @as(f32, @floatFromInt(drawable_width)) / self.video_scale;
+        self.video_height = @as(f32, @floatFromInt(drawable_height)) / self.video_scale;
         self.window.setSize(self.video_width, self.video_height);
     }
 
@@ -341,10 +341,10 @@ fn sdlProcessWindowEvent(window_event: c.SDL_WindowEvent) void {
 fn sdlQueryModState() u4 {
     var modifiers: u4 = 0;
     const sdl_mod_state = c.SDL_GetModState();
-    if ((sdl_mod_state & c.KMOD_ALT) != 0) modifiers |= @as(u4, 1) << @enumToInt(gui.Modifier.alt);
-    if ((sdl_mod_state & c.KMOD_CTRL) != 0) modifiers |= @as(u4, 1) << @enumToInt(gui.Modifier.ctrl);
-    if ((sdl_mod_state & c.KMOD_SHIFT) != 0) modifiers |= @as(u4, 1) << @enumToInt(gui.Modifier.shift);
-    if ((sdl_mod_state & c.KMOD_GUI) != 0) modifiers |= @as(u4, 1) << @enumToInt(gui.Modifier.super);
+    if ((sdl_mod_state & c.KMOD_ALT) != 0) modifiers |= @as(u4, 1) << @intFromEnum(gui.Modifier.alt);
+    if ((sdl_mod_state & c.KMOD_CTRL) != 0) modifiers |= @as(u4, 1) << @intFromEnum(gui.Modifier.ctrl);
+    if ((sdl_mod_state & c.KMOD_SHIFT) != 0) modifiers |= @as(u4, 1) << @intFromEnum(gui.Modifier.shift);
+    if ((sdl_mod_state & c.KMOD_GUI) != 0) modifiers |= @as(u4, 1) << @intFromEnum(gui.Modifier.super);
     return modifiers;
 }
 
@@ -352,8 +352,8 @@ fn sdlProcessMouseMotion(motion_event: c.SDL_MouseMotionEvent) void {
     if (findSdlWindow(motion_event.windowID)) |sdl_window| {
         sdl_window.dirty = true;
         if (motion_event.which == c.SDL_TOUCH_MOUSEID) {} else {
-            var mx: f32 = @intToFloat(f32, motion_event.x);
-            var my: f32 = @intToFloat(f32, motion_event.y);
+            var mx: f32 = @as(f32, @floatFromInt(motion_event.x));
+            var my: f32 = @as(f32, @floatFromInt(motion_event.y));
             if (builtin.os.tag == .windows or builtin.os.tag == .linux) {
                 mx /= sdl_window.video_scale;
                 my /= sdl_window.video_scale;
@@ -378,8 +378,8 @@ fn sdlProcessMouseButton(button_event: c.SDL_MouseButtonEvent) void {
     if (is_touch_panning) return; // reject accidental button presses
     if (findSdlWindow(button_event.windowID)) |sdl_window| {
         sdl_window.dirty = true;
-        var mx: f32 = @intToFloat(f32, button_event.x);
-        var my: f32 = @intToFloat(f32, button_event.y);
+        var mx: f32 = @as(f32, @floatFromInt(button_event.x));
+        var my: f32 = @as(f32, @floatFromInt(button_event.y));
         if (builtin.os.tag == .windows or builtin.os.tag == .linux) {
             mx /= sdl_window.video_scale;
             my /= sdl_window.video_scale;
@@ -421,22 +421,22 @@ fn sdlProcessMouseWheel(wheel_event: c.SDL_MouseWheelEvent) void {
         var x: i32 = undefined;
         var y: i32 = undefined;
         const state = c.SDL_GetMouseState(&x, &y);
-        var mx: f32 = @intToFloat(f32, x);
-        var my: f32 = @intToFloat(f32, y);
+        var mx: f32 = @as(f32, @floatFromInt(x));
+        var my: f32 = @as(f32, @floatFromInt(y));
         if (builtin.os.tag == .windows or builtin.os.tag == .linux) {
             mx /= sdl_window.video_scale;
             my /= sdl_window.video_scale;
         }
 
-        if (wheel_event.which == @bitCast(c_int, c.SDL_TOUCH_MOUSEID) or has_touch_mouse) {
+        if (wheel_event.which == @as(c_int, @bitCast(c.SDL_TOUCH_MOUSEID)) or has_touch_mouse) {
             is_touch_panning = true;
             const magic_factor = 4; // TODO: we need floating point resolution
             var se = gui.TouchEvent{
                 .event = gui.Event{ .type = .TouchPan },
                 .x = mx,
                 .y = my,
-                .dx = magic_factor * @intToFloat(f32, wheel_event.x),
-                .dy = magic_factor * @intToFloat(f32, wheel_event.y),
+                .dx = magic_factor * @as(f32, @floatFromInt(wheel_event.x)),
+                .dy = magic_factor * @as(f32, @floatFromInt(wheel_event.y)),
                 .zoom = 0,
             };
             if (wheel_event.direction == c.SDL_MOUSEWHEEL_FLIPPED) {
@@ -461,7 +461,7 @@ fn sdlProcessMouseWheel(wheel_event: c.SDL_MouseWheelEvent) void {
 }
 
 fn sdlProcessTouchFinger(finger_event: c.SDL_TouchFingerEvent) void {
-    if (finger_event.touchId == @bitCast(c_int, c.SDL_TOUCH_MOUSEID)) {
+    if (finger_event.touchId == @as(c_int, @bitCast(c.SDL_TOUCH_MOUSEID))) {
         // has_touch_mouse = true; // doesn't work on windows
     }
     touch_window_id = finger_event.windowID;
@@ -510,7 +510,7 @@ fn translateSdlKey(sym: c.SDL_Keycode) gui.KeyCode {
         c.SDLK_RIGHT => .Right,
         c.SDLK_UP => .Up,
         c.SDLK_DOWN => .Down,
-        c.SDLK_a...c.SDLK_z => @intToEnum(gui.KeyCode, @enumToInt(gui.KeyCode.A) + @intCast(u8, sym - c.SDLK_a)),
+        c.SDLK_a...c.SDLK_z => @as(gui.KeyCode, @enumFromInt(@intFromEnum(gui.KeyCode.A) + @as(u8, @intCast(sym - c.SDLK_a)))),
         c.SDLK_HASH => .Hash,
         else => .Unknown,
     };
@@ -550,7 +550,7 @@ fn sdlProcessTextInput(text_event: c.SDL_TextInputEvent) void {
                     codepoint |= text[1] & 0b00111111;
                     codepoint <<= 6;
                     codepoint |= text[2] & 0b00111111;
-                    const surrogate = @intCast(u16, codepoint);
+                    const surrogate = @as(u16, @intCast(codepoint));
 
                     if (first_surrogate_half) |first_surrogate0| {
                         const utf16 = [_]u16{ first_surrogate0, surrogate };
@@ -600,11 +600,11 @@ fn sdlAddTimer(timer: *gui.Timer, interval: u32) u32 {
     if (res == 0) {
         std.debug.print("SDL_AddTimer failed: {s}", .{c.SDL_GetError()});
     }
-    return @intCast(u32, res);
+    return @as(u32, @intCast(res));
 }
 
 fn sdlCancelTimer(timer_id: u32) void {
-    _ = c.SDL_RemoveTimer(@intCast(c_int, timer_id));
+    _ = c.SDL_RemoveTimer(@as(c_int, @intCast(timer_id)));
     //if (!res) std.debug.print("SDL_RemoveTimer failed: {}", .{c.SDL_GetError()});
 }
 
@@ -629,7 +629,7 @@ fn sdlProcessUserEvent(user_event: c.SDL_UserEvent) void {
     markAllWindowsAsDirty();
     switch (user_event.code) {
         SDL_USEREVENT_TIMER => {
-            var timer = @ptrCast(*gui.Timer, @alignCast(@sizeOf(usize), user_event.data1));
+            var timer = @as(*gui.Timer, @alignCast(@ptrCast(user_event.data1)));
             timer.onElapsed();
         },
         else => {},
@@ -651,7 +651,7 @@ fn sdlProcessClipboardUpdate() void {
 
 fn sdlProcessMultiGesture(gesture_event: c.SDL_MultiGestureEvent) void {
     if (gesture_event.numFingers != 2 or is_touch_panning) return;
-    if (@fabs(gesture_event.dDist) > 0.004) {
+    if (@abs(gesture_event.dDist) > 0.004) {
         is_touch_zooming = true;
     }
     if (!is_touch_zooming) return;
@@ -661,8 +661,8 @@ fn sdlProcessMultiGesture(gesture_event: c.SDL_MultiGestureEvent) void {
         var x: i32 = undefined;
         var y: i32 = undefined;
         _ = c.SDL_GetMouseState(&x, &y);
-        var mx: f32 = @intToFloat(f32, x);
-        var my: f32 = @intToFloat(f32, y);
+        var mx: f32 = @as(f32, @floatFromInt(x));
+        var my: f32 = @as(f32, @floatFromInt(y));
         if (builtin.os.tag == .windows or builtin.os.tag == .linux) {
             mx /= sdl_window.video_scale;
             my /= sdl_window.video_scale;
@@ -781,7 +781,7 @@ pub fn main() !void {
 
     if (c.SDL_GetPrefPath(info.org_name, info.app_name)) |sdl_pref_path| {
         defer c.SDL_free(sdl_pref_path);
-        const user_pref_path = std.mem.sliceTo(@ptrCast([*:0]const u8, sdl_pref_path), 0);
+        const user_pref_path = std.mem.sliceTo(@as([*:0]const u8, @ptrCast(sdl_pref_path)), 0);
         window_config_file_path = try std.fs.path.join(allocator, &.{ user_pref_path, "window.json" });
     }
     defer {
@@ -842,7 +842,7 @@ pub fn main() !void {
     editor_widget = try EditorWidget.init(allocator, rect, vg);
     defer editor_widget.deinit(vg);
     main_window.setMainWidget(&editor_widget.widget);
-    main_window.close_request_context = @ptrToInt(main_window);
+    main_window.close_request_context = @intFromPtr(main_window);
     main_window.onCloseRequestFn = onMainWindowCloseRequest;
     if (window_config_file_path) |file_path| {
         loadAndApplyWindowConfig(allocator, main_window, file_path) catch {}; // don't care
@@ -899,7 +899,7 @@ fn onMainWindowCloseRequest(context: usize) bool {
         editor_widget.showUnsavedChangesDialog(onUnsavedChangesDialogResult, context);
         return false;
     }
-    const window = @intToPtr(*gui.Window, context);
+    const window = @as(*gui.Window, @ptrFromInt(context));
     if (window_config_file_path) |file_path| {
         writeWindowConfig(window, file_path) catch {}; // don't care
     }
@@ -909,7 +909,7 @@ fn onMainWindowCloseRequest(context: usize) bool {
 fn onUnsavedChangesDialogResult(result_context: usize, result: MessageBoxWidget.Result) void {
     if (result == .no) {
         editor_widget.has_unsaved_changes = false; // HACK: close will succeed when there are no unsaved changes
-        const main_window = @intToPtr(*gui.Window, result_context);
+        const main_window = @as(*gui.Window, @ptrFromInt(result_context));
         main_window.close();
     } else if (result == .yes) {
         editor_widget.trySaveAsDocument(); // TODO: if success, continue closing app
@@ -928,8 +928,8 @@ fn writeWindowConfig(window: *gui.Window, file_path: []const u8) !void {
 
     const config = WindowConfig{
         .display_index = sdl_window.getDisplayIndex(),
-        .windowed_width = @floatToInt(i32, sdl_window.windowed_width),
-        .windowed_height = @floatToInt(i32, sdl_window.windowed_height),
+        .windowed_width = @as(i32, @intFromFloat(sdl_window.windowed_width)),
+        .windowed_height = @as(i32, @intFromFloat(sdl_window.windowed_height)),
         .is_maximized = sdl_window.isMaximized(),
     };
 
@@ -945,8 +945,10 @@ fn loadAndApplyWindowConfig(allocator: std.mem.Allocator, window: *gui.Window, f
     defer file.close();
     const json = try file.readToEndAlloc(allocator, 1_000_000);
     defer allocator.free(json);
-    const config = try std.json.parseFromSlice(WindowConfig, allocator, json, .{});
+    const parsed = try std.json.parseFromSlice(WindowConfig, allocator, json, .{});
+    defer parsed.deinit();
 
+    const config = parsed.value;
     sdl_window.setSize(config.windowed_width, config.windowed_height);
     sdl_window.setDisplay(config.display_index);
     if (config.is_maximized) {

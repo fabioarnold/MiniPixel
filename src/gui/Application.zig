@@ -53,8 +53,8 @@ pub fn createWindow(self: *Self, title: [:0]const u8, width: f32, height: f32, o
 
     const system_window_id = try system.createWindow(
         title,
-        @floatToInt(u32, width),
-        @floatToInt(u32, height),
+        @as(u32, @intFromFloat(width)),
+        @as(u32, @intFromFloat(height)),
         options,
         window,
     );

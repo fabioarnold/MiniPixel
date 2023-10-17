@@ -1,26 +1,34 @@
 .{
     .name = "Mini Pixel",
     .version = "0.2.1",
+    .paths = .{
+        "data",
+        "lib",
+        "src",
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+    },
     .dependencies = .{
         .nfd = .{
-            .url = "https://github.com/fabioarnold/nfd-zig/archive/8520a6807f046a23ecf3143e22fc49d2a9d1c189.tar.gz",
-            .hash = "122089e0f5ab5e4729a09aed48d721b98ed2b362923ead797c6af3b54ef9a725203f",
+            .url = "https://github.com/fabioarnold/nfd-zig/archive/4701d11cf52866828bd682c19ddddf60f8152960.tar.gz",
+            .hash = "12207996dc990674491c5cebe0c78026f8f99608a4cd5187bfeb0b3df910a04dc907",
         },
         .s2s = .{
-            .url = "https://github.com/ziglibs/s2s/archive/5e9e655bff25caf1355f68a6d4907212fbf7dfdf.tar.gz",
-            .hash = "122056bfa6716ebde6de4fbbd535b6fc5e9ac266198d63c006689da252ae803bb39f",
+            .url = "https://github.com/ziglibs/s2s/archive/f1d0508cc47b2af353658d4e52616a45aafa91ce.tar.gz",
+            .hash = "122084b614cc4ac1e0694812d8863446840a314d8654afebad9b6966ebe6792931b1",
         },
         .sdl = .{
-            .url = "https://github.com/andrewrk/SDL/archive/aef95740310154ebd491bc35e0fdcd118b16ade0.tar.gz",
-            .hash = "12202e4412ade6d1b8c45a606fc83cfa242a0ac47a70578aef9d5fa3b0bb33ab5618",
+            .url = "https://github.com/fabioarnold/SDL/archive/ea82c623a1321b81c64fc89c76579168b2ac835d.tar.gz",
+            .hash = "1220484b1a29fcae7fd69b66b0089827a424b3c1b217dd9848a70878df7182977ac2",
         },
         .zigwin32 = .{
-            .url = "https://github.com/marlersoft/zigwin32/archive/b70e7f818d77a0c0f39b0bd9c549e16439ff5780.tar.gz",
-            .hash = "122037145d96670bcd62b87a00a1d0924053760c73bca6ea6daabfcf9a94855395ef",
+            .url = "https://github.com/marlersoft/zigwin32/archive/6777f1db221d0cb50322842f558f03e3c3a4099f.tar.gz",
+            .hash = "1220f8d5028adceac0c6fc8ef554d82efef49ca48913393e9c2f5d73a66b58c8aaad",
         },
         .nanovg = .{
-            .url = "https://github.com/fabioarnold/nanovg-zig/archive/dd92f323ad465dfe30a4810a79ed2a486c6576e2.tar.gz",
-            .hash = "12209b9865ffdb6fe47d6fa248c64ba11dd42b2ddeb6d607faabbed20eb0fe729046",
+            .url = "https://github.com/fabioarnold/nanovg-zig/archive/de997980351481b6e1bbb6e1aceddde963d5e32b.tar.gz",
+            .hash = "1220b8d6ff0b689f46824fc9f4d179ced85b82c733c361ab69b6634a85bd88e88ba7",
         },
     },
 }

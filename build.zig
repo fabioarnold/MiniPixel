@@ -25,16 +25,16 @@ pub fn build(b: *std.Build) !void {
     const exe = b.addExecutable(.{
         .name = "minipixel",
         .root_source_file = .{ .path = "src/main.zig" },
+        .main_mod_path = .{ .path = "." },
         .target = target,
         .optimize = optimize,
     });
-    exe.setMainPkgPath(".");
 
     const exe_options = b.addOptions();
     exe.addOptions("build_options", exe_options);
     exe_options.addOption(bool, "automated_testing", automated_testing);
 
-    exe.addIncludePath("lib/gl2/include");
+    exe.addIncludePath(.{ .path = "lib/gl2/include" });
     if (exe.target.isWindows()) {
         exe.addVcpkgPaths(.dynamic) catch @panic("vcpkg not installed");
         if (exe.vcpkg_bin_path) |bin_path| {
@@ -50,16 +50,16 @@ pub fn build(b: *std.Build) !void {
                 "\trc /fo minipixel.o minipixel.rc\n\nbefore continuing\n", .{});
             return error.FileNotFound;
         };
-        exe.addObjectFile("minipixel.o"); // add icon
+        exe.addObjectFile(.{ .path = "minipixel.o" }); // add icon
     } else if (exe.target.isDarwin()) {
-        exe.addCSourceFile("src/c/sdl_hacks.m", &.{});
+        exe.addCSourceFile(.{ .file = .{ .path = "src/c/sdl_hacks.m" }, .flags = &.{} });
     }
     const c_flags: []const []const u8 = if (optimize == .Debug)
         &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS", "-O0", "-g" }
     else
         &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS" };
-    exe.addCSourceFile("src/c/png_image.c", &.{"-std=c99"});
-    exe.addCSourceFile("lib/gl2/src/glad.c", c_flags);
+    exe.addCSourceFile(.{ .file = .{ .path = "src/c/png_image.c" }, .flags = &.{"-std=c99"} });
+    exe.addCSourceFile(.{ .file = .{ .path = "lib/gl2/src/glad.c" }, .flags = c_flags });
     exe.addModule("win32", zigwin32_dep.module("zigwin32"));
     exe.addModule("nfd", nfd_dep.module("nfd"));
     exe.addModule("nanovg", nanovg);
@@ -72,7 +72,8 @@ pub fn build(b: *std.Build) !void {
         // Workaround for CI: Zig detects pkg-config and resolves -lpng16 which doesn't exist
         exe.linkSystemLibraryName("libpng16");
     } else if (exe.target.isDarwin()) {
-        exe.addLibraryPath("/opt/homebrew/lib");
+        exe.addIncludePath(.{ .path = "/opt/homebrew/include" });
+        exe.addLibraryPath(.{ .path = "/opt/homebrew/lib" });
         exe.linkSystemLibrary("png");
     } else {
         exe.linkSystemLibrary("libpng16");

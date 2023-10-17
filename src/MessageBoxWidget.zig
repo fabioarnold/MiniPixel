@@ -126,7 +126,7 @@ pub fn configure(self: *MessageBoxWidget, icon: Icon, buttons: Buttons, message:
             self.yes_button.widget.visible = true;
             self.no_button.widget.setPosition(rect.w - 90 - 90, rect.h - 35);
             self.no_button.widget.visible = true;
-        }
+        },
     }
     self.message_label.text = message;
 }
@@ -212,7 +212,7 @@ fn drawWarningIcon(vg: nvg, x: f32, y: f32) void {
     vg.arcTo(16, 0.5, 0.5, 31.5, 2);
     vg.arcTo(0.5, 31.5, 16, 31.5, 2);
     vg.closePath();
-    vg.fillColor(nvg.rgb(247, 226,107));
+    vg.fillColor(nvg.rgb(247, 226, 107));
     vg.fill();
     vg.strokeColor(nvg.rgb(164, 100, 34));
     vg.stroke();

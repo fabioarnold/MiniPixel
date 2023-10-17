@@ -40,7 +40,9 @@ pub fn Slider(comptime T: type) type {
             self.allocator.destroy(self);
         }
 
-        fn onChanged(self: *Self) void { _ = self; }
+        fn onChanged(self: *Self) void {
+            _ = self;
+        }
 
         fn onMouseMove(widget: *gui.Widget, event: *const gui.MouseEvent) void {
             const self = @fieldParentPtr(Self, "widget", widget);

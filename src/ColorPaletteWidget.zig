@@ -123,8 +123,8 @@ fn onMouseMove(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     const self = @fieldParentPtr(Self, "widget", widget);
     if (event.isButtonPressed(.left) and self.selected != null) {
         const rect = widget.relative_rect;
-        const ix = @floatToInt(u8, std.math.clamp(16 * event.x / rect.w, 0, 15));
-        const iy = @floatToInt(u8, std.math.clamp(16 * event.y / rect.h, 0, 15));
+        const ix = @as(u8, @intFromFloat(std.math.clamp(16 * event.x / rect.w, 0, 15)));
+        const iy = @as(u8, @intFromFloat(std.math.clamp(16 * event.y / rect.h, 0, 15)));
         const i = 16 * iy + ix;
         self.setSelection(i);
     }
@@ -134,8 +134,8 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
     if (event.button == .left) {
         const self = @fieldParentPtr(Self, "widget", widget);
         const rect = widget.relative_rect;
-        const ix = std.math.clamp(@floatToInt(u8, 16 * event.x / rect.w), 0, 15);
-        const iy = std.math.clamp(@floatToInt(u8, 16 * event.y / rect.h), 0, 15);
+        const ix = std.math.clamp(@as(u8, @intFromFloat(16 * event.x / rect.w)), 0, 15);
+        const iy = std.math.clamp(@as(u8, @intFromFloat(16 * event.y / rect.h)), 0, 15);
         const i = 16 * iy + ix;
         if (self.selected) |selected| {
             self.setSelection(if (selected != i) i else null);
@@ -157,8 +157,8 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
 
     var i: usize = 0;
     while (i < 256) : (i += 1) {
-        const x = @intToFloat(f32, i % 16);
-        const y = @intToFloat(f32, i / 16);
+        const x = @as(f32, @floatFromInt(i % 16));
+        const y = @as(f32, @floatFromInt(i / 16));
         vg.beginPath();
         vg.rect(rect.x + pad + x * tile_w, rect.y + pad + y * tile_h, tile_w - 1, tile_h - 1);
         const color = self.colors[i * 4 ..][0..4];
@@ -167,8 +167,8 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     }
 
     if (self.selected) |selected| {
-        const x = @intToFloat(f32, selected % 16);
-        const y = @intToFloat(f32, selected / 16);
+        const x = @as(f32, @floatFromInt(selected % 16));
+        const y = @as(f32, @floatFromInt(selected / 16));
         vg.beginPath();
         vg.rect(rect.x + pad + x * tile_w - 0.5, rect.y + pad + y * tile_h - 0.5, tile_w, tile_h);
         vg.strokeColor(nvg.rgbf(1, 1, 1));

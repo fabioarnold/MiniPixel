@@ -44,7 +44,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), text: [:0]const u8) !*Self {
         .text = text,
         .auto_repeat_timer = gui.Timer{
             .on_elapsed_fn = onAutoRepeatTimerElapsed,
-            .ctx = @ptrToInt(self),
+            .ctx = @intFromPtr(self),
         },
     };
     self.widget.focus_policy.mouse = true;
@@ -145,7 +145,7 @@ fn onLeave(widget: *gui.Widget) void {
 }
 
 fn onAutoRepeatTimerElapsed(context: usize) void {
-    var button = @intToPtr(*Button, context);
+    var button = @as(*Button, @ptrFromInt(context));
     if (button.onClickFn) |onClickFn| {
         onClickFn(button);
     }

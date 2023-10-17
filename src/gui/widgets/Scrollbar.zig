@@ -94,7 +94,7 @@ pub fn setValue(self: *Self, value: f32) void {
 }
 
 pub fn setMaxValue(self: *Self, max_value: f32) void {
-    self.max_value = std.math.max(0, max_value);
+    self.max_value = @max(0, max_value);
     self.setValue(self.value); // clamps
     self.updateThumbSize();
     self.updateThumbPosition();

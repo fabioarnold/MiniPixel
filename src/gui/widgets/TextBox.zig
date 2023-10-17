@@ -45,7 +45,7 @@ pub fn init(allocator: std.mem.Allocator, rect: Rect(f32)) !*Self {
         .base_key_down_fn = widget.onKeyDownFn,
         .blink_timer = gui.Timer{
             .on_elapsed_fn = onBlinkTimerElapsed,
-            .ctx = @ptrToInt(self),
+            .ctx = @intFromPtr(self),
         },
     };
 
@@ -165,7 +165,7 @@ fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
     event.event.accept();
 
     const text_len = std.unicode.utf8CountCodepoints(self.text.items) catch unreachable;
-    self.cursor_position = std.math.min(self.cursor_position, text_len); // make sure cursor position is in a valid range
+    self.cursor_position = @min(self.cursor_position, text_len); // make sure cursor position is in a valid range
 
     self.show_cursor_position_preview = false;
 
@@ -204,7 +204,7 @@ fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
                     self.cursor_position = self.selection_end;
                 } else {
                     if (self.hasSelection()) {
-                        self.cursor_position = std.math.min(self.selection_begin, self.selection_end);
+                        self.cursor_position = @min(self.selection_begin, self.selection_end);
                         self.clearSelection();
                     } else if (self.cursor_position > 0) self.cursor_position -= 1;
                 }
@@ -219,7 +219,7 @@ fn onKeyDown(widget: *gui.Widget, event: *gui.KeyEvent) void {
                     self.cursor_position = self.selection_end;
                 } else {
                     if (self.hasSelection()) {
-                        self.cursor_position = std.math.max(self.selection_begin, self.selection_end);
+                        self.cursor_position = @max(self.selection_begin, self.selection_end);
                         self.clearSelection();
                     } else if (self.cursor_position < text_len) self.cursor_position += 1;
                 }
@@ -390,10 +390,10 @@ pub fn selectAll(self: *Self) void {
 pub fn setText(self: *Self, text: []const u8) !void {
     const codepoint_count = try std.unicode.utf8CountCodepoints(text);
     try self.text.replaceRange(0, self.text.items.len, text);
-    self.cursor_position = std.math.min(self.cursor_position, codepoint_count);
-    self.cursor_position_preview = std.math.min(self.cursor_position_preview, codepoint_count);
-    self.selection_begin = std.math.min(self.selection_begin, codepoint_count);
-    self.selection_end = std.math.min(self.selection_end, codepoint_count);
+    self.cursor_position = @min(self.cursor_position, codepoint_count);
+    self.cursor_position_preview = @min(self.cursor_position_preview, codepoint_count);
+    self.selection_begin = @min(self.selection_begin, codepoint_count);
+    self.selection_end = @min(self.selection_end, codepoint_count);
 }
 
 pub fn draw(widget: *gui.Widget, vg: nvg) void {
@@ -461,8 +461,8 @@ fn drawSelection(self: *Self, h: f32, vg: nvg) void {
     if (!self.hasSelection()) return;
     const rect = self.widget.relative_rect;
 
-    const min = std.math.min(self.selection_begin, self.selection_end);
-    const max = std.math.max(self.selection_begin, self.selection_end);
+    const min = @min(self.selection_begin, self.selection_end);
+    const max = @max(self.selection_begin, self.selection_end);
     const min_x = self.glyph_positions.items[min].minx;
     const max_x = self.glyph_positions.items[max - 1].maxx;
 
@@ -500,7 +500,7 @@ fn drawCursors(self: *Self, cursor_h: f32, text_max_x: f32, vg: nvg) void {
 }
 
 fn onBlinkTimerElapsed(ctx: usize) void {
-    const self = @intToPtr(*Self, ctx);
+    const self = @as(*Self, @ptrFromInt(ctx));
     self.blink = !self.blink;
 }
 

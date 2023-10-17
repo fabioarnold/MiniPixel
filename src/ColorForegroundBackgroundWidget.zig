@@ -82,11 +82,11 @@ pub fn swap(self: *Self) void {
 }
 
 pub fn getRgba(self: Self, color_layer: ColorLayer) [4]u8 {
-    return self.colors[@enumToInt(color_layer)];
+    return self.colors[@intFromEnum(color_layer)];
 }
 
 pub fn setRgba(self: *Self, color_layer: ColorLayer, color: []const u8) void {
-    const i = @enumToInt(color_layer);
+    const i = @intFromEnum(color_layer);
     if (!std.mem.eql(u8, &self.colors[i], color)) {
         std.mem.copy(u8, &self.colors[i], color);
         self.notifyChanged(.color);
@@ -107,7 +107,7 @@ fn onMouseDown(widget: *gui.Widget, event: *const gui.MouseEvent) void {
         const point = Point(f32).make(event.x, event.y);
         for (self.rects, 0..) |rect, i| {
             if (rect.contains(point)) {
-                self.setActive(@intToEnum(ColorLayer, @intCast(u1, i)));
+                self.setActive(@as(ColorLayer, @enumFromInt(@as(u1, @intCast(i)))));
                 break;
             }
         }
@@ -161,8 +161,8 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     var i: usize = self.colors.len;
     while (i > 0) {
         i -= 1;
-        const stroke_width: f32 = if (i == @enumToInt(self.active)) 2 else 1;
-        const stroke_color = if (i == @enumToInt(self.active)) nvg.rgb(0, 0, 0) else nvg.rgb(66, 66, 66);
+        const stroke_width: f32 = if (i == @intFromEnum(self.active)) 2 else 1;
+        const stroke_color = if (i == @intFromEnum(self.active)) nvg.rgb(0, 0, 0) else nvg.rgb(66, 66, 66);
         vg.beginPath();
         vg.rect(
             self.rects[i].x + 0.5 * stroke_width,

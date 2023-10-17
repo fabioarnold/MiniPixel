@@ -65,11 +65,11 @@ pub fn Point(comptime T: type) type {
         }
 
         pub fn min(a: Self, b: Self) Self {
-            return .{ .x = std.math.min(a.x, b.x), .y = std.math.min(a.y, b.y) };
+            return .{ .x = @min(a.x, b.x), .y = @min(a.y, b.y) };
         }
 
         pub fn max(a: Self, b: Self) Self {
-            return .{ .x = std.math.max(a.x, b.x), .y = std.math.max(a.y, b.y) };
+            return .{ .x = @max(a.x, b.x), .y = @max(a.y, b.y) };
         }
     };
 }
@@ -89,8 +89,8 @@ pub fn Rect(comptime T: type) type {
 
         pub fn fromPoints(p0: Point(T), p1: Point(T)) Self {
             return .{
-                .x = std.math.min(p0.x, p1.x),
-                .y = std.math.min(p0.y, p1.y),
+                .x = @min(p0.x, p1.x),
+                .y = @min(p0.y, p1.y),
                 .w = if (p1.x > p0.x) p1.x - p0.x else p0.x - p1.x,
                 .h = if (p1.y > p0.y) p1.y - p0.y else p0.y - p1.y,
             };
@@ -122,10 +122,10 @@ pub fn Rect(comptime T: type) type {
 
         pub fn intersection(self: Self, other: Rect(T)) Rect(T) {
             return .{
-                .x = std.math.max(self.x, other.x),
-                .y = std.math.max(self.y, other.y),
-                .w = std.math.min(self.x + self.w, other.x + other.w) - std.math.max(self.x, other.x),
-                .h = std.math.min(self.y + self.h, other.y + other.h) - std.math.max(self.y, other.y),
+                .x = @max(self.x, other.x),
+                .y = @max(self.y, other.y),
+                .w = @min(self.x + self.w, other.x + other.w) - @max(self.x, other.x),
+                .h = @min(self.y + self.h, other.y + other.h) - @max(self.y, other.y),
             };
         }
     };

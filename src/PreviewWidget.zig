@@ -86,10 +86,10 @@ pub fn draw(widget: *gui.Widget, vg: nvg) void {
     const client_rect = Rect(f32).make(0, 0, client_w, client_h);
     self.drawBackground(client_rect, vg);
 
-    const d_x = client_w - @intToFloat(f32, self.document.getWidth());
-    const d_y = client_h - @intToFloat(f32, self.document.getHeight());
-    self.translation.x = std.math.clamp(self.translation.x, std.math.min(0, d_x), std.math.max(0, d_x));
-    self.translation.y = std.math.clamp(self.translation.y, std.math.min(0, d_y), std.math.max(0, d_y));
+    const d_x = client_w - @as(f32, @floatFromInt(self.document.getWidth()));
+    const d_y = client_h - @as(f32, @floatFromInt(self.document.getHeight()));
+    self.translation.x = std.math.clamp(self.translation.x, @min(0, d_x), @max(0, d_x));
+    self.translation.y = std.math.clamp(self.translation.y, @min(0, d_y), @max(0, d_y));
     vg.translate(self.translation.x, self.translation.y);
     self.document.draw(vg);
 
@@ -106,12 +106,12 @@ fn drawBackground(self: Self, rect: Rect(f32), vg: nvg) void {
 }
 
 fn drawSelection(self: Self, selection: Document.Selection, rect: Rect(f32), vg: nvg) void {
-    const document_rect = Rect(f32).make(0, 0, @intToFloat(f32, self.document.getWidth()), @intToFloat(f32, self.document.getHeight()));
+    const document_rect = Rect(f32).make(0, 0, @as(f32, @floatFromInt(self.document.getWidth())), @as(f32, @floatFromInt(self.document.getHeight())));
     const selection_rect = Rect(f32).make(
-        @intToFloat(f32, selection.rect.x),
-        @intToFloat(f32, selection.rect.y),
-        @intToFloat(f32, selection.rect.w),
-        @intToFloat(f32, selection.rect.h),
+        @as(f32, @floatFromInt(selection.rect.x)),
+        @as(f32, @floatFromInt(selection.rect.y)),
+        @as(f32, @floatFromInt(selection.rect.w)),
+        @as(f32, @floatFromInt(selection.rect.h)),
     );
     const intersection = rect.intersection(document_rect.intersection(selection_rect));
     vg.scissor(intersection.x, intersection.y, intersection.w, intersection.h);

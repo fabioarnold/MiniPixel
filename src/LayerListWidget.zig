@@ -83,16 +83,16 @@ pub fn onDocumentChanged(self: *Self) void {
         self.layer_widgets.shrinkRetainingCapacity(layer_count);
         self.widget.children.shrinkRetainingCapacity(self.widget.children.items.len - remove_count);
     } else {
-        var i: u32 = @truncate(u32, self.layer_widgets.items.len);
+        var i: u32 = @as(u32, @truncate(self.layer_widgets.items.len));
         while (i < layer_count) : (i += 1) {
-            const rect = Rect(f32).make(0, @intToFloat(f32, layer_count - i) * tile_size, 3 * tile_size, tile_size + 1);
+            const rect = Rect(f32).make(0, @as(f32, @floatFromInt(layer_count - i)) * tile_size, 3 * tile_size, tile_size + 1);
             const layer_widget = LayerWidget.init(self.allocator, rect, self.document, i) catch return; // TODO: handle?
             self.layer_widgets.append(layer_widget) catch return;
             self.widget.addChild(&layer_widget.widget) catch return;
         }
     }
     for (self.layer_widgets.items, 0..) |layer_widget, i| {
-        layer_widget.widget.relative_rect.y = @intToFloat(f32, layer_count - i) * tile_size;
+        layer_widget.widget.relative_rect.y = @as(f32, @floatFromInt(layer_count - i)) * tile_size;
     }
 
     self.updateVisibleButtons();
@@ -171,7 +171,7 @@ fn onLinkButtonClicked(button: *gui.Button) void {
 pub fn updateVisibleButtons(self: *Self) void {
     var any_visible: bool = false;
     for (self.layer_widgets.items, 0..) |layer_widget, i| {
-        const visible = self.document.isLayerVisible(@truncate(u32, i));
+        const visible = self.document.isLayerVisible(@as(u32, @truncate(i)));
         if (visible) any_visible = true;
         layer_widget.visible_button.iconFn = if (visible) icons.iconEyeOpen else icons.iconEyeClosed;
         layer_widget.visible_button.checked = !visible;
@@ -183,7 +183,7 @@ pub fn updateVisibleButtons(self: *Self) void {
 pub fn updateLockButtons(self: *Self) void {
     var any_unlocked: bool = false;
     for (self.layer_widgets.items, 0..) |layer_widget, i| {
-        const locked = self.document.isLayerLocked(@truncate(u32, i));
+        const locked = self.document.isLayerLocked(@as(u32, @truncate(i)));
         if (!locked) any_unlocked = true;
         layer_widget.lock_button.iconFn = if (locked) icons.iconLockClosed else icons.iconLockOpen;
         layer_widget.lock_button.checked = locked;
@@ -195,7 +195,7 @@ pub fn updateLockButtons(self: *Self) void {
 pub fn updateLinkButtons(self: *Self) void {
     var any_unlinked: bool = false;
     for (self.layer_widgets.items, 0..) |layer_widget, i| {
-        const linked = self.document.isLayerLinked(@truncate(u32, i));
+        const linked = self.document.isLayerLinked(@as(u32, @truncate(i)));
         if (!linked) any_unlinked = true;
         layer_widget.link_button.iconFn = if (linked) icons.iconLinked else icons.iconUnlinked;
         layer_widget.link_button.checked = linked;
@@ -208,7 +208,7 @@ fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {
     const frame_x = name_w;
     const frame_y = 0;
     if (mouse_x >= frame_x and mouse_y >= frame_y) {
-        const frame = @floatToInt(u32, (mouse_x - frame_x) / tile_size);
+        const frame = @as(u32, @intFromFloat((mouse_x - frame_x) / tile_size));
         if (frame < self.document.getFrameCount()) {
             self.document.gotoFrame(frame);
         }
@@ -216,7 +216,7 @@ fn selectFrameAndLayer(self: *Self, mouse_x: f32, mouse_y: f32) void {
     const layer_x = 3 * tile_size;
     const layer_y = tile_size;
     if (mouse_x >= layer_x and mouse_y >= layer_y) {
-        const layer = @floatToInt(u32, (mouse_y - layer_y) / tile_size);
+        const layer = @as(u32, @intFromFloat((mouse_y - layer_y) / tile_size));
         if (layer < self.document.getLayerCount()) {
             self.document.selectLayer(self.document.getLayerCount() - 1 - layer);
         }
@@ -247,11 +247,11 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
         // draw selection
         const selected_layer = self.document.selected_layer;
         const selected_frame = self.document.selected_frame;
-        const grid_w = name_w + @intToFloat(f32, frame_count) * tile_size;
-        const grid_h = @intToFloat(f32, 1 + layer_count) * tile_size;
+        const grid_w = name_w + @as(f32, @floatFromInt(frame_count)) * tile_size;
+        const grid_h = @as(f32, @floatFromInt(1 + layer_count)) * tile_size;
         vg.beginPath();
-        vg.rect(0, @intToFloat(f32, layer_count - selected_layer) * tile_size, grid_w, tile_size);
-        vg.rect(name_w + @intToFloat(f32, selected_frame) * tile_size, 0, tile_size, grid_h);
+        vg.rect(0, @as(f32, @floatFromInt(layer_count - selected_layer)) * tile_size, grid_w, tile_size);
+        vg.rect(name_w + @as(f32, @floatFromInt(selected_frame)) * tile_size, 0, tile_size, grid_h);
         vg.fillColor(nvg.rgbf(1, 1, 1));
         vg.fill();
 
@@ -259,19 +259,19 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
         vg.beginPath();
         var row: usize = 1;
         while (row <= layer_count + 1) : (row += 1) {
-            const row_y = @intToFloat(f32, row) * tile_size - 0.5;
+            const row_y = @as(f32, @floatFromInt(row)) * tile_size - 0.5;
             vg.moveTo(0, row_y);
             vg.lineTo(grid_w, row_y);
         }
         var col: usize = 1;
         while (col <= 3) : (col += 1) {
-            const col_x = @intToFloat(f32, col) * tile_size - 0.5;
+            const col_x = @as(f32, @floatFromInt(col)) * tile_size - 0.5;
             vg.moveTo(col_x, 0);
             vg.lineTo(col_x, grid_h);
         }
         col = 0;
         while (col <= frame_count) : (col += 1) {
-            const col_x = name_w + @intToFloat(f32, col) * tile_size - 0.5;
+            const col_x = name_w + @as(f32, @floatFromInt(col)) * tile_size - 0.5;
             vg.moveTo(col_x, 0);
             vg.lineTo(col_x, grid_h);
         }
@@ -287,16 +287,16 @@ fn draw(widget: *gui.Widget, vg: nvg) void {
         var frame: usize = 0;
         while (frame < frame_count) : (frame += 1) {
             const text = std.fmt.bufPrint(&buf, "{}", .{frame + 1}) catch unreachable;
-            _ = vg.text(name_w + @intToFloat(f32, frame) * tile_size + 10, 10, text);
+            _ = vg.text(name_w + @as(f32, @floatFromInt(frame)) * tile_size + 10, 10, text);
         }
 
         // draw cel indicators
         row = 0;
         while (row < layer_count) : (row += 1) {
-            const y = @intToFloat(f32, layer_count - row) * tile_size + 10;
+            const y = @as(f32, @floatFromInt(layer_count - row)) * tile_size + 10;
             col = 0;
             while (col < frame_count) : (col += 1) {
-                const x = name_w + @intToFloat(f32, col) * tile_size + 10;
+                const x = name_w + @as(f32, @floatFromInt(col)) * tile_size + 10;
                 if (self.document.layers.items[row].cels.items[col].bitmap == null) {
                     vg.beginPath();
                     vg.circle(x, y, 5.5);

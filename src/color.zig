@@ -19,11 +19,11 @@ pub fn eql(a: Color, b: Color) bool {
 }
 
 fn mul8(a: u8, b: u8) u8 {
-    return @truncate(u8, (@as(u16, a) * @as(u16, b)) / 0xff);
+    return @as(u8, @truncate((@as(u16, a) * @as(u16, b)) / 0xff));
 }
 
 fn div8(a: u8, b: u8) u8 {
-    return @truncate(u8, @divTrunc(@as(u16, a) * 0xff, @as(u16, b)));
+    return @as(u8, @truncate(@divTrunc(@as(u16, a) * 0xff, @as(u16, b))));
 }
 
 // blend color a over b (Porter Duff)
@@ -43,16 +43,16 @@ pub fn blend(a: Color, b: Color) Color {
 
 pub fn distanceSqr(a: Color, b: Color) f32 {
     const d = [_]f32{
-        @intToFloat(f32, a[0]) - @intToFloat(f32, b[0]),
-        @intToFloat(f32, a[1]) - @intToFloat(f32, b[1]),
-        @intToFloat(f32, a[2]) - @intToFloat(f32, b[2]),
-        @intToFloat(f32, a[3]) - @intToFloat(f32, b[3]),
+        @as(f32, @floatFromInt(a[0])) - @as(f32, @floatFromInt(b[0])),
+        @as(f32, @floatFromInt(a[1])) - @as(f32, @floatFromInt(b[1])),
+        @as(f32, @floatFromInt(a[2])) - @as(f32, @floatFromInt(b[2])),
+        @as(f32, @floatFromInt(a[3])) - @as(f32, @floatFromInt(b[3])),
     };
     return d[0] * d[0] + d[1] * d[1] + d[2] * d[2] + d[3] * d[3];
 }
 
 pub fn findNearest(colors: []const u8, color: Color) usize {
-    var nearest: f32 = std.math.f32_max;
+    var nearest: f32 = std.math.floatMax(f32);
     var nearest_i: usize = 0;
     var i: usize = 0;
     while (i < colors.len and nearest > 0) : (i += 4) {

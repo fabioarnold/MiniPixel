@@ -66,12 +66,12 @@ pub const MouseEvent = struct {
 
     pub fn isButtonPressed(self: MouseEvent, button: MouseButton) bool {
         if (button == .none) return false;
-        const flag = @as(u32, 1) << (@enumToInt(button) - 1);
+        const flag = @as(u32, 1) << (@intFromEnum(button) - 1);
         return (self.state & flag) != 0;
     }
 
     pub fn isModifierPressed(self: MouseEvent, modifier: Modifier) bool {
-        const flag = @as(@TypeOf(self.modifiers), 1) << @enumToInt(modifier);
+        const flag = @as(@TypeOf(self.modifiers), 1) << @intFromEnum(modifier);
         return (self.modifiers & flag) != 0;
     }
 };
@@ -159,12 +159,12 @@ pub const KeyEvent = struct {
     modifiers: u4,
 
     pub fn isModifierPressed(self: KeyEvent, modifier: Modifier) bool {
-        const flag = @as(@TypeOf(self.modifiers), 1) << @enumToInt(modifier);
+        const flag = @as(@TypeOf(self.modifiers), 1) << @intFromEnum(modifier);
         return (self.modifiers & flag) != 0;
     }
 
     pub fn isSingleModifierPressed(self: KeyEvent, modifier: Modifier) bool {
-        const flag = @as(@TypeOf(self.modifiers), 1) << @enumToInt(modifier);
+        const flag = @as(@TypeOf(self.modifiers), 1) << @intFromEnum(modifier);
         return (self.modifiers & flag) == flag;
     }
 };
