@@ -6,7 +6,6 @@ const ArrayList = std.ArrayList;
 const ArrayListUnmanaged = std.ArrayListUnmanaged;
 
 const nvg = @import("nanovg");
-const s2s = @import("s2s");
 const gui = @import("gui");
 const Point = gui.geometry.Point;
 const Pointi = Point(i32);
@@ -296,90 +295,13 @@ const Snapshot = struct {
 };
 
 pub fn serialize(self: Document) ![]u8 {
-    var snapshot = Snapshot{
-        .x = self.x,
-        .y = self.y,
-        .width = self.width,
-        .height = self.height,
-        .bitmap_type = self.bitmap_type,
-        .frame_count = self.frame_count,
-        .frame_time = self.frame_time,
-        .selected_frame = self.selected_frame,
-        .selected_layer = self.selected_layer,
-        .layers = self.layers.items,
-        .colormap = self.colormap,
-        .selection = if (self.selection) |selection| .{
-            .rect = selection.rect,
-            .bitmap = selection.bitmap,
-        } else null,
-    };
-
-    var output = ArrayList(u8).init(self.allocator);
-
-    if (snapshot_compression_enabled) {
-        var comp = try std.compress.deflate.compressor(self.allocator, output.writer(), .{ .level = .best_speed });
-        defer comp.deinit();
-        try s2s.serialize(comp.writer(), Snapshot, snapshot);
-        try comp.close();
-    } else {
-        try s2s.serialize(output.writer(), Snapshot, snapshot);
-    }
-
-    output.shrinkAndFree(output.items.len);
-    return output.items;
+    _ = self;
+    return &.{};
 }
 
 pub fn deserialize(self: *Document, data: []u8) !void {
-    var snapshot: Snapshot = undefined;
-    var input = std.io.fixedBufferStream(data);
-
-    if (snapshot_compression_enabled) {
-        var decomp = try std.compress.deflate.decompressor(self.allocator, input.reader(), null);
-        defer decomp.deinit();
-        snapshot = try s2s.deserializeAlloc(decomp.reader(), Snapshot, self.allocator);
-        _ = decomp.close();
-    } else {
-        snapshot = try s2s.deserializeAlloc(input.reader(), Snapshot, self.allocator);
-    }
-
-    self.width = self.width;
-    self.height = self.height;
-    self.frame_count = snapshot.frame_count;
-    self.frame_time = snapshot.frame_time;
-    self.bitmap_type = snapshot.bitmap_type;
-    self.selected_frame = snapshot.selected_frame;
-    self.selected_layer = snapshot.selected_layer;
-    self.deinitLayers();
-    // HACK: snapshot contains the wrong capacity
-    for (snapshot.layers) |*layer| {
-        layer.cels.capacity = layer.cels.items.len;
-    }
-    self.layers = ArrayList(Layer).fromOwnedSlice(self.allocator, snapshot.layers);
-    self.allocator.free(self.colormap);
-    self.colormap = snapshot.colormap;
-    self.freeSelection();
-    if (snapshot.selection) |selection| {
-        self.selection = Selection{
-            .rect = selection.rect,
-            .bitmap = selection.bitmap,
-        };
-        self.need_selection_texture_recreation = true;
-    }
-
-    self.preview_bitmap.deinit(self.allocator);
-    self.preview_bitmap = try Bitmap.init(self.allocator, self.width, self.height, self.bitmap_type);
-    self.preview_bitmap.clear();
-    self.need_texture_recreation = true;
-
-    if (self.x != snapshot.x or self.y != snapshot.y) {
-        const dx = snapshot.x - self.x;
-        const dy = snapshot.y - self.y;
-        self.x += dx;
-        self.y += dy;
-        self.canvas.translateByPixel(dx, dy);
-    }
-    self.last_preview = .full;
-    self.clearPreview();
+    _ = self;
+    _ = data;
 }
 
 fn getCel(self: *Self, layer: u32, frame: u32) *Cel {

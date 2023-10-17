@@ -13,7 +13,6 @@ pub fn build(b: *std.Build) !void {
     const automated_testing = b.option(bool, "automated-testing", "Enable automated testing") orelse false;
 
     const nfd_dep = b.dependency("nfd", .{ .target = target, .optimize = optimize });
-    const s2s_dep = b.dependency("s2s", .{ .target = target, .optimize = optimize });
     const sdl_dep = b.dependency("sdl", .{ .target = target, .optimize = optimize });
     const zigwin32_dep = b.dependency("zigwin32", .{});
     const nanovg_dep = b.dependency("nanovg", .{ .target = target, .optimize = optimize });
@@ -63,7 +62,6 @@ pub fn build(b: *std.Build) !void {
     exe.addModule("win32", zigwin32_dep.module("zigwin32"));
     exe.addModule("nfd", nfd_dep.module("nfd"));
     exe.addModule("nanovg", nanovg);
-    exe.addModule("s2s", s2s_dep.module("s2s"));
     exe.addModule("gui", gui);
     exe.linkLibrary(nanovg_dep.artifact("nanovg"));
     exe.linkLibrary(nfd_dep.artifact("nfd"));

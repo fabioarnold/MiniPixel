@@ -14,10 +14,6 @@
             .url = "https://github.com/fabioarnold/nfd-zig/archive/4701d11cf52866828bd682c19ddddf60f8152960.tar.gz",
             .hash = "12207996dc990674491c5cebe0c78026f8f99608a4cd5187bfeb0b3df910a04dc907",
         },
-        .s2s = .{
-            .url = "https://github.com/ziglibs/s2s/archive/f1d0508cc47b2af353658d4e52616a45aafa91ce.tar.gz",
-            .hash = "122084b614cc4ac1e0694812d8863446840a314d8654afebad9b6966ebe6792931b1",
-        },
         .sdl = .{
             .url = "https://github.com/fabioarnold/SDL/archive/ea82c623a1321b81c64fc89c76579168b2ac835d.tar.gz",
             .hash = "1220484b1a29fcae7fd69b66b0089827a424b3c1b217dd9848a70878df7182977ac2",
