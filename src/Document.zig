@@ -58,6 +58,41 @@ const Layer = struct {
         }
         self.cels.deinit(allocator);
     }
+
+    fn clone(self: Layer, allocator: Allocator) !Layer {
+        var layer = Layer{
+            .cels = try ArrayListUnmanaged(Cel).initCapacity(allocator, self.cels.items.len),
+            .visible = self.visible,
+            .locked = self.locked,
+            .linked = self.linked,
+        };
+        for (self.cels.items) |*cel| {
+            layer.cels.appendAssumeCapacity(Cel{
+                .bitmap = if (cel.bitmap) |bitmap| try bitmap.clone(allocator) else null,
+                .linked_frame = cel.linked_frame,
+            });
+        }
+        return layer;
+    }
+
+    fn eql(self: Layer, layer: Layer) bool {
+        if (self.visible != layer.visible or
+            self.locked != layer.locked or
+            self.linked != layer.linked or
+            self.cels.items.len != layer.cels.items.len)
+        {
+            return false;
+        }
+        for (self.cels.items, layer.cels.items) |*a, *b| {
+            if (a.linked_frame != b.linked_frame) return false;
+            if (a.bitmap != null and b.bitmap != null) {
+                if (!a.bitmap.?.eql(b.bitmap.?)) return false;
+            } else if (a.bitmap != null or b.bitmap != null) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 const BitmapIterator = struct {
@@ -276,7 +311,7 @@ pub fn save(self: *Self, file_path: []const u8) !void {
     try image.writeToFile(file_path);
 }
 
-const Snapshot = struct {
+pub const Snapshot = struct {
     x: i32,
     y: i32,
     width: u32,
@@ -292,16 +327,122 @@ const Snapshot = struct {
         rect: Recti,
         bitmap: Bitmap,
     },
+
+    pub fn deinit(self: *Snapshot, allocator: Allocator) void {
+        for (self.layers) |*layer| {
+            layer.deinit(allocator);
+        }
+        allocator.free(self.layers);
+        allocator.free(self.colormap);
+        if (self.selection) |selection| {
+            selection.bitmap.deinit(allocator);
+        }
+        allocator.destroy(self);
+    }
 };
 
-pub fn serialize(self: Document) ![]u8 {
-    _ = self;
-    return &.{};
+pub fn takeSnapshot(self: Document) !*Snapshot {
+    const snapshot = try self.allocator.create(Snapshot);
+    snapshot.* = .{
+        .x = self.x,
+        .y = self.y,
+        .width = self.width,
+        .height = self.height,
+        .bitmap_type = self.bitmap_type,
+        .frame_count = self.frame_count,
+        .frame_time = self.frame_time,
+        .selected_frame = self.selected_frame,
+        .selected_layer = self.selected_layer,
+        .layers = try self.allocator.alloc(Layer, self.layers.items.len),
+        .colormap = try self.allocator.dupe(u8, self.colormap),
+        .selection = null,
+    };
+    for (self.layers.items, 0..) |layer, i| {
+        snapshot.layers[i] = try layer.clone(self.allocator);
+    }
+    std.mem.copy(u8, snapshot.colormap, self.colormap);
+    if (self.selection) |selection| {
+        snapshot.selection = .{
+            .rect = selection.rect,
+            .bitmap = try selection.bitmap.clone(self.allocator),
+        };
+    }
+    return snapshot;
 }
 
-pub fn deserialize(self: *Document, data: []u8) !void {
-    _ = self;
-    _ = data;
+pub fn fromSnapshot(self: *Document, snapshot: *Snapshot) !void {
+    self.width = self.width;
+    self.height = self.height;
+    self.frame_count = snapshot.frame_count;
+    self.frame_time = snapshot.frame_time;
+    self.bitmap_type = snapshot.bitmap_type;
+    self.selected_frame = snapshot.selected_frame;
+    self.selected_layer = snapshot.selected_layer;
+    for (self.layers.items) |*layer| {
+        layer.deinit(self.allocator);
+    }
+    self.layers.clearRetainingCapacity();
+    try self.layers.ensureTotalCapacity(snapshot.layers.len);
+    for (snapshot.layers) |layer| {
+        self.layers.appendAssumeCapacity(try layer.clone(self.allocator));
+    }
+    self.allocator.free(self.colormap);
+    self.colormap = try self.allocator.dupe(u8, snapshot.colormap);
+    self.freeSelection();
+    if (snapshot.selection) |selection| {
+        self.selection = Selection{
+            .rect = selection.rect,
+            .bitmap = try selection.bitmap.clone(self.allocator),
+        };
+        self.need_selection_texture_recreation = true;
+    }
+
+    self.preview_bitmap.deinit(self.allocator);
+    self.preview_bitmap = try Bitmap.init(self.allocator, self.width, self.height, self.bitmap_type);
+    self.preview_bitmap.clear();
+    self.need_texture_recreation = true;
+
+    if (self.x != snapshot.x or self.y != snapshot.y) {
+        const dx = snapshot.x - self.x;
+        const dy = snapshot.y - self.y;
+        self.x += dx;
+        self.y += dy;
+        self.canvas.translateByPixel(dx, dy);
+    }
+    self.last_preview = .full;
+    self.clearPreview();
+}
+
+pub fn eqlSnapshot(self: Document, snapshot: *Snapshot) bool {
+    if (self.x != snapshot.x or
+        self.y != snapshot.y or
+        self.width != snapshot.width or
+        self.height != snapshot.height or
+        self.bitmap_type != snapshot.bitmap_type or
+        self.frame_count != snapshot.frame_count or
+        self.frame_time != snapshot.frame_time or
+        self.selected_frame != snapshot.selected_frame or
+        self.selected_layer != snapshot.selected_layer or
+        self.layers.items.len != snapshot.layers.len or
+        !std.mem.eql(u8, self.colormap, snapshot.colormap))
+    {
+        return false;
+    }
+
+    // compare layers
+    for (self.layers.items, 0..) |layer, i| {
+        if (!layer.eql(snapshot.layers[i])) return false;
+    }
+
+    // compare selection
+    if (self.selection != null and snapshot.selection != null) {
+        if (!self.selection.?.rect.eql(snapshot.selection.?.rect)) return false;
+        if (!self.selection.?.bitmap.eql(snapshot.selection.?.bitmap)) return false;
+    } else if (self.selection != null or snapshot.selection != null) {
+        return false;
+    }
+
+    return true;
 }
 
 fn getCel(self: *Self, layer: u32, frame: u32) *Cel {

@@ -87,6 +87,10 @@ pub fn Rect(comptime T: type) type {
             return .{ .x = x, .y = y, .w = w, .h = h };
         }
 
+        pub fn eql(self: Self, other: Self) bool {
+            return self.x == other.x and self.y == other.y and self.w == other.w and self.h == other.h;
+        }
+
         pub fn fromPoints(p0: Point(T), p1: Point(T)) Self {
             return .{
                 .x = @min(p0.x, p1.x),

@@ -48,6 +48,14 @@ pub const Bitmap = union(BitmapType) {
         };
     }
 
+    pub fn eql(self: Bitmap, bitmap: Bitmap) bool {
+        if (self.getType() != bitmap.getType()) return false;
+        return switch (self) {
+            .color => |color_bitmap| color_bitmap.eql(bitmap.color),
+            .indexed => |indexed_bitmap| indexed_bitmap.eql(bitmap.indexed),
+        };
+    }
+
     pub fn clear(self: Bitmap) void {
         switch (self) {
             inline else => |bitmap| bitmap.clear(),

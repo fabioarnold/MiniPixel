@@ -4,12 +4,11 @@ const ArrayList = std.ArrayList;
 
 const EditorWidget = @import("EditorWidget.zig");
 const Document = @import("Document.zig");
-
-const Snapshot = []u8;
+const Snapshot = Document.Snapshot;
 
 pub const Buffer = struct {
     allocator: Allocator,
-    stack: ArrayList(Snapshot),
+    stack: ArrayList(*Snapshot),
     index: usize = 0,
 
     editor: ?*EditorWidget = null,
@@ -18,14 +17,14 @@ pub const Buffer = struct {
         var self = try allocator.create(Buffer);
         self.* = Buffer{
             .allocator = allocator,
-            .stack = ArrayList(Snapshot).init(allocator),
+            .stack = ArrayList(*Snapshot).init(allocator),
         };
         return self;
     }
 
     pub fn deinit(self: *Buffer) void {
         for (self.stack.items) |snapshot| {
-            self.allocator.free(snapshot);
+            snapshot.deinit(self.allocator);
         }
         self.stack.deinit();
         self.allocator.destroy(self);
@@ -33,7 +32,7 @@ pub const Buffer = struct {
 
     pub fn clearAndFreeStack(self: *Buffer) void {
         for (self.stack.items) |snapshot| {
-            self.allocator.free(snapshot);
+            snapshot.deinit(self.allocator);
         }
         self.stack.shrinkRetainingCapacity(0);
         self.index = 0;
@@ -41,7 +40,7 @@ pub const Buffer = struct {
 
     pub fn reset(self: *Buffer, document: *Document) !void {
         self.clearAndFreeStack();
-        try self.stack.append(try document.serialize());
+        try self.stack.append(try document.takeSnapshot());
         self.notifyChanged(document);
     }
 
@@ -57,7 +56,7 @@ pub const Buffer = struct {
         if (!self.canUndo()) return;
         self.index -= 1;
         const snapshot = self.stack.items[self.index];
-        try document.deserialize(snapshot);
+        try document.fromSnapshot(snapshot);
         self.notifyChanged(document);
     }
 
@@ -69,23 +68,22 @@ pub const Buffer = struct {
         if (!self.canRedo()) return;
         self.index += 1;
         const snapshot = self.stack.items[self.index];
-        try document.deserialize(snapshot);
+        try document.fromSnapshot(snapshot);
         self.notifyChanged(document);
     }
 
     pub fn pushFrame(self: *Buffer, document: *Document) !void { // TODO: handle error cases
         // do comparison
         const top = self.stack.items[self.index];
-        const snapshot = try document.serialize();
-        if (std.mem.eql(u8, top, snapshot)) {
-            document.allocator.free(snapshot);
+        if (document.eqlSnapshot(top)) {
             return;
         }
 
+        const snapshot = try document.takeSnapshot();
         self.index += 1;
         // clear redo stack
         for (self.stack.items[self.index..self.stack.items.len]) |snap| {
-            document.allocator.free(snap);
+            snap.deinit(self.allocator);
         }
         self.stack.shrinkRetainingCapacity(self.index);
 
