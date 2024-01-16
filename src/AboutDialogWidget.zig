@@ -69,7 +69,7 @@ fn onMouseDown(widget: *gui.Widget, mouse_event: *gui.MouseEvent) void {
 }
 
 fn onMouseMove(widget: *gui.Widget, mouse_event: *gui.MouseEvent) void {
-    var self = @fieldParentPtr(Self, "widget", widget);
+    const self = @fieldParentPtr(Self, "widget", widget);
     _ = self;
     const link_itchio_rect = Rect(f32).make(
         link_itchio_bounds[0],

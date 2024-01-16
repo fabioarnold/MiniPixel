@@ -88,7 +88,7 @@ pub fn getRgba(self: Self, color_layer: ColorLayer) [4]u8 {
 pub fn setRgba(self: *Self, color_layer: ColorLayer, color: []const u8) void {
     const i = @intFromEnum(color_layer);
     if (!std.mem.eql(u8, &self.colors[i], color)) {
-        std.mem.copy(u8, &self.colors[i], color);
+        @memcpy(&self.colors[i], color);
         self.notifyChanged(.color);
     }
 }

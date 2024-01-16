@@ -212,7 +212,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
     configureToolbarButton(self.palette_paste_button, icons.iconPasteEnabled, tryPastePalette, "Paste Color");
     configureToolbarButton(self.palette_toggle_button, icons.iconColorPalette, tryTogglePalette, "Toggle between 8-bit indexed mode and true color");
 
-    std.mem.copy(u8, self.document.colormap, &self.color_palette.colors);
+    @memcpy(self.document.colormap, &self.color_palette.colors);
     self.color_palette.onSelectionChangedFn = struct {
         fn selectionChanged(color_palette: *ColorPaletteWidget) void {
             if (color_palette.widget.parent) |parent| {
@@ -271,7 +271,7 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
             if (color_picker.widget.parent) |parent| {
                 var editor = @fieldParentPtr(EditorWidget, "widget", parent);
                 if (editor.color_palette.selected) |selected| {
-                    std.mem.copy(u8, editor.color_palette.colors[4 * selected ..][0..4], &color_picker.color);
+                    @memcpy(editor.color_palette.colors[4 * selected ..][0..4], &color_picker.color);
                     editor.updateDocumentPaletteAt(selected);
                 }
                 editor.color_foreground_background.setActiveRgba(&color_picker.color);
@@ -707,7 +707,7 @@ pub fn showUnsavedChangesDialog(self: *Self, onResultFn: ?*const fn (usize, Mess
 
 fn showMessageBox(self: *Self, title: [:0]const u8) void {
     if (self.widget.getWindow()) |parent_window| {
-        var window_or_error = parent_window.createChildWindow(
+        const window_or_error = parent_window.createChildWindow(
             title,
             self.message_box_widget.widget.relative_rect.w,
             self.message_box_widget.widget.relative_rect.h,
@@ -733,7 +733,7 @@ fn onMessageBoxClosed(context: usize) void {
 
 pub fn newDocument(self: *Self) void { // TODO
     if (self.widget.getWindow()) |parent_window| {
-        var window_or_error = parent_window.createChildWindow(
+        const window_or_error = parent_window.createChildWindow(
             "New Document",
             self.new_document_widget.widget.relative_rect.w,
             self.new_document_widget.widget.relative_rect.h,
@@ -751,7 +751,7 @@ pub fn newDocument(self: *Self) void { // TODO
 
 fn showAboutDialog(self: *Self) void {
     if (self.widget.getWindow()) |parent_window| {
-        var window_or_error = parent_window.createChildWindow(
+        const window_or_error = parent_window.createChildWindow(
             "About",
             self.about_dialog_widget.widget.relative_rect.w,
             self.about_dialog_widget.widget.relative_rect.h,
@@ -807,7 +807,7 @@ fn saveDocument(self: *Self, force_save_as: bool) !void {
         if (try nfd.saveFileDialog("png", null)) |nfd_file_path| {
             defer nfd.freePath(nfd_file_path);
 
-            var png_file_path = try copyWithExtension(self.allocator, nfd_file_path, ".png");
+            const png_file_path = try copyWithExtension(self.allocator, nfd_file_path, ".png");
             defer self.allocator.free(png_file_path);
 
             try self.document.save(png_file_path);
@@ -1002,7 +1002,7 @@ fn tryCopyPalette(self: *Self) void {
 fn tryPastePalette(self: *Self) void {
     if (Clipboard.getColor(self.allocator)) |color| {
         if (self.color_palette.selected) |selected| {
-            std.mem.copy(u8, self.color_palette.colors[4 * @as(usize, selected) ..][0..4], &color);
+            @memcpy(self.color_palette.colors[4 * @as(usize, selected) ..][0..4], &color);
             self.updateDocumentPaletteAt(selected);
         }
         self.color_foreground_background.setActiveRgba(&color);
@@ -1043,13 +1043,13 @@ fn tryTogglePalette(self: *Self) void {
 
 fn onDocumentChanged(self: *Self) void {
     // update GUI
-    std.mem.copy(u8, &self.color_palette.colors, self.document.colormap);
+    @memcpy(&self.color_palette.colors, self.document.colormap);
     switch (self.document.getBitmapType()) {
         .color => {
             self.palette_toggle_button.checked = false;
             self.color_palette.selection_locked = false;
-            std.mem.copy(u8, &self.document.foreground_color, &self.color_foreground_background.getRgba(.foreground));
-            std.mem.copy(u8, &self.document.background_color, &self.color_foreground_background.getRgba(.background));
+            @memcpy(&self.document.foreground_color, &self.color_foreground_background.getRgba(.foreground));
+            @memcpy(&self.document.background_color, &self.color_foreground_background.getRgba(.background));
             self.blend_mode.widget.enabled = true;
         },
         .indexed => {
@@ -1088,7 +1088,7 @@ fn updateDocumentPalette(self: *Self, mode: Document.PaletteUpdateMode) !void {
 }
 
 fn updateDocumentPaletteAt(self: *Self, i: usize) void {
-    std.mem.copy(u8, self.document.colormap[4 * i .. 4 * i + 4], self.color_palette.colors[4 * i .. 4 * i + 4]);
+    @memcpy(self.document.colormap[4 * i .. 4 * i + 4], self.color_palette.colors[4 * i .. 4 * i + 4]);
     self.document.need_texture_update = true;
 }
 

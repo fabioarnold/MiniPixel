@@ -62,7 +62,7 @@ pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
 
     if (c.EmptyClipboard() == 0) return error.EmptyClipboardFailed;
 
-    var png_data = try image.writeToMemory(allocator);
+    const png_data = try image.writeToMemory(allocator);
     defer allocator.free(png_data);
 
     // copy to global memory
@@ -73,7 +73,7 @@ pub fn setImage(allocator: std.mem.Allocator, image: Image) !void {
     if (c.GlobalLock(global_handle)) |local_mem| {
         defer _ = c.GlobalUnlock(global_handle);
         const data = @as([*]u8, @ptrCast(local_mem));
-        std.mem.copy(u8, data[0..png_data.len], png_data);
+        @memcpy(data[0..png_data.len], png_data);
 
         _ = c.SetClipboardData(png_format, global_handle);
     }

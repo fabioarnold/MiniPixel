@@ -3,12 +3,10 @@ const Allocator = std.mem.Allocator;
 
 const gui = @import("gui");
 const nvg = @import("nanovg");
+const data = @import("data");
 const Rect = gui.geometry.Rect;
 const Point = gui.geometry.Point;
 const BlendMode = @import("color.zig").BlendMode;
-
-const image_alpha_data = @embedFile("../data/blendmodealpha.png");
-const image_replace_data = @embedFile("../data/blendmodereplace.png");
 
 widget: gui.Widget,
 allocator: Allocator,
@@ -34,8 +32,8 @@ pub fn init(allocator: Allocator, rect: Rect(f32), vg: nvg) !*Self {
             Rect(f32).make(pad + 1, 33 - 27, rect.w - 2 * pad - 2, 27),
             Rect(f32).make(pad + 1, 33, rect.w - 2 * pad - 2, 27),
         },
-        .image_alpha = vg.createImageMem(image_alpha_data, .{ .nearest = true }),
-        .image_replace = vg.createImageMem(image_replace_data, .{ .nearest = true }),
+        .image_alpha = vg.createImageMem(data.images.blendmodealpha, .{ .nearest = true }),
+        .image_replace = vg.createImageMem(data.images.blendmodereplace, .{ .nearest = true }),
     };
 
     self.widget.onMouseDownFn = onMouseDown;

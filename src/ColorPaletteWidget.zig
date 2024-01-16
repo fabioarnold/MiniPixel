@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 
 const gui = @import("gui");
 const nvg = @import("nanovg");
+const data = @import("data");
 const Rect = gui.geometry.Rect;
 const col = @import("color.zig");
 
@@ -18,7 +19,7 @@ onSelectionChangedFn: ?*const fn (*Self) void = null,
 
 const Self = @This();
 
-const default_pal_contents = @embedFile("../data/palettes/arne16.pal");
+const default_pal_contents = data.palettes.arne16;
 
 pub fn init(allocator: Allocator, rect: Rect(f32)) !*Self {
     var self = try allocator.create(Self);
@@ -97,7 +98,7 @@ pub fn loadPalContents(self: *Self, contents: []const u8) !void {
         self.colors[4 * i + 3] = alpha;
     }
     while (i < 256) : (i += 1) {
-        std.mem.copy(u8, self.colors[4 * i ..][0..4], &col.black);
+        @memcpy(self.colors[4 * i ..][0..4], &col.black);
     }
 }
 

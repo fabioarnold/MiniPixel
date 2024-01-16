@@ -109,8 +109,8 @@ pub fn drawPanel(vg: nvg, x: f32, y: f32, w: f32, h: f32, depth: f32, hovered: b
 pub fn drawPanelInset(vg: nvg, x: f32, y: f32, w: f32, h: f32, depth: f32) void {
     if (w <= 0 or h <= 0) return;
 
-    var color_shadow = theme_colors.shadow;
-    var color_light = theme_colors.light;
+    const color_shadow = theme_colors.shadow;
+    const color_light = theme_colors.light;
 
     // light
     vg.beginPath();

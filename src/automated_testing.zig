@@ -4,7 +4,7 @@ const gui = @import("gui");
 const EditorWidget = @import("EditorWidget.zig");
 
 pub fn runTests(window: *gui.Window) !void {
-    var editor_widget = @fieldParentPtr(EditorWidget, "widget", window.main_widget.?);
+    const editor_widget = @fieldParentPtr(EditorWidget, "widget", window.main_widget.?);
     try testFloodFill(window, editor_widget);
     try testSetIndividualPixels(window, editor_widget);
 }

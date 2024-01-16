@@ -14,7 +14,7 @@ pub const Buffer = struct {
     editor: ?*EditorWidget = null,
 
     pub fn init(allocator: Allocator) !*Buffer {
-        var self = try allocator.create(Buffer);
+        const self = try allocator.create(Buffer);
         self.* = Buffer{
             .allocator = allocator,
             .stack = ArrayList(*Snapshot).init(allocator),

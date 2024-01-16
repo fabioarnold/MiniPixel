@@ -48,7 +48,7 @@ pub fn initFromFile(allocator: Allocator, file_path: []const u8) !Image {
         // init remaining entries to black
         var i: usize = colormap_entries;
         while (i < colormap_len) : (i += 1) {
-            std.mem.copy(u8, colormap[4 * i ..][0..4], &col.black);
+            @memcpy(colormap[4 * i ..][0..4], &col.black);
         }
         self.colormap = colormap;
     }
@@ -81,7 +81,7 @@ pub fn initFromMemory(allocator: Allocator, memory: []const u8) !Image {
         // init remaining entries to black
         var i: usize = colormap_entries;
         while (i < colormap_len) : (i += 1) {
-            std.mem.copy(u8, colormap[4 * i ..][0..4], &col.black);
+            @memcpy(colormap[4 * i ..][0..4], &col.black);
         }
         self.colormap = colormap;
     }
@@ -144,7 +144,7 @@ fn convertIndexedToRgba(allocator: Allocator, indexed_image: Image) !Image {
     var i: usize = 0;
     while (i < pixel_count) : (i += 1) {
         const index = @as(usize, @intCast(indexed_image.pixels[i]));
-        std.mem.copy(u8, image.pixels[4 * i ..][0..4], colormap[4 * index ..][0..4]);
+        @memcpy(image.pixels[4 * i ..][0..4], colormap[4 * index ..][0..4]);
     }
     return image;
 }

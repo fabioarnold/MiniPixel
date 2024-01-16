@@ -145,7 +145,7 @@ fn onLeave(widget: *gui.Widget) void {
 }
 
 fn onAutoRepeatTimerElapsed(context: usize) void {
-    var button = @as(*Button, @ptrFromInt(context));
+    const button = @as(*Button, @ptrFromInt(context));
     if (button.onClickFn) |onClickFn| {
         onClickFn(button);
     }

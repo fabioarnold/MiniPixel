@@ -17,31 +17,32 @@ pub fn build(b: *std.Build) !void {
     const zigwin32_dep = b.dependency("zigwin32", .{});
     const nanovg_dep = b.dependency("nanovg", .{ .target = target, .optimize = optimize });
 
-    // const nanovg = b.createModule(.{ .source_file = .{ .path = "deps/nanovg-zig/src/nanovg.zig" } });
-    const nanovg = nanovg_dep.module("nanovg");
-    const gui = b.createModule(.{ .source_file = .{ .path = "src/gui/gui.zig" }, .dependencies = &.{.{ .name = "nanovg", .module = nanovg }} });
+    const nanovg_mod = nanovg_dep.module("nanovg");
+    const gui_mod = b.createModule(.{ .root_source_file = .{ .path = "src/gui/gui.zig" } });
+    gui_mod.addImport("nanovg", nanovg_mod);
+    const data_mod = b.createModule(.{ .root_source_file = .{ .path = "data/data.zig" } });
+
 
     const exe = b.addExecutable(.{
         .name = "minipixel",
         .root_source_file = .{ .path = "src/main.zig" },
-        .main_mod_path = .{ .path = "." },
         .target = target,
         .optimize = optimize,
     });
 
     const exe_options = b.addOptions();
-    exe.addOptions("build_options", exe_options);
+    exe.root_module.addOptions("build_options", exe_options);
     exe_options.addOption(bool, "automated_testing", automated_testing);
 
     exe.addIncludePath(.{ .path = "lib/gl2/include" });
-    if (exe.target.isWindows()) {
-        exe.addVcpkgPaths(.dynamic) catch @panic("vcpkg not installed");
-        if (exe.vcpkg_bin_path) |bin_path| {
-            for (&[_][]const u8{ "libpng16.dll", "zlib1.dll" }) |dll| {
-                const src_dll = try std.fs.path.join(b.allocator, &.{ bin_path, dll });
-                b.installBinFile(src_dll, dll);
-            }
-        }
+    if (target.result.os.tag == .windows) {
+        // exe.addVcpkgPaths(.dynamic) catch @panic("vcpkg not installed");
+        // if (exe.vcpkg_bin_path) |bin_path| {
+        //     for (&[_][]const u8{ "libpng16.dll", "zlib1.dll" }) |dll| {
+        //         const src_dll = try std.fs.path.join(b.allocator, &.{ bin_path, dll });
+        //         b.installBinFile(src_dll, dll);
+        //     }
+        // }
         exe.subsystem = .Windows;
         exe.linkSystemLibrary("shell32");
         std.fs.cwd().access("minipixel.o", .{}) catch {
@@ -50,7 +51,7 @@ pub fn build(b: *std.Build) !void {
             return error.FileNotFound;
         };
         exe.addObjectFile(.{ .path = "minipixel.o" }); // add icon
-    } else if (exe.target.isDarwin()) {
+    } else if (target.result.os.tag == .macos) {
         exe.addCSourceFile(.{ .file = .{ .path = "src/c/sdl_hacks.m" }, .flags = &.{} });
     }
     const c_flags: []const []const u8 = if (optimize == .Debug)
@@ -59,28 +60,27 @@ pub fn build(b: *std.Build) !void {
         &.{ "-std=c99", "-D_CRT_SECURE_NO_WARNINGS" };
     exe.addCSourceFile(.{ .file = .{ .path = "src/c/png_image.c" }, .flags = &.{"-std=c99"} });
     exe.addCSourceFile(.{ .file = .{ .path = "lib/gl2/src/glad.c" }, .flags = c_flags });
-    exe.addModule("win32", zigwin32_dep.module("zigwin32"));
-    exe.addModule("nfd", nfd_dep.module("nfd"));
-    exe.addModule("nanovg", nanovg);
-    exe.addModule("gui", gui);
-    exe.linkLibrary(nanovg_dep.artifact("nanovg"));
-    exe.linkLibrary(nfd_dep.artifact("nfd"));
+    exe.root_module.addImport("win32", zigwin32_dep.module("zigwin32"));
+    exe.root_module.addImport("nfd", nfd_dep.module("nfd"));
+    exe.root_module.addImport("nanovg", nanovg_mod);
+    exe.root_module.addImport("gui", gui_mod);
+    exe.root_module.addImport("data", data_mod);
     exe.linkLibrary(sdl_dep.artifact("SDL2"));
-    if (exe.target.isWindows()) {
+    if (target.result.os.tag == .windows) {
         // Workaround for CI: Zig detects pkg-config and resolves -lpng16 which doesn't exist
-        exe.linkSystemLibraryName("libpng16");
-    } else if (exe.target.isDarwin()) {
+        exe.linkSystemLibrary("libpng16");
+    } else if (target.result.os.tag == .macos) {
         exe.addIncludePath(.{ .path = "/opt/homebrew/include" });
         exe.addLibraryPath(.{ .path = "/opt/homebrew/lib" });
         exe.linkSystemLibrary("png");
     } else {
         exe.linkSystemLibrary("libpng16");
     }
-    if (exe.target.isDarwin()) {
+    if (target.result.os.tag == .macos) {
         exe.linkFramework("OpenGL");
-    } else if (exe.target.isWindows()) {
+    } else if (target.result.os.tag == .windows) {
         exe.linkSystemLibrary("opengl32");
-    } else if (exe.target.isLinux()) {
+    } else if (target.result.os.tag == .linux) {
         exe.linkSystemLibrary("gl");
         exe.linkSystemLibrary("X11");
     }

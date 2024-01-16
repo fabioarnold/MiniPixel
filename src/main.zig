@@ -11,6 +11,7 @@ const c = @import("c.zig");
 const nvg = @import("nanovg");
 const gui = @import("gui");
 const Rect = gui.geometry.Rect;
+const data = @import("data");
 const Clipboard = @import("Clipboard.zig");
 const EditorWidget = @import("EditorWidget.zig");
 const MessageBoxWidget = @import("MessageBoxWidget.zig");
@@ -714,7 +715,7 @@ pub fn sdlHasClipboardText() bool {
 pub fn sdlGetClipboardText(allocator: std.mem.Allocator) !?[]const u8 {
     const sdl_text = c.SDL_GetClipboardText();
     if (sdl_text == null) return null;
-    var text = try allocator.dupe(u8, std.mem.sliceTo(sdl_text, 0));
+    const text = try allocator.dupe(u8, std.mem.sliceTo(sdl_text, 0));
     c.SDL_free(sdl_text);
     return text;
 }
@@ -833,10 +834,8 @@ pub fn main() !void {
     gui.init(vg);
     defer gui.deinit(vg);
 
-    const roboto_regular = @embedFile("../data/fonts/Roboto-Regular.ttf");
-    const roboto_bold = @embedFile("../data/fonts/Roboto-Bold.ttf");
-    _ = vg.createFontMem("guifont", roboto_regular);
-    _ = vg.createFontMem("guifontbold", roboto_bold);
+    _ = vg.createFontMem("guifont", data.fonts.roboto_regular);
+    _ = vg.createFontMem("guifontbold", data.fonts.roboto_bold);
 
     const rect = Rect(f32).make(0, 0, main_window.width, main_window.height);
     editor_widget = try EditorWidget.init(allocator, rect, vg);

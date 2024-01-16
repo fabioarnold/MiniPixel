@@ -360,7 +360,7 @@ pub fn takeSnapshot(self: Document) !*Snapshot {
     for (self.layers.items, 0..) |layer, i| {
         snapshot.layers[i] = try layer.clone(self.allocator);
     }
-    std.mem.copy(u8, snapshot.colormap, self.colormap);
+    @memcpy(snapshot.colormap, self.colormap);
     if (self.selection) |selection| {
         snapshot.selection = .{
             .rect = selection.rect,
@@ -566,7 +566,7 @@ pub fn applyPalette(self: *Self, palette: []u8, mode: PaletteUpdateMode) !void {
         self.clearPreview();
     }
 
-    std.mem.copy(u8, self.colormap, palette);
+    @memcpy(self.colormap, palette);
     self.need_texture_update = true;
 
     try self.history.pushFrame(self);
@@ -870,7 +870,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
                         const si = 4 * ((y + oy) * @as(u32, @intCast(rect.w)) + ox);
                         const di = 4 * ((sy + y) * color_bitmap.width + sx);
                         // copy entire line
-                        std.mem.copy(u8, new_bitmap.color.pixels[si .. si + 4 * w], color_bitmap.pixels[di .. di + 4 * w]);
+                        @memcpy(new_bitmap.color.pixels[si .. si + 4 * w], color_bitmap.pixels[di .. di + 4 * w]);
                     }
                 },
                 .indexed => |indexed_bitmap| {
@@ -878,7 +878,7 @@ pub fn crop(self: *Self, rect: Recti) !void {
                         const si = (y + oy) * @as(u32, @intCast(rect.w)) + ox;
                         const di = (sy + y) * indexed_bitmap.width + sx;
                         // copy entire line
-                        std.mem.copy(u8, new_bitmap.indexed.indices[si .. si + w], indexed_bitmap.indices[di .. di + w]);
+                        @memcpy(new_bitmap.indexed.indices[si .. si + w], indexed_bitmap.indices[di .. di + w]);
                     }
                 },
             }
@@ -938,7 +938,7 @@ pub fn clearSelection(self: *Self) !void {
                                 dst.* = col.blend(src.*, dst.*);
                             }
                         },
-                        .replace => std.mem.copy(u8, color_bitmap.pixels[di .. di + 4 * w], bitmap.color.pixels[si .. si + 4 * w]),
+                        .replace => @memcpy(color_bitmap.pixels[di .. di + 4 * w], bitmap.color.pixels[si .. si + 4 * w]),
                     }
                 }
             },
@@ -946,7 +946,7 @@ pub fn clearSelection(self: *Self) !void {
                 while (y < h) : (y += 1) {
                     const si = (y + oy) * @as(u32, @intCast(rect.w)) + ox;
                     const di = (sy + y) * indexed_bitmap.width + sx;
-                    std.mem.copy(u8, indexed_bitmap.indices[di .. di + w], bitmap.indexed.indices[si .. si + w]);
+                    @memcpy(indexed_bitmap.indices[di .. di + w], bitmap.indexed.indices[si .. si + w]);
                 }
             },
         }
@@ -983,7 +983,7 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
             while (y < h) : (y += 1) {
                 const di = 4 * (y * w);
                 const si = 4 * ((sy + y) * color_bitmap.width + sx);
-                std.mem.copy(u8, bitmap.color.pixels[di .. di + 4 * w], color_bitmap.pixels[si .. si + 4 * w]);
+                @memcpy(bitmap.color.pixels[di .. di + 4 * w], color_bitmap.pixels[si .. si + 4 * w]);
                 const dst_line = color_bitmap.pixels[si .. si + 4 * w];
                 var i: usize = 0;
                 while (i < dst_line.len) : (i += 1) {
@@ -995,14 +995,14 @@ pub fn makeSelection(self: *Self, rect: Recti) !void {
             while (y < h) : (y += 1) {
                 const di = y * w;
                 const si = (sy + y) * indexed_bitmap.width + sx;
-                std.mem.copy(u8, bitmap.indexed.indices[di .. di + w], indexed_bitmap.indices[si .. si + w]);
+                @memcpy(bitmap.indexed.indices[di .. di + w], indexed_bitmap.indices[si .. si + w]);
                 const dst_line = indexed_bitmap.indices[si .. si + w];
                 @memset(dst_line, self.background_index);
             }
         },
     }
 
-    var selection = Selection{
+    const selection = Selection{
         .rect = intersection,
         .bitmap = bitmap,
     };
@@ -1095,8 +1095,8 @@ pub fn clearPreview(self: *Self) void {
         .full => {
             if (self.getCurrentCelBitmap()) |bitmap| {
                 switch (bitmap) {
-                    .color => |color_bitmap| std.mem.copy(u8, self.preview_bitmap.color.pixels, color_bitmap.pixels),
-                    .indexed => |indexed_bitmap| std.mem.copy(u8, self.preview_bitmap.indexed.indices, indexed_bitmap.indices),
+                    .color => |color_bitmap| @memcpy(self.preview_bitmap.color.pixels, color_bitmap.pixels),
+                    .indexed => |indexed_bitmap| @memcpy(self.preview_bitmap.indexed.indices, indexed_bitmap.indices),
                 }
             } else {
                 self.preview_bitmap.clear();
@@ -1256,7 +1256,7 @@ pub fn pick(self: *Self, x: i32, y: i32) void {
                 if (indexed_bitmap.getIndex(x, y)) |index| {
                     self.foreground_index = index;
                     const color = self.colormap[4 * @as(usize, self.foreground_index) ..][0..4];
-                    std.mem.copy(u8, &self.foreground_color, color);
+                    @memcpy(&self.foreground_color, color);
                 }
             },
         }

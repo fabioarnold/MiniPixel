@@ -31,7 +31,7 @@ const Self = @This();
 
 pub fn init(allocator: std.mem.Allocator, system_functions: SystemFunctions) !*Self {
     system = system_functions;
-    var self = try allocator.create(Application);
+    const self = try allocator.create(Application);
     self.* = Self{
         .allocator = allocator,
         .windows = std.ArrayList(*gui.Window).init(allocator),

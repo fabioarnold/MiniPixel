@@ -11,20 +11,20 @@
     },
     .dependencies = .{
         .nfd = .{
-            .url = "https://github.com/fabioarnold/nfd-zig/archive/4701d11cf52866828bd682c19ddddf60f8152960.tar.gz",
-            .hash = "12207996dc990674491c5cebe0c78026f8f99608a4cd5187bfeb0b3df910a04dc907",
+            .url = "https://github.com/fabioarnold/nfd-zig/archive/91b199d3cbb314c52c630b7bf6050c4d665c0628.tar.gz",
+            .hash = "122020466a938b490e0d4963eae2157d976990aa0acc53a1e32f9ac39d63a14cf977",
         },
         .sdl = .{
-            .url = "https://github.com/fabioarnold/SDL/archive/ea82c623a1321b81c64fc89c76579168b2ac835d.tar.gz",
-            .hash = "1220484b1a29fcae7fd69b66b0089827a424b3c1b217dd9848a70878df7182977ac2",
+            .url = "https://github.com/andrewrk/SDL/archive/db4a162db2f6f59f737d03f441455dc9524d5793.tar.gz",
+            .hash = "1220c5360c9c71c215baa41b46ec18d0711059b48416a2b1cf96c7c2d87b2e8e4cf6",
         },
         .zigwin32 = .{
             .url = "https://github.com/marlersoft/zigwin32/archive/6777f1db221d0cb50322842f558f03e3c3a4099f.tar.gz",
             .hash = "1220f8d5028adceac0c6fc8ef554d82efef49ca48913393e9c2f5d73a66b58c8aaad",
         },
         .nanovg = .{
-            .url = "https://github.com/fabioarnold/nanovg-zig/archive/de997980351481b6e1bbb6e1aceddde963d5e32b.tar.gz",
-            .hash = "1220b8d6ff0b689f46824fc9f4d179ced85b82c733c361ab69b6634a85bd88e88ba7",
+            .url = "https://github.com/fabioarnold/nanovg-zig/archive/b3396d4e65da5862c6ff088f64b3301aa50f3a9f.tar.gz",
+            .hash = "1220908cb7b3e907526744c1ab23d21d312a6062e3813dc1facc6f03980fdd3c04f6",
         },
     },
 }

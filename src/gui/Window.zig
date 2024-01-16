@@ -37,7 +37,7 @@ onClosedFn: ?*const fn (usize) void = null,
 const Self = @This();
 
 pub fn init(allocator: std.mem.Allocator, application: *gui.Application) !*Self {
-    var self = try allocator.create(Self);
+    const self = try allocator.create(Self);
     self.* = Self{
         .allocator = allocator,
         .application = application,
